@@ -49,7 +49,8 @@ def sync(target: Path, template: Path) -> bool:
         print(f"[backup] {backup}")
     fd, tmp = tempfile.mkstemp(prefix=".jarvis-agents-", dir=target.parent)
     try:
-        os.fchmod(fd, stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600)
+        if hasattr(os, "fchmod"):
+            os.fchmod(fd, stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600)
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(updated)
             handle.flush()
