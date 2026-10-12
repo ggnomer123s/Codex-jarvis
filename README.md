@@ -117,7 +117,7 @@ Advanced operators can install a **separate**, opt-in Codex profile with its own
 - Linux: `bash scripts/install-full-linux.sh`
 - Windows 11: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1`
 
-They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full` or `jarvis full`. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
+They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full fast`, `jarvis-full normal`, or `jarvis-full deep`. The equivalents `jarvis full fast|normal|deep` also work. Normal inherits the full profile's configured reasoning; fast is `low` and deep is `high`. The launcher starts directly in interactive Codex without injecting a startup task. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
 
 ## Intent-driven desktop automation and selecting regions
 
@@ -133,7 +133,8 @@ Read [GUI Operator](docs/gui-operator.md) for platform examples and the design c
 |---|---|
 | `jarvis` / `jarvis fast` | Start Codex with low reasoning effort; no automatic inspection task |
 | `jarvis normal` / `jarvis deep` | Model's configured default / high reasoning for complex tasks |
-| `jarvis full` | Start the separately installed Full Access profile (requires separate opt-in) |
+| `jarvis-full fast` / `normal` / `deep` | Optional Full Access with low / configured default / high reasoning (separate opt-in) |
+| `jarvis full fast` / `normal` / `deep` | Aliases to the same Full Access modes |
 | `jarvis access status` / `jarvis access all` | Hyprland-only: inspect or change Hypruse window permissions with confirmation |
 | `jarvis status` | Show configured GUI MCP and monitoring status |
 | `jarvis gui-check` | Check GUI backend and navigation prerequisites |
