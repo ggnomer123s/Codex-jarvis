@@ -12,7 +12,7 @@ After pulling the latest version and rerunning the installer, use:
 jarvis           # Fast mode is the default: low reasoning effort
 jarvis fast      # Same fast mode explicitly
 jarvis normal    # Respect your existing Codex model/reasoning defaults
-jarvis deep      # Medium reasoning effort for difficult or uncertain problems
+jarvis deep      # High reasoning effort for difficult or uncertain problems
 ```
 
 JARVIS uses `codex --config model_reasoning_effort=low` for its default fast mode. This is a **per-launch override**, not a rewrite of `~/.codex/config.toml`, and it does not change the model. Model support for reasoning values varies; use `jarvis normal` if the selected model rejects `low`.
