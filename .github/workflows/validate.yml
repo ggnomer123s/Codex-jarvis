@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check Bash syntax
-        run: bash -n scripts/install-linux.sh scripts/watch-linux.sh
+        run: bash -n scripts/install-linux.sh scripts/watch-linux.sh scripts/hypruse-access.sh
       - name: Check Python syntax
         run: python3 -m py_compile scripts/x11_mcp.py scripts/jarvis_memory.py scripts/jarvis_voice.py tests/test_memory.py
       - name: Verify local memory lifecycle
