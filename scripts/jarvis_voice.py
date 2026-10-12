@@ -31,7 +31,8 @@ def main():
 
     try:
         print("JARVIS local push-to-talk (no background listening).", file=sys.stderr)
-        input("Press Enter to START microphone recording... ")
+        print("Press Enter to START microphone recording...", file=sys.stderr)
+        input()
         print("Recording. Press Enter to STOP.", file=sys.stderr)
         with sd.RawInputStream(
             samplerate=sample_rate,
