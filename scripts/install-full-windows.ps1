@@ -83,34 +83,9 @@ rem JARVIS-CODEX MANAGED
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0jarvis-full.ps1" %*
 '@
 
-Set-Content -LiteralPath $launcher -Encoding UTF8 -Value @'
-# JARVIS-CODEX MANAGED — separate high-access profile
-param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Commands)
-$ErrorActionPreference = 'Stop'
-if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
-     [Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  throw 'JARVIS Full Access must not run elevated.'
-}
-$env:CODEX_HOME = Join-Path $env:LOCALAPPDATA 'jarvis-codex\full-codex-home'
-$codex = Get-Command codex.exe -ErrorAction SilentlyContinue
-if (-not $codex) { $codex = Get-Command codex.cmd -ErrorAction SilentlyContinue }
-if (-not $codex) { throw 'Codex CLI not found.' }
-$mode = if ($Commands -and $Commands.Count -gt 0) { $Commands[0] } else { 'start' }
-switch ($mode) {
-  'login' { & $codex.Source login; exit $LASTEXITCODE }
-  'status' {
-    Write-Host "Independent CODEX_HOME: $env:CODEX_HOME"
-    & $codex.Source login status
-    & $codex.Source mcp list
-  }
-  'start' {
-    Write-Warning 'JARVIS FULL ACCESS: NO SHELL SANDBOX OR CODEX APPROVAL PROMPTS.'
-    & $codex.Source --dangerously-bypass-approvals-and-sandbox 'JARVIS Full Access. Work on user-authorized tasks with desktop MCP and CLI tools. Observe and verify. Obtain explicit confirmation before irreversible deletion, sending/publishing, purchases, disclosure of private data or changing security settings. Never bypass Windows authentication or UAC.'
-    exit $LASTEXITCODE
-  }
-  default { throw 'Usage: jarvis-full [login|status]' }
-}
-'@
+# Use the same tested standalone launcher for all reasoning profiles.
+$sourceLauncher = Join-Path $PSScriptRoot 'jarvis-full-launcher.ps1'
+Copy-Item $sourceLauncher $launcher -Force
 
 $userPath = [Environment]::GetEnvironmentVariable('Path','User')
 $parts = @($userPath -split ';' | Where-Object { $_ })
@@ -120,5 +95,5 @@ if ($parts -notcontains $bin) {
 Write-Host '[ok] Separate Windows JARVIS Full Access installed.'
 Write-Host '[next] Open a new normal PowerShell terminal.'
 Write-Host '[next] Sign in once: jarvis-full login'
-Write-Host '[next] Start with: jarvis-full'
+Write-Host '[next] Start with: jarvis-full fast | normal | deep'
 Write-Host '[info] Your normal jarvis installation is unchanged.'
