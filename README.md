@@ -127,6 +127,7 @@ Use `jarvis normal` if the selected model does not support low reasoning effort.
 - [Linux installation for Debian/Ubuntu, Fedora, Arch, openSUSE and more](docs/linux.md)
 - [Desktop environment support and MCP/Skill setup](docs/mcp-and-skills.md)
 - [High-accuracy GUI navigation: semantic controls, screenshots and zoom](docs/gui-navigation.md)
+- [Performance tuning: fast mode and fewer model/tool round trips](docs/performance.md)
 - [Windows 11 setup](docs/windows11.md)
 - [Daily usage and end-to-end testing](docs/usage.md)
 - [Security, permissions and privacy](docs/security.md)
