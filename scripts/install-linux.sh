@@ -116,6 +116,7 @@ case "${1:-}" in
     sleep 2
     systemctl --user start jarvis-codex-watch.service
     systemctl --user reset-failed jarvis-codex-test-failure.service || true
+    systemctl --user start jarvis-codex-watch.service
     echo 'Test finished. See: jarvis reports'
     ;;
   monitor)
