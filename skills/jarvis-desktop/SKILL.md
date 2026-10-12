@@ -36,3 +36,20 @@ On recurring errors, relevant local user-confirmed repair notes may be read as u
 `jarvis voice` is user-triggered push-to-talk using local faster-whisper. The approved **transcript** is sent to Codex, not the raw audio. A transcript may be inaccurate, so request separate approval for consequential actions. No wake word or continuous microphone monitoring.
 
 For details: `docs/gui-navigation.md`, `docs/usage.md` and the upstream Hypruse skill.
+
+## FAST MODE — efficient desktop operation (default)
+
+Avoid excessive screenshots, repeated reasoning and redundant verification. GUI tasks should feel responsive while preserving authorization and safety.
+
+1. **One initial observation:** call `desktop` once per task or after a meaningful structural change. Don't call it repeatedly when its state remains valid.
+2. **Prefer semantic action:** use `ui` to find a named control, then `click_ui`. If a unique control is already grounded in the current UI view, don't take a screenshot just to click it.
+3. **Batch known safe steps:** use Hypruse `sequence` for a short, deterministic series of actions once the target is identified, provided no intermediate step requires new user consent or a decision based on new output.
+4. **Use action result fusion:** use `then='ui'`, `then='desktop'` or `then='screenshot'` when supported so one call performs an action and reports its outcome.
+5. **Event-driven waits:** use `wait_for` for window/title changes rather than repeatedly capturing frames. Never poll screenshots just to see whether a dialog opened.
+6. **Screenshot only on demand:** take one window-specific screenshot when visual evidence is needed. Use `zoom` only for a small or ambiguous target. Avoid full-desktop screenshots if a window-scoped capture suffices.
+7. **Verification proportional to risk:** for reversible navigation such as opening a tab or selecting a chat, verify the final state once, rather than inspecting after each trivial movement. For sending, deleting, installing, permissions or settings changes, stop for explicit confirmation and verify each consequential effect.
+8. **Time budget:** prefer the simplest supported tool call. If the target cannot be identified after two observation attempts, explain the blocker instead of looping for minutes.
+9. **Respect MCP guards:** never treat a confinement/authentication refusal as a reason to try screenshots, alternative input methods or a shell workaround. Never bypass user confirmation.
+10. **Be concise:** report progress only when needed, summarize the result in a few sentences, and avoid long self-analysis of simple UI actions.
+
+For a straightforward user-approved task such as “open Telegram and select one chat without sending anything”, the expected pattern is: `desktop` → (focus using `hypr` if permitted) → `ui` or one window screenshot → `click_ui` or a grounded pointer click → verify selected chat once. Do not inspect unrelated applications or repeatedly capture the whole screen.
