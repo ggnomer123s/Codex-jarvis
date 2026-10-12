@@ -113,32 +113,8 @@ else
 fi
 printf '%s\n' "$BACKEND" > "$FULL_HOME/backend.txt"
 
-cat > "$BIN/jarvis-full" <<'LAUNCH'
-#!/usr/bin/env bash
-# JARVIS-CODEX MANAGED — dedicated privileged agent profile
-set -Eeuo pipefail
-if [[ "$EUID" -eq 0 ]]; then
-  echo '[error] Refusing to launch Codex Full Access as root.' >&2
-  exit 1
-fi
-export CODEX_HOME="$HOME/.local/share/jarvis-codex/full-codex-home"
-if [[ "${1:-}" == 'status' ]]; then
-  echo "Independent CODEX_HOME: $CODEX_HOME"
-  codex login status || true
-  codex mcp list
-  exit 0
-fi
-if [[ "${1:-}" == 'login' ]]; then
-  exec codex login
-fi
-if [[ $# -gt 0 ]]; then
-  echo 'Usage: jarvis-full [login|status]' >&2
-  exit 2
-fi
-printf 'JARVIS FULL ACCESS — unsandboxed Codex, no approvals. Ctrl+C to stop.\n' >&2
-exec codex --dangerously-bypass-approvals-and-sandbox \
-  'JARVIS Full Access. Focus on the user task. Use available desktop MCP, API and shell tools. Verify results. For irreversible deletion, sending messages, purchases, sharing personal data or changing security configuration, obtain explicit permission first. Do not try to bypass OS authentication.'
-LAUNCH
+# Install a standalone, syntax-tested launcher shared by all reasoning modes.
+cp "$ROOT/scripts/jarvis-full-launcher.sh" "$BIN/jarvis-full"
 chmod 755 "$BIN/jarvis-full"
 
 cat > "$FISH/jarvis-full.fish" <<'FISH'
@@ -155,5 +131,5 @@ for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
 done
 echo '[ok] Separate JARVIS Full Access profile installed.'
 echo '[next] Open a new terminal. Sign in once with: jarvis-full login'
-echo '[next] Launch with: jarvis-full'
+echo '[next] Launch with: jarvis-full fast | normal | deep'
 echo '[note] Existing jarvis and its MCP restrictions are unchanged.'
