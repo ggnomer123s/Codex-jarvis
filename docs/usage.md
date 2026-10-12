@@ -27,6 +27,15 @@ JARVIS provides a **single `jarvis` launcher** for Codex CLI with desktop-contex
 
 **Windows test:** “Use Windows-MCP to open Notepad, type `JARVIS_ONLINE` and verify with a screenshot. Do not save.”
 
+## Memory and voice
+
+- `jarvis memory add` — interactively record a user-confirmed fix; nothing is written until you type YES.
+- `jarvis memory search <keyword>` and `jarvis memory list` — inspect your private, local repair history.
+- `jarvis memory forget <id>` — delete an entry after confirming DELETE.
+- `jarvis voice` — push-to-talk mic capture, local faster-whisper speech recognition, transcript review, then YES to send text to Codex.
+
+Audio is not sent to Codex, but the accepted transcript is. Voice requires PortAudio and downloads the Whisper model on first use. Memory is not synced to ChatGPT or GitHub. Detailed steps: [Memory & Voice](memory-and-voice.md).
+
 ## Monitoring scope
 
 - Linux (with systemd --user): checks failed **user services**, roughly every two minutes, and optionally asks Codex for a read-only diagnostic report.
