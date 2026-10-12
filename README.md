@@ -68,6 +68,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-window
 # Reopen PowerShell, then: jarvis
 ```
 
+## Memory and voice input
+
+Both are opt-in and cross-platform. No always-on microphone or automatic memory capture.
+
+```sh
+jarvis voice                   # local push-to-talk Whisper transcription, confirm before sending
+jarvis memory add              # save a manually verified repair
+jarvis memory search dolphin   # search your previous confirmed fixes
+jarvis memory list             # inspect saved notes
+jarvis memory forget <id>      # delete one note (confirmation required)
+```
+
+Microphone dependencies: Linux requires a PortAudio runtime (such as `libportaudio2` or `portaudio`); Windows uses the PortAudio runtime provided with the sounddevice wheel when available. On first voice use, uv downloads dependencies and faster-whisper downloads the multilingual Whisper model. The recorded audio is processed locally and not stored on disk by this feature. **The recognized text is sent to Codex only after you type YES.**
+
+Confirmed-fix memory remains on **your own device**, not in this GitHub repository; it is read only as troubleshooting history and is never automatically populated. See the [Memory & Voice guide](docs/memory-and-voice.md).
+
 ## Commands
 
 | Command | What it does |
