@@ -1,35 +1,48 @@
-# JARVIS: руководство пользователя
+# Using JARVIS
 
-## Команды
+JARVIS provides a **single \`jarvis\` launcher** for Codex CLI with desktop-context instructions. Desktop MCPs and installed Skills are discovered in the Codex session.
 
-| Команда | Linux / Windows 11 |
-|---|---|
-| `jarvis` | Открыть Codex GUI-ассистента |
-| `jarvis status` | Показать подключенный GUI MCP, монитор |
-| `jarvis reports` | Найти сохраненные отчеты |
-| `jarvis monitor off` | Выключить фоновый watcher |
-| `jarvis monitor on` | Включить созданный watcher |
-| `jarvis test` | Только Linux: безопасный тест упавшего временного user-service |
-| `jarvis stop` | Linux: остановка Hypruse; Windows: завершение Codex через Ctrl+C |
+## Main commands
 
-## Четыре примера
+| Command | Linux | Windows 11 |
+|---|---|---|
+| \`jarvis\` | Start assistant | Start assistant |
+| \`jarvis status\` | GUI backend & monitor | Windows-MCP & monitor |
+| \`jarvis reports\` | Saved diagnostics | Saved diagnostics |
+| \`jarvis monitor on/off\` | Start/stop systemd user watcher (when available) | Toggle optional Scheduled Task |
+| \`jarvis test\` | Trigger synthetic failed user service | Not available |
+| \`jarvis stop\` | Hyprland: stops Hypruse; other desktops: exit Codex | Exit Codex with Ctrl+C or /exit |
 
-**Осмотр:** «Узнай, какие GUI MCP-инструменты доступны. Посмотри активное окно и сделай screenshot. Ничего не меняй».
+## Suggested prompts
 
-**Диагностика:** «Приложение не работает. Через GUI и безопасные средства диагностики определи симптомы. Отделяй факты от гипотез. Изменения только после моего согласия».
+**Observe only:** “Discover the configured GUI MCP. Tell me which desktop/session and application are active, and show a screenshot. Do not click or type.”
 
-**Тест Linux:** «Запусти через Hypruse новое kitty, через GUI напечатай `echo JARVIS_ONLINE`, исполни и проверь вывод по screenshot».
+**Diagnose a problem:** “My application behaves incorrectly. Observe the UI, collect non-destructive diagnostics, explain the most likely cause, and ask permission before making changes.”
 
-**Тест Windows 11:** «Через Windows-MCP открой Notepad, набери `JARVIS_ONLINE`, проверь по screenshot. Ничего не сохраняй».
+**Hyprland GUI test:** “Launch a fresh terminal with Hypruse, type \`echo JARVIS_ONLINE\` via GUI, execute it and verify the output.”
 
-## Тест полного набора
+**X11 GUI test:** Once explicitly enabled: “Open a text editor manually, then click its editable area, type \`JARVIS_ONLINE\` via jarvis-x11 and verify the result with a screenshot. Do not save.”
 
-1. Выполни `jarvis status`. MCP должен быть зарегистрирован.
-2. Выполни `jarvis`, попроси перечислить GUI-инструменты и посмотреть экран.
-3. Выполни GUI-тест с безопасным текстом. Убедись, что модель не утверждает успех без реального наблюдения.
-4. Посмотри `jarvis reports`. На Linux отдельно можно `jarvis test`. На Windows монитор **не включен**, пока не запущен installer с `-EnableMonitor`.
-5. Для проверки отключения: `jarvis monitor off`, затем при необходимости `jarvis monitor on`.
+**GNOME/KDE/general Wayland test:** “Use the GUI MCP's \`describe_environment\` first. Confirm screenshot and input availability. If a portal permission is requested, let me authorize it manually. Do not act if input is unavailable.”
 
-## Ожидания и ограничения
+**Windows test:** “Use Windows-MCP to open Notepad, type \`JARVIS_ONLINE\` and verify with a screenshot. Do not save.”
 
-Codex **не смотрит экран непрерывно**. MCP tools доступны агенту во время текущей сессии и вызываются по задаче. Watcher не равен полнофункциональному обнаружению всех неисправностей: Linux следит за failed user services, Windows (опционально) за событиями Application Error. Автопочинка без подтверждения запрещена правилами проекта, но инструкции модели не заменяют системные ограничения прав.
+## Monitoring scope
+
+- Linux (with systemd --user): checks failed **user services**, roughly every two minutes, and optionally asks Codex for a read-only diagnostic report.
+- Windows (opt in): watches **Application Error** events. It does not observe every application exception.
+- The GUI agent does not run in the background unless you have an active Codex session. Screenshots are not captured continuously by these watchers.
+- Monitoring never authorizes automatic fixes.
+
+## Troubleshooting checklist
+
+1. Run \`jarvis status\` and \`codex mcp list\`.
+2. Confirm your **actual** desktop session: \`echo "$XDG_SESSION_TYPE"\` and \`echo "$XDG_CURRENT_DESKTOP"\`.
+3. On Wayland, ask the MCP for backend capability diagnostics; check screenshot vs input independently.
+4. On X11, ensure \`xdotool\`, \`wmctrl\`, \`maim\` are installed; input is disabled until explicit opt-in.
+5. Restart Codex after changing registrations or Skills.
+6. Check reports and user journal for monitor-specific issues. Do not paste private logs/tokens into public issues.
+
+## Safety
+
+Desktop automation can read on-screen private information or cause unintended GUI changes. Observe first; ask permission before changes. Read [Security](security.md).
