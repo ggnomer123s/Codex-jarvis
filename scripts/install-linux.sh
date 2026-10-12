@@ -99,7 +99,9 @@ fi
 cat > "$BIN/jarvis-codex" <<'LAUNCH'
 #!/usr/bin/env bash
 # JARVIS-CODEX MANAGED
-exec codex --sandbox read-only --ask-for-approval on-request 'JARVIS desktop mode: discover available GUI MCP tools. Observe and diagnose before changing anything; request confirmation for changes. If the request is unclear, ask what I want investigated.'
+# Fast default: low reasoning effort reduces model thinking latency.
+# Do not send an automatic start-up task; wait for the user's request.
+exec codex --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request
 LAUNCH
 chmod 755 "$BIN/jarvis-codex"
 cat > "$BIN/jarvis" <<'ONE'
@@ -109,7 +111,11 @@ set -Eeuo pipefail
 APP="$HOME/.local/share/jarvis-codex"
 backend="$(cat "$APP/backend.txt" 2>/dev/null || echo none)"
 case "${1:-start}" in
-  start) exec "$HOME/.local/bin/jarvis-codex" ;;
+  start|fast) exec "$HOME/.local/bin/jarvis-codex" ;;
+  normal)
+    exec codex --sandbox read-only --ask-for-approval on-request ;;
+  deep)
+    exec codex --config model_reasoning_effort=medium --sandbox read-only --ask-for-approval on-request ;;
   status)
     echo "GUI MCP backend: $backend"
     [[ "$backend" == none ]] || codex mcp get "$backend"
@@ -148,7 +154,7 @@ case "${1:-start}" in
     printf '\nRecognized: %s\n' "$transcript"
     read -r -p 'Send this transcript to Codex? Type YES: ' answer
     [[ "$answer" == YES ]] || { echo 'Cancelled.'; exit 0; }
-    exec codex --sandbox read-only --ask-for-approval on-request "JARVIS dictated request (user-reviewed): $transcript. Use available GUI MCP when relevant. Observe first and ask before changes." ;;
+    exec codex --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request "JARVIS dictated request (user-reviewed): $transcript. Use available GUI MCP when relevant. Observe first and ask before changes." ;;
   stop)
     if [[ "$backend" == hypruse ]]; then exec uvx hypruse stop; fi
     echo 'End the Codex session with Ctrl+C or /exit. Other MCP servers use stdio.' ;;
@@ -171,7 +177,7 @@ case "${1:-start}" in
       off) systemctl --user disable --now jarvis-codex-watch.timer ;;
       *) echo 'Usage: jarvis monitor on|off' >&2; exit 2 ;;
     esac ;;
-  help|-h|--help) echo 'jarvis | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis test | jarvis stop' ;;
+  help|-h|--help) echo 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis test | jarvis stop' ;;
   *) echo 'Usage: jarvis help' >&2; exit 2 ;;
 esac
 ONE
