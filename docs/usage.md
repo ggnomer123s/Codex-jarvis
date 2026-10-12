@@ -14,7 +14,8 @@ These per-launch settings do not overwrite your Codex config file. Reasoning sup
 
 | Command | Linux | Windows 11 |
 |---|---|---|
-| `jarvis` | Start assistant | Start assistant |
+| `jarvis` / `jarvis fast` | Low-reasoning responsive GUI mode | Low-reasoning responsive GUI mode |
+| `jarvis normal` / `jarvis deep` | Default / medium reasoning modes | Default / medium reasoning modes |
 | `jarvis status` | GUI backend & monitor | Windows-MCP & monitor |
 | `jarvis reports` | Saved diagnostics | Saved diagnostics |
 | `jarvis gui-check` | Inspect backend, optional AT-SPI/marks helpers | Check registered Windows-MCP |
