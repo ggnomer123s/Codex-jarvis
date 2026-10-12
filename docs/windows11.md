@@ -68,7 +68,15 @@ The installer:
 jarvis
 ~~~
 
-## 4. Verify MCP, Skill and GUI
+## 4. Voice and confirmed-fix memory
+
+After installation, run `jarvis voice` in a new PowerShell window. Press Enter to start recording and again to stop; faster-whisper runs locally and shows the recognized text. Review it, then type YES to send the transcript to a Codex interactive session. The first use downloads Python packages and a Whisper model. On Windows, allow microphone access for desktop apps if necessary.
+
+`jarvis memory add` saves a user-confirmed fix to a private JSON file only after typing YES. `jarvis memory search <keyword>`, `jarvis memory list` and `jarvis memory forget <id>` allow search, review and deletion. Notes never automatically sync to GitHub or ChatGPT.
+
+For model settings, supported languages and detailed privacy constraints, see [Memory & Voice](memory-and-voice.md).
+
+## 5. Verify MCP, Skill and GUI
 
 ~~~powershell
 codex.cmd mcp list
@@ -86,7 +94,7 @@ After verifying the capability, use a harmless test:
 
 Screenshot access and input tools may be restricted by Windows desktop, security or session permissions. Review the actual tool list rather than assuming that registration equals success.
 
-## 5. Optional Windows Application Error monitoring
+## 6. Optional Windows Application Error monitoring
 
 This is **not** full screen monitoring, malware detection or a general auto-repair system. It queries recent **Application Error** Windows events and may send the event text to Codex for read-only diagnostic reports. Logs can contain private information.
 
@@ -106,7 +114,7 @@ jarvis monitor on
 
 Managed/corporate PCs may prevent creation of user tasks; normal GUI assistance does not depend on the monitor.
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 **`jarvis` is not recognized**: open a new PowerShell window. Verify `%USERPROFILE%\.local\bin\jarvis.cmd` exists and that directory is on the user PATH.
 
@@ -120,7 +128,7 @@ Managed/corporate PCs may prevent creation of user tasks; normal GUI assistance 
 
 **Emergency stop**: Ctrl+C or `/exit` in Codex. Windows-MCP is a local stdio process launched by Codex, not a network daemon.
 
-## 7. Security notes
+## 8. Security notes
 
 - Do not run JARVIS as Administrator.
 - The shell's `read-only` sandbox **does not block all GUI actions** through MCP.
