@@ -82,7 +82,8 @@ switch ($mode) {
   'full' {
     $launcher = Join-Path $env:USERPROFILE '.local\bin\jarvis-full.cmd'
     if (-not (Test-Path $launcher)) { throw 'Optional Full Access is not installed; see scripts/install-full-windows.ps1.' }
-    & $launcher
+    $fullArgs = if ($Commands.Count -gt 1) { @($Commands[1..($Commands.Count - 1)]) } else { @() }
+    & $launcher @fullArgs
     exit $LASTEXITCODE
   }
   'deep' {
@@ -126,7 +127,7 @@ switch ($mode) {
     else { throw 'Usage: jarvis monitor on|off' }
   }
   'stop' { Write-Host 'Use Ctrl+C or exit to stop Codex; Windows-MCP is a client-owned stdio server.' }
-  'help' { Write-Host 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis full | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
+  'help' { Write-Host 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis full [fast|normal|deep] | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
   default { throw "Unknown command $mode. Try: jarvis help" }
 }
 '@
