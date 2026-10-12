@@ -11,11 +11,11 @@ mcp = FastMCP("jarvis-x11")
 ALLOW_INPUT = os.getenv("JARVIS_X11_ALLOW_INPUT", "0") == "1"
 
 
-def _run(*args: str, text: bool = True):
+def _run(*args: str, text: bool = True, timeout: int = 12):
     program = args[0]
     if shutil.which(program) is None:
         raise RuntimeError(f"Missing required program: {program}")
-    result = subprocess.run(args, capture_output=True, check=False, timeout=12,
+    result = subprocess.run(args, capture_output=True, check=False, timeout=timeout,
                             text=text)
     if result.returncode:
         err = result.stderr.strip() if text else result.stderr.decode(errors="replace")
@@ -54,6 +54,45 @@ def screenshot(window_id: str = "") -> Image:
         raw = _run("maim", "-u", "-i", window_id, "-f", "png", text=False)
     else:
         raw = _run("maim", "-u", "-f", "png", text=False)
+    return Image(data=raw, format="png")
+
+
+def _validate_point(x: int, y: int) -> None:
+    if type(x) is not int or type(y) is not int:
+        raise ValueError("Coordinates must be integers")
+    if not (-32768 <= x <= 32767 and -32768 <= y <= 32767):
+        raise ValueError("Coordinates outside supported X11 desktop bounds")
+
+
+@mcp.tool()
+def screenshot_region(x: int, y: int, width: int, height: int) -> Image:
+    """Capture a bounded rectangle in global X11 screen coordinates (read-only).
+
+    Use this to zoom into an identified portion of a screen without another
+    full-screen image. Coordinates may be negative on multi-monitor layouts.
+    """
+    _validate_point(x, y)
+    if type(width) is not int or type(height) is not int:
+        raise ValueError("Region dimensions must be integers")
+    if not (1 <= width <= 4096 and 1 <= height <= 4096):
+        raise ValueError("Region dimensions must be between 1 and 4096")
+    if x + width > 32768 or y + height > 32768:
+        raise ValueError("Region exceeds supported desktop bounds")
+    geometry = f"{width}x{height}{x:+d}{y:+d}"
+    raw = _run("maim", "-u", "-g", geometry, "-f", "png", text=False)
+    return Image(data=raw, format="png")
+
+
+@mcp.tool()
+def user_select_screenshot() -> Image:
+    """Let the HUMAN draw a rectangle on the X11 desktop to capture.
+
+    Read-only operation; wait for the user's selection (Escape cancels).
+    Unlike drag(), the agent does not move the mouse or choose the bounds.
+    """
+    if not os.getenv("DISPLAY"):
+        raise RuntimeError("X11 DISPLAY is not available")
+    raw = _run("maim", "-u", "-s", "-f", "png", text=False, timeout=45)
     return Image(data=raw, format="png")
 
 
@@ -125,6 +164,43 @@ def key(key_sequence: str, window_id: str = "") -> str:
         _focus_and_verify(window_id)
     _run("xdotool", "key", "--clearmodifiers", key_sequence)
     return "Shortcut delivered; confirm effect in window controls or screenshot."
+
+
+@mcp.tool()
+def drag(x1: int, y1: int, x2: int, y2: int,
+         button: int = 1, steps: int = 12, window_id: str = "") -> str:
+    """Hold and drag the mouse between global screen points.
+
+    Useful for drawing a selection rectangle in editors, selecting timeline
+    clips, or dragging UI objects. Does not capture a screenshot.
+    Explicit coordinates must come from a recent observation. The button
+    is released even when a motion call fails. GUI input opt-in is required.
+    """
+    _require_input()
+    _validate_point(x1, y1)
+    _validate_point(x2, y2)
+    if button not in (1, 2, 3):
+        raise ValueError("button must be 1, 2 or 3")
+    if type(steps) is not int or not (1 <= steps <= 40):
+        raise ValueError("steps must be between 1 and 40")
+    if (x1, y1) == (x2, y2):
+        raise ValueError("Drag start and end must differ")
+    if window_id:
+        _focus_and_verify(window_id)
+    _run("xdotool", "mousemove", str(x1), str(y1))
+    pressed = False
+    try:
+        _run("xdotool", "mousedown", str(button))
+        pressed = True
+        for index in range(1, steps + 1):
+            x = round(x1 + (x2 - x1) * index / steps)
+            y = round(y1 + (y2 - y1) * index / steps)
+            _run("xdotool", "mousemove", str(x), str(y))
+            time.sleep(0.012)
+    finally:
+        if pressed:
+            _run("xdotool", "mouseup", str(button))
+    return "Drag completed; inspect the resulting selection in the target app."
 
 
 @mcp.tool()
