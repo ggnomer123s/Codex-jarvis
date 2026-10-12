@@ -73,8 +73,17 @@ if (-not $c) { throw 'Codex CLI not found' }
 $mode = if ($Commands.Count) { $Commands[0] } else { 'start' }
 $state = Join-Path $env:LOCALAPPDATA 'jarvis-codex'
 switch ($mode) {
-  'start' {
-    & $c.Source --sandbox read-only --ask-for-approval on-request 'JARVIS mode: discover GUI MCP tools, inspect the Windows desktop, diagnose first, ask before changes. Ask what I want fixed if unclear.'
+  { $_ -in @('start','fast') } {
+    # No automatic startup prompt; show the interactive Codex UI immediately.
+    & $c.Source --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request
+    exit $LASTEXITCODE
+  }
+  'normal' {
+    & $c.Source --sandbox read-only --ask-for-approval on-request
+    exit $LASTEXITCODE
+  }
+  'deep' {
+    & $c.Source --config model_reasoning_effort=medium --sandbox read-only --ask-for-approval on-request
     exit $LASTEXITCODE
   }
   'status' {
@@ -104,7 +113,7 @@ switch ($mode) {
     if ($LASTEXITCODE -ne 0 -or -not $transcript) { throw 'Recording/transcription cancelled or failed.' }
     Write-Host "Recognized: $transcript"
     if ((Read-Host 'Send this transcript to Codex? Type YES') -cne 'YES') { Write-Host 'Cancelled.'; return }
-    & $c.Source --sandbox read-only --ask-for-approval on-request "JARVIS dictated request (user-reviewed): $transcript. Use GUI MCP when relevant; observe first and ask before changes."
+    & $c.Source --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request "JARVIS dictated request (user-reviewed): $transcript. Use GUI MCP when relevant; observe first and ask before changes."
     exit $LASTEXITCODE
   }
   'monitor' {
@@ -114,7 +123,7 @@ switch ($mode) {
     else { throw 'Usage: jarvis monitor on|off' }
   }
   'stop' { Write-Host 'Use Ctrl+C or exit to stop Codex; Windows-MCP is a client-owned stdio server.' }
-  'help' { Write-Host 'jarvis | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
+  'help' { Write-Host 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
   default { throw "Unknown command $mode. Try: jarvis help" }
 }
 '@
