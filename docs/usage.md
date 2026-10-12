@@ -53,6 +53,14 @@ Audio is not sent to Codex, but the accepted transcript is. Voice requires PortA
 5. Restart Codex after changing registrations or Skills.
 6. Check reports and user journal for monitor-specific issues. Do not paste private logs/tokens into public issues.
 
+## Accurate GUI navigation
+
+Run `jarvis gui-check` before the first full GUI test. On Hyprland the assistant should start with `desktop`, then prefer `ui` / `click_ui` or `marks`; when accessibility isn't available, use `screenshot` + `zoom` before `pointer`. After acting, use `then='ui'`, `then='desktop'` or `then='screenshot'` (when supported) to verify the outcome. These tools are not guaranteed on all backends.
+
+Hypruse normal cursor movements are immediate, not animated. Built-in dragging already interpolates; avoid bypassing the MCP's guardrails solely for visual smoothing.
+
+See [GUI Navigation](gui-navigation.md) for exact workflow and compositor limitations.
+
 ## Safety
 
 Desktop automation can read on-screen private information or cause unintended GUI changes. Observe first; ask permission before changes. Read [Security](security.md).
