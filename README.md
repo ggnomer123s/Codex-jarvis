@@ -119,6 +119,14 @@ Advanced operators can install a **separate**, opt-in Codex profile with its own
 
 They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full` or `jarvis full`. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
 
+## Intent-driven desktop automation and selecting regions
+
+JARVIS now explicitly routes requests that describe visible app interaction to the available GUI MCP tools: opening windows, choosing playlists, switching tabs, dragging or selecting content in file managers, browsers and creative editors. For batch file processing and development it can still use deterministic native APIs and shell tools. This behavior is guided by the installed [Desktop Skill](skills/jarvis-desktop/SKILL.md) and versioned managed agent rules.
+
+**Two meanings of region selection:** `drag` changes a selection inside an application; `screenshot_region` (or Hypruse `screenshot(region=...)`) captures pixels without touching the app. Linux X11 additionally has `user_select_screenshot` so the person can draw a capture rectangle. Hypruse and Windows-MCP already supply native pointer drags and region screenshots, so no duplicate pointer backend is installed on those systems.
+
+Read [GUI Operator](docs/gui-operator.md) for platform examples and the design comparison with Microsoft UFO, Agent-S, E2B Desktop and Windows-MCP.
+
 ## Commands
 
 | Command | What it does |
@@ -139,6 +147,7 @@ They require a one-time typed warning acknowledgement. After installation, use `
 - [Linux installation for Debian/Ubuntu, Fedora, Arch, openSUSE and more](docs/linux.md)
 - [Desktop environment support and MCP/Skill setup](docs/mcp-and-skills.md)
 - [High-accuracy GUI navigation: semantic controls, screenshots and zoom](docs/gui-navigation.md)
+- [Intent-driven GUI Operator and drag/region selection](docs/gui-operator.md)
 - [Keyboard shortcuts on Hyprland, Linux X11 and Windows](docs/shortcuts.md)
 - [Optional separate Full Access profile](docs/full-access.md)
 - [Performance tuning: fast mode and fewer model/tool round trips](docs/performance.md)
