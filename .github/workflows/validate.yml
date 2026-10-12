@@ -1,0 +1,26 @@
+name: Static checks
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Bash syntax
+        run: bash -n scripts/install-linux.sh scripts/watch-linux.sh
+      - name: Check Python syntax
+        run: python3 -m py_compile scripts/x11_mcp.py
+      - name: Check English documentation and managed scripts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          paths = [Path("README.md"), *Path("docs").glob("*.md"),
+                   *Path("skills").rglob("*.md"), *Path("scripts").glob("*.sh"),
+                   *Path("scripts").glob("*.ps1"), *Path("scripts").glob("*.py")]
+          for path in paths:
+              text = path.read_text(encoding="utf-8")
+              assert not any("\u0400" <= c <= "\u052f" for c in text), f"Unexpected Cyrillic text: {path}"
+          print("Documentation and scripts: English only")
+          PY
