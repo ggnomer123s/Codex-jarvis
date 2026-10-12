@@ -9,6 +9,7 @@ JARVIS provides a **single `jarvis` launcher** for Codex CLI with desktop-contex
 | `jarvis` | Start assistant | Start assistant |
 | `jarvis status` | GUI backend & monitor | Windows-MCP & monitor |
 | `jarvis reports` | Saved diagnostics | Saved diagnostics |
+| `jarvis gui-check` | Inspect backend, optional AT-SPI/marks helpers | Check registered Windows-MCP |
 | `jarvis monitor on/off` | Start/stop systemd user watcher (when available) | Toggle optional Scheduled Task |
 | `jarvis test` | Trigger synthetic failed user service | Not available |
 | `jarvis stop` | Hyprland: stops Hypruse; other desktops: exit Codex | Exit Codex with Ctrl+C or /exit |
