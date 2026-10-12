@@ -81,3 +81,22 @@ Only after that succeeds:
 - If focus or a window's position changes unexpectedly, re-read the desktop state.
 - Never infer success from a successful click delivery alone: inspect actual postconditions.
 - After two failures, stop and explain the evidence instead of repeating clicks.
+
+## FAST MODE: fewer screenshots, quicker UI decisions
+
+JARVIS ships with an updated `jarvis-desktop` Skill that favors **semantic-first, event-driven navigation**.
+
+For simple reversible actions:
+1. Query `desktop` once to identify the window and workspace.
+2. Use `ui` + `click_ui` if the element is accessible; otherwise make **one window-specific screenshot**, then `zoom` only if the target is small or ambiguous.
+3. Prefer `sequence` for a few already-grounded safe actions.
+4. Check the **final state once** using `then='ui'` or `then='desktop'`. Use `wait_for` for delayed changes.
+5. Stop after two unsuccessful observation attempts instead of capturing the screen repeatedly.
+
+**Do not trade away safety to gain speed.** An authorization/confinement refusal is final; messaging, deletion, purchases, privilege changes and editing sensitive state still require explicit confirmation.
+
+### Example
+
+> Fast mode. Open the already permitted Telegram window, choose one visible chat and stop. Do not send anything. Use desktop + accessibility UI before screenshots, avoid repeated screen captures, and verify selection once. If confinement refuses, stop and report it.
+
+The actual speed also depends on network latency, model reasoning effort and whether the application exposes AT-SPI controls. This Skill changes agent behavior; it does not make the MCP server itself faster or guarantee a fixed latency.
