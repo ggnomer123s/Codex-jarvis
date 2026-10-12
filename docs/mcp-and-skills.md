@@ -31,7 +31,7 @@ codex mcp add hypruse --env HYPRUSE_CONFINE=launched --env HYPRUSE_STRICT=1 --en
 
 ## X11
 
-The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `screenshot`, `focus_window`, `click`, `key`, `type_text` and `scroll`.
+The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `screenshot`, `screenshot_region`, `user_select_screenshot`, `focus_window`, `click`, `drag`, `key`, `type_text` and `scroll`. `drag` (application selection or moving objects) requires explicit GUI-input opt-in; `screenshot_region` is read-only; `user_select_screenshot` waits for the human to draw a capture rectangle. The X11 drag always attempts to release its button, even after a failed movement.
 
 ~~~sh
 codex mcp get jarvis-x11
@@ -95,7 +95,7 @@ This targets the **real desktop**; use virtual mode for isolated tests when appr
 
 The installer copies `skills/jarvis-desktop/SKILL.md` to `~/.agents/skills/jarvis-desktop/SKILL.md`. On Windows, the analogous path is under `%USERPROFILE%`.
 
-It also appends a managed block to `~/.codex/AGENTS.md`, preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill describes the observe → diagnose → confirm → act → verify workflow.
+It also appends a managed block to `~/.codex/AGENTS.md`, preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill now routes requests involving real app interactions to the GUI backend automatically, including drag selection and region screenshots. For exact workflows, see [GUI Operator](gui-operator.md). The managed `AGENTS.md` block is refreshed safely on reinstall, preserving personal instructions.
 
 Open a **fresh Codex session** after changing MCPs or Skills:
 
