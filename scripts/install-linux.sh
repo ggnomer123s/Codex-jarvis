@@ -68,6 +68,8 @@ fi
 printf '%s\n' "$SERVER" > "$APP/backend.txt"
 cp "$ROOT/scripts/jarvis_memory.py" "$APP/memory.py"
 cp "$ROOT/scripts/jarvis_voice.py" "$APP/voice.py"
+cp "$ROOT/scripts/hypruse-access.sh" "$APP/hypruse-access.sh"
+chmod 755 "$APP/hypruse-access.sh"
 
 if [[ -f "$ROOT/skills/jarvis-desktop/SKILL.md" ]]; then
   mkdir -p "$HOME/.agents/skills/jarvis-desktop"
