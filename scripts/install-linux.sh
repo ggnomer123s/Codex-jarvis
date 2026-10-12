@@ -114,7 +114,8 @@ case "${1:-start}" in
       echo 'Optional Full Access is not installed; see scripts/install-full-linux.sh.' >&2
       exit 1
     fi
-    exec "$HOME/.local/bin/jarvis-full" ;;
+    shift
+    exec "$HOME/.local/bin/jarvis-full" "$@" ;;
   access)
     if [[ "$backend" != hypruse ]]; then
       echo 'Hypruse access profiles require a Hyprland session.' >&2
@@ -183,7 +184,7 @@ case "${1:-start}" in
       off) systemctl --user disable --now jarvis-codex-watch.timer ;;
       *) echo 'Usage: jarvis monitor on|off' >&2; exit 2 ;;
     esac ;;
-  help|-h|--help) echo 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis full | jarvis access status|all|restricted|allow|telegram | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis test | jarvis stop' ;;
+  help|-h|--help) echo 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis full [fast|normal|deep] | jarvis access status|all|restricted|allow|telegram | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis test | jarvis stop' ;;
   *) echo 'Usage: jarvis help' >&2; exit 2 ;;
 esac
 ONE
