@@ -85,6 +85,12 @@ switch ($mode) {
   'reports' {
     Get-ChildItem (Join-Path $state 'reports') -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object LastWriteTime,Name
   }
+  'gui-check' {
+    Write-Host 'JARVIS Windows desktop diagnostics'
+    & $c.Source mcp get windows-mcp
+    Write-Host 'Windows-MCP availability depends on UI Automation access and application support.'
+    Write-Host 'For an end-to-end accuracy test, follow docs/gui-navigation.md.'
+  }
   'memory' {
     $uv = Get-Command uv.exe -ErrorAction Stop
     $argsToPass = if ($Commands.Count -gt 1) { $Commands[1..($Commands.Count - 1)] } else { @('--help') }
@@ -108,7 +114,7 @@ switch ($mode) {
     else { throw 'Usage: jarvis monitor on|off' }
   }
   'stop' { Write-Host 'Use Ctrl+C or exit to stop Codex; Windows-MCP is a client-owned stdio server.' }
-  'help' { Write-Host 'jarvis | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
+  'help' { Write-Host 'jarvis | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
   default { throw "Unknown command $mode. Try: jarvis help" }
 }
 '@
