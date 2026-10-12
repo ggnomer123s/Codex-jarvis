@@ -90,6 +90,7 @@ Confirmed-fix memory remains on **your own device**, not in this GitHub reposito
 |---|---|
 | `jarvis` | Start Codex with desktop troubleshooting instructions |
 | `jarvis status` | Show configured GUI MCP and monitoring status |
+| `jarvis gui-check` | Check GUI backend and navigation prerequisites |
 | `jarvis reports` | List diagnostic reports |
 | `jarvis monitor on` / `jarvis monitor off` | Enable/disable an installed watcher |
 | `jarvis test` | Linux: simulate a failed **systemd user** service |
