@@ -104,7 +104,8 @@ The default `jarvis` launcher now favors responsive desktop actions: it sets **C
 jarvis           # Fast default
 jarvis fast      # Explicit fast mode
 jarvis normal    # Your normal Codex reasoning setting
-jarvis deep      # Medium reasoning for difficult problems
+jarvis deep      # High reasoning for debugging, coding, long editing tasks
+jarvis full      # Optional, separately installed Full Access profile
 ```
 
 Use `jarvis normal` if the selected model does not support low reasoning effort. Speed varies with model/MCP approvals, accessibility and application behavior. Read [Performance tuning](docs/performance.md).
@@ -116,14 +117,16 @@ Advanced operators can install a **separate**, opt-in Codex profile with its own
 - Linux: `bash scripts/install-full-linux.sh`
 - Windows 11: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1`
 
-They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full`. This profile is **unsafe for sensitive computers**, since it disables Codex's normal shell sandbox and approval prompts. OS authentication and privilege boundaries are unchanged.
+They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full` or `jarvis full`. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `jarvis` / `jarvis fast` | Start Codex with low reasoning effort; no automatic inspection task |
-| `jarvis normal` / `jarvis deep` | Default reasoning / medium reasoning for complex troubleshooting |
+| `jarvis normal` / `jarvis deep` | Model's configured default / high reasoning for complex tasks |
+| `jarvis full` | Start the separately installed Full Access profile (requires separate opt-in) |
+| `jarvis access status` / `jarvis access all` | Hyprland-only: inspect or change Hypruse window permissions with confirmation |
 | `jarvis status` | Show configured GUI MCP and monitoring status |
 | `jarvis gui-check` | Check GUI backend and navigation prerequisites |
 | `jarvis reports` | List diagnostic reports |
@@ -136,6 +139,8 @@ They require a one-time typed warning acknowledgement. After installation, use `
 - [Linux installation for Debian/Ubuntu, Fedora, Arch, openSUSE and more](docs/linux.md)
 - [Desktop environment support and MCP/Skill setup](docs/mcp-and-skills.md)
 - [High-accuracy GUI navigation: semantic controls, screenshots and zoom](docs/gui-navigation.md)
+- [Keyboard shortcuts on Hyprland, Linux X11 and Windows](docs/shortcuts.md)
+- [Optional separate Full Access profile](docs/full-access.md)
 - [Performance tuning: fast mode and fewer model/tool round trips](docs/performance.md)
 - [Windows 11 setup](docs/windows11.md)
 - [Daily usage and end-to-end testing](docs/usage.md)
