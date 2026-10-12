@@ -1,105 +1,131 @@
-# Установка на Windows 11 (полный гайд)
+# Windows 11 installation guide
 
-**Работаем в обычном PowerShell на Windows, не внутри WSL.** Hypruse предназначен для Hyprland, поэтому здесь применяется [Windows-MCP](https://github.com/CursorTouch/Windows-MCP), который использует Windows UI Automation и screenshot/click/keyboard tools.
+This guide configures **Codex CLI + Windows-MCP + JARVIS Skill + one-command launcher** on native Windows 11. It does **not** use WSL, Hypruse, or Linux display protocols.
 
-## 1. Подготовка Windows
+> Windows support is currently **not hardware-tested by this repository**. It integrates the independently maintained [Windows-MCP](https://github.com/CursorTouch/Windows-MCP). Check upstream compatibility and permissions.
 
-Открой Windows Terminal → PowerShell (без «Запуск от администратора»). Если WinGet не установлен — поставь Microsoft App Installer. Затем:
+## 1. Prepare Windows Terminal / PowerShell
 
-```powershell
+Open a normal, non-administrator PowerShell window. Install Microsoft App Installer if WinGet is unavailable.
+
+Install required tools:
+
+~~~powershell
 winget install -e --id Git.Git
 winget install -e --id OpenJS.NodeJS.LTS
 winget install -e --id astral-sh.uv
-```
+~~~
 
-**Перезапусти** PowerShell, чтобы обновился PATH. Проверка:
+**Close and reopen PowerShell** so the PATH is refreshed.
 
-```powershell
+Verify:
+
+~~~powershell
 git --version
 node --version
 npm.cmd --version
 uvx --version
-```
+~~~
 
-Codex CLI:
+If any command is missing, check its official installation instructions and the PATH environment variable.
 
-```powershell
+## 2. Install and sign in to Codex CLI
+
+~~~powershell
 npm.cmd install -g @openai/codex
 codex.cmd --version
 codex.cmd
-```
+~~~
 
-Войди через поддерживаемый ChatGPT-способ или другой предлагаемый способ. Отдельный API key не обязателен, если используешь поддерживаемый вход через ChatGPT.
+Follow the authentication flow offered by Codex. Supported ChatGPT sign-in can be used without manually creating a separate OpenAI API key.
 
-**Ошибка `codex.ps1` заблокирован Execution Policy:** PowerShell иногда находит npm wrapper `codex.ps1`. Используй **`codex.cmd`**, не меняй системную Execution Policy. В JARVIS скрипт также выбирает исполняемый `.exe` или `.cmd`.
+### Windows PowerShell: blocked codex.ps1
 
-## 2. Установи JARVIS
+If invoking `codex` produces an error like `codex.ps1 cannot be loaded because running scripts is disabled`, use **`codex.cmd`**. You do **not** need to globally weaken PowerShell Execution Policy.
 
-```powershell
+JARVIS uses `jarvis.cmd` to avoid this common problem.
+
+## 3. Install JARVIS
+
+~~~powershell
 git clone https://github.com/ggnomer123s/Codex-jarvis.git
 cd Codex-jarvis
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
-```
+~~~
 
-Здесь `ExecutionPolicy Bypass` действует только для **дочернего процесса**, а не всей ОС. Изучи скрипт перед запуском.
+The `ExecutionPolicy Bypass` flag applies to this one **child PowerShell process**; it does not permanently change the machine's policy. Inspect the script before executing.
 
-Установщик:
-1. Сохраняет уже настроенный `windows-mcp`, если он есть; иначе добавляет `codex mcp add windows-mcp -- uvx windows-mcp serve` с ограничением PowerShell/Registry/Process/FileSystem/Clipboard tools.
-2. Создаёт `%USERPROFILE%\.local\bin\jarvis.cmd` и `jarvis.ps1`, добавляет каталог к User PATH.
-3. Добавляет правила в `%USERPROFILE%\.codex\AGENTS.md` с резервной копией старых правил.
-4. Копирует `skills/jarvis-desktop/SKILL.md` в `%USERPROFILE%\.agents\skills\jarvis-desktop`.
-5. По умолчанию **не включает** фоновый мониторинг событий.
+The installer:
+1. Preserves an existing `windows-mcp` Codex registration. If none exists, it registers [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) using `uvx windows-mcp serve`, excluding the extra `PowerShell`, `Registry`, `Process`, `FileSystem` and `Clipboard` MCP tool categories.
+2. Installs `%USERPROFILE%\.local\bin\jarvis.cmd` and `jarvis.ps1`, adding the directory to the user PATH.
+3. Adds desktop safety instructions to `%USERPROFILE%\.codex\AGENTS.md`, backing up any previously existing instructions.
+4. Copies `skills/jarvis-desktop/SKILL.md` to `%USERPROFILE%\.agents\skills\jarvis-desktop`.
+5. Leaves background monitoring **disabled** by default.
 
-**Закрой и заново открой PowerShell**, затем:
+**Close and reopen PowerShell**. Launch:
 
-```powershell
+~~~powershell
 jarvis
-```
+~~~
 
-## 3. MCP диагностика
+## 4. Verify MCP, Skill and GUI
 
-```powershell
+~~~powershell
 codex.cmd mcp list
 codex.cmd mcp get windows-mcp
 jarvis status
-```
+~~~
 
-Внутри Codex отправь: «Самостоятельно найди GUI MCP, прочитай активное окно и сделай screenshot. Открой Notepad, через GUI введи JARVIS_ONLINE, проверь текст. Не сохраняй файлы и ничего не меняй».
+Start `jarvis` and ask:
 
-Windows-MCP при первом старте может подгружать Python-зависимости; в upstream указано Python 3.13+. Если `uvx windows-mcp serve` падает, сперва проверь `uvx windows-mcp serve --help`, версию Python и полный путь к `uvx.exe`. Не пытайся запускать Windows-MCP из Linux/WSL для native desktop.
+> Discover installed GUI MCP tools. Identify the active window and take a screenshot without making changes.
 
-## 4. Опциональный автоматический монитор
+After verifying the capability, use a harmless test:
 
-Монитор отслеживает **только Windows Application Error события**, а не вообще все сбои приложений, драйверов и ядра. Запускать его стоит лишь когда тебя устраивает отправка части данных Event Log в Codex для AI-анализа.
+> Use Windows-MCP to open Notepad, type JARVIS_ONLINE, verify the text with another screenshot, and do not save files or change settings.
 
-```powershell
-# В каталоге Codex-jarvis:
+Screenshot access and input tools may be restricted by Windows desktop, security or session permissions. Review the actual tool list rather than assuming that registration equals success.
+
+## 5. Optional Windows Application Error monitoring
+
+This is **not** full screen monitoring, malware detection or a general auto-repair system. It queries recent **Application Error** Windows events and may send the event text to Codex for read-only diagnostic reports. Logs can contain private information.
+
+To explicitly enable the monitoring Scheduled Task, rerun the installer from your cloned project directory:
+
+~~~powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1 -EnableMonitor
-```
+~~~
 
-Появится пользовательская Scheduled Task `JARVIS-Codex-Watch`, опрашивающая Application Error раз в 5 минут. Отчёты хранятся в `%LOCALAPPDATA%\jarvis-codex\reports`. Это **read-only диагностика**, не auto-fix.
+The task `JARVIS-Codex-Watch` polls roughly every five minutes. Reports are written to `%LOCALAPPDATA%\jarvis-codex\reports`.
 
-```powershell
+~~~powershell
 jarvis reports
 jarvis monitor off
 jarvis monitor on
-```
+~~~
 
-На некоторых корпоративных Windows создание Scheduled Task может быть запрещено — GUI-ассистент от этого не ломается.
-
-## 5. Настройка и безопасность
-
-Новый MCP сервер запускается локально по **stdio** — сетевой порт для него не нужен. Для базовой безопасности установщик исключает Windows-MCP tools `PowerShell,Registry,Process,FileSystem,Clipboard`. Однако через мышь/клавиатуру агент всё ещё может менять состояние приложения: `--sandbox read-only` в Codex контролирует shell, но не гарантирует запрет GUI-кликов. Не запускай от администратора и не вводи через агента пароли.
-
-Проверь перечень исключений в `codex mcp get windows-mcp`. Существующее подключение не переписывается автоматически.
+Managed/corporate PCs may prevent creation of user tasks; normal GUI assistance does not depend on the monitor.
 
 ## 6. Troubleshooting
 
-- `jarvis : term is not recognized` — открой новый PowerShell, проверь `%USERPROFILE%\.local\bin\jarvis.cmd` и User PATH.
-- `codex.ps1 cannot be loaded` — пользуйся `codex.cmd`.
-- `Connection closed` — `codex.cmd mcp get windows-mcp`, `uvx windows-mcp serve --help`, проверь PATH и Python 3.13+; иногда помогает полный путь к `uvx.exe`.
-- Skill не найден — открой новую сессию Codex; проверь файл `%USERPROFILE%\.agents\skills\jarvis-desktop\SKILL.md`.
-- Ничего не кликает — проверь доступность Windows UI Automation, ограничения пользователя и MCP permissions. **Не отключай UAC и антивирус**.
-- Аварийная остановка GUI: Ctrl+C в Codex, затем завершение сессии. Windows-MCP — stdio subprocess Codex, не отдельный фоновый сетевой сервер.
+**`jarvis` is not recognized**: open a new PowerShell window. Verify `%USERPROFILE%\.local\bin\jarvis.cmd` exists and that directory is on the user PATH.
 
-Upstream: [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) · [Codex CLI](https://github.com/openai/codex) · [uv](https://docs.astral.sh/uv/getting-started/installation/).
+**`codex.ps1` is blocked**: use `codex.cmd`. Do not globally set the PowerShell Execution Policy to `Unrestricted`.
+
+**MCP server disconnects**: inspect `codex.cmd mcp get windows-mcp`, verify `uvx --version`, and check upstream Windows-MCP requirements. Python installation and environment paths may be required by the upstream project.
+
+**MCP registered but cannot click**: check permissions, tool exclusions and Windows UI Automation support. Do not disable Windows Defender or User Account Control (UAC) to bypass the problem.
+
+**Skill missing**: start a new Codex session, inspect `%USERPROFILE%\.agents\skills\jarvis-desktop\SKILL.md` and `/skills`.
+
+**Emergency stop**: Ctrl+C or `/exit` in Codex. Windows-MCP is a local stdio process launched by Codex, not a network daemon.
+
+## 7. Security notes
+
+- Do not run JARVIS as Administrator.
+- The shell's `read-only` sandbox **does not block all GUI actions** through MCP.
+- A screen capture may contain confidential material; hide private windows before the test.
+- Obtain human confirmation before state-changing input, upgrades, process termination or file edits.
+- Avoid pasting Windows event logs into public GitHub issues without removing secrets.
+
+Further reading: [MCP & Skills](mcp-and-skills.md) · [Usage](usage.md) · [Security](security.md) · [Upstream Windows-MCP](https://github.com/CursorTouch/Windows-MCP).
