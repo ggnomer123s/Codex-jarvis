@@ -106,7 +106,7 @@ cat > "$BIN/jarvis" <<'ONE'
 # JARVIS-CODEX MANAGED
 set -Eeuo pipefail
 BIN="$HOME/.local/bin"
-case "$1" in
+case "${1:-}" in
   ""|start) exec "$BIN/jarvis-codex" ;;
   status) codex mcp get hypruse; systemctl --user status jarvis-codex-watch.timer --no-pager ;;
   reports) ls -lt "$HOME/.local/state/jarvis-codex/reports" ;;
@@ -119,7 +119,7 @@ case "$1" in
     echo 'Test finished. See: jarvis reports'
     ;;
   monitor)
-    case "$2" in
+    case "${2:-}" in
       on) systemctl --user enable --now jarvis-codex-watch.timer ;;
       off) systemctl --user disable --now jarvis-codex-watch.timer ;;
       *) echo 'Usage: jarvis monitor on|off' >&2; exit 2 ;;
