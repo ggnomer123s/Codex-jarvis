@@ -69,6 +69,21 @@ If unsure, stop and ask the user.
 AGENTS
 fi
 
+# A dedicated copy lets Full Access use the desktop workflow without
+# rewriting the normal user's JARVIS Skill.
+if [[ -f "$ROOT/skills/jarvis-desktop/SKILL.md" ]]; then
+  mkdir -p "$FULL_HOME/skills/jarvis-desktop"
+  cp "$ROOT/skills/jarvis-desktop/SKILL.md" "$FULL_HOME/skills/jarvis-desktop/SKILL.md"
+  cat >> "$FULL_HOME/skills/jarvis-desktop/SKILL.md" <<'FULL_SCOPE'
+
+## Dedicated Full Access profile
+In this profile, routine, reversible changes clearly included in the user's
+requested task are authorized without repeated confirmations. Continue to ask
+before sending private data, irreversible deletion, payments, entering secrets,
+or changing security settings. No OS privilege escalation is authorized.
+FULL_SCOPE
+fi
+
 export CODEX_HOME="$FULL_HOME"
 BACKEND='none'
 if [[ "$SESSION" == 'wayland' ]] && { [[ "$DESKTOP" == *Hyprland* ]] || [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; }; then
