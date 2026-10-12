@@ -146,7 +146,17 @@ A configured Wayland MCP is **not proof that GUI control works**. The upstream g
 
 **PyGObject note:** `uvx` uses an isolated Python environment, so it may not see your distro's `python3-gi` package. If portal calls are missing, check [the advanced MCP guide](mcp-and-skills.md) for a `uv venv --system-site-packages` configuration. Never make input devices world-writable.
 
-## 5. Verify and troubleshoot
+## 5. Optional voice and memory
+
+`jarvis voice` records only when you press Enter. It transcribes audio locally using the multilingual Whisper **base** model and asks for explicit YES before forwarding the text to Codex.
+
+Install the OS PortAudio runtime first: Debian/Ubuntu: `sudo apt install libportaudio2`, Fedora: `sudo dnf install portaudio`, Arch-based: `sudo pacman -S --needed portaudio`. See the openSUSE-specific package search in [Memory & Voice](memory-and-voice.md).
+
+`jarvis memory add`, `jarvis memory search <keyword>` and `jarvis memory forget <id>` manage manually confirmed solutions without cloud syncing or auto-learning. The installer does not import older conversations into memory.
+
+See [Memory & Voice](memory-and-voice.md) for first-run downloads, privacy and microphone troubleshooting.
+
+## 6. Verify and troubleshoot
 
 ~~~sh
 jarvis status
@@ -179,7 +189,7 @@ jarvis test
 
 The installed script is `~/.local/bin/jarvis`. Fish gets `~/.config/fish/functions/jarvis.fish`. For Bash or Zsh ensure `~/.local/bin` is in PATH (the installer adds a managed PATH line to your interactive shell configuration when needed).
 
-## 6. Safety
+## 7. Safety
 
 Screenshot and log content may include private data. All desktop MCPs are third-party programs with powerful local access. On X11 any sufficiently privileged client can typically observe and inject input across windows, so the opt-in input mode is particularly sensitive. On Wayland, portals mediate permissions differently by compositor.
 
