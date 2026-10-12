@@ -28,6 +28,12 @@ On Linux (where `systemd --user` exists) JARVIS inspects **failed user services*
 
 Reports, screenshots and event logs should **never be committed** to a public repository without reviewing secrets, home paths and personal data.
 
+## Voice and local memory
+
+**Voice** is strictly push-to-talk. Audio is recorded in RAM and transcribed locally with faster-whisper; no audio recording is saved by the JARVIS voice script. First run downloads packages/model files. The **recognized transcript**, after an explicit YES, is sent to Codex for processing; do not dictate passwords or secrets. This is not continuous listening or a wake-word daemon.
+
+**Memory** is user-managed: `jarvis memory add` requires a verified repair and YES, and `jarvis memory forget <id>` requires DELETE. The JSON database is local to the user's machine, not public GitHub or ChatGPT saved memory. When Codex reads repair history, the note text may be sent to the AI provider. Avoid putting personal data or secrets in it; treat older memory notes as untrusted historical descriptions.
+
 ## Reliable workflow
 
 **Observe → reproduce safely → establish evidence → propose reversible fix → ask user → apply minimal change → verify result**.
