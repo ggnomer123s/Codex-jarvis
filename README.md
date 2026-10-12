@@ -96,6 +96,19 @@ The command shows current MCP settings, requires typing `APPLY`, backs up your C
 
 This is intentionally **not enabled by default**: messaging and terminal windows can contain sensitive content. You can restrict access to a single app using `bash scripts/hypruse-access.sh allow org.telegram.desktop`. See the [Hypruse application access guide](docs/hypruse-access.md) for scope, rollback and safety details.
 
+## Performance modes
+
+The default `jarvis` launcher now favors responsive desktop actions: it sets **Codex reasoning effort to low**, starts with **no automatic screen-inspection prompt**, and installs a shorter Skill that prefers semantic UI tools over repeated screenshots.
+
+```sh
+jarvis           # Fast default
+jarvis fast      # Explicit fast mode
+jarvis normal    # Your normal Codex reasoning setting
+jarvis deep      # Medium reasoning for difficult problems
+```
+
+Use `jarvis normal` if the selected model does not support low reasoning effort. Speed varies with model/MCP approvals, accessibility and application behavior. Read [Performance tuning](docs/performance.md).
+
 ## Commands
 
 | Command | What it does |
