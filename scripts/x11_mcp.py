@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from mcp.server.fastmcp import FastMCP, Image
 
 mcp = FastMCP("jarvis-x11")
@@ -46,9 +47,13 @@ def windows() -> str:
 
 
 @mcp.tool()
-def screenshot() -> Image:
-    """Capture the current X11 desktop as an image. May include sensitive information."""
-    raw = _run("maim", "-u", "-f", "png", text=False)
+def screenshot(window_id: str = "") -> Image:
+    """Capture one X11 window when identified; otherwise the entire desktop."""
+    if window_id:
+        _validate_window_id(window_id)
+        raw = _run("maim", "-u", "-i", window_id, "-f", "png", text=False)
+    else:
+        raw = _run("maim", "-u", "-f", "png", text=False)
     return Image(data=raw, format="png")
 
 
@@ -58,21 +63,39 @@ def active_window() -> str:
     return _run("xdotool", "getactivewindow", "getwindowname")[:1000]
 
 
+def _validate_window_id(window_id: str) -> None:
+    if not re.fullmatch(r"0x[0-9a-fA-F]{1,16}", window_id):
+        raise ValueError("Expected an X11 window ID, e.g. 0x03400001")
+
+
+def _focus_and_verify(window_id: str) -> None:
+    """Avoid typing into whichever app happens to be focused."""
+    _validate_window_id(window_id)
+    _run("wmctrl", "-ia", window_id)
+    for _ in range(6):
+        try:
+            active = _run("xdotool", "getactivewindow").strip()
+            if active.isdecimal() and int(active) == int(window_id, 16):
+                return
+        except RuntimeError:
+            pass
+        time.sleep(0.05)
+    raise RuntimeError("Requested window did not become active; refusing keyboard input.")
+
+
 @mcp.tool()
 def focus_window(window_id: str) -> str:
-    """Focus an X11 window by its hexadecimal ID, after user approval."""
+    """Focus an X11 window by ID and verify focus before reporting success."""
     _require_input()
-    if not re.fullmatch(r"0x[0-9a-fA-F]+", window_id):
-        raise ValueError("Expected an X11 window ID like 0x03400001")
-    _run("wmctrl", "-ia", window_id)
-    return "Focus requested; verify via active_window or screenshot."
+    _focus_and_verify(window_id)
+    return "Window is active; verify state before input."
 
 
 @mcp.tool()
 def click(x: int, y: int, button: int = 1) -> str:
     """Move pointer to a screen coordinate and click. button=1/2/3."""
     _require_input()
-    if not (0 <= x <= 32767 and 0 <= y <= 32767 and button in (1, 2, 3)):
+    if not (-32768 <= x <= 32767 and -32768 <= y <= 32767 and button in (1, 2, 3)):
         raise ValueError("Invalid coordinates or button")
     _run("xdotool", "mousemove", str(x), str(y), "click", str(button))
     return "Click sent; verify via screenshot."
@@ -89,13 +112,19 @@ def type_text(text: str) -> str:
 
 
 @mcp.tool()
-def key(key_sequence: str) -> str:
-    """Press an X11 key chord, e.g. ctrl+l, Return, super+e."""
+def key(key_sequence: str, window_id: str = "") -> str:
+    """Send an X11 key chord (ctrl+s, ctrl+shift+t, Return); optionally target window.
+
+    If window_id is supplied, focus is verified before delivery so the shortcut
+    cannot silently land in an unrelated window. No shell commands are executed.
+    """
     _require_input()
     if not re.fullmatch(r"[A-Za-z0-9_+ -]{1,70}", key_sequence):
         raise ValueError("Invalid key sequence")
+    if window_id:
+        _focus_and_verify(window_id)
     _run("xdotool", "key", "--clearmodifiers", key_sequence)
-    return "Key sent; verify via screenshot."
+    return "Shortcut delivered; confirm effect in window controls or screenshot."
 
 
 @mcp.tool()
