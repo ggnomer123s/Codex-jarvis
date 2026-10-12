@@ -113,7 +113,8 @@ Use `jarvis normal` if the selected model does not support low reasoning effort.
 
 | Command | What it does |
 |---|---|
-| `jarvis` | Start Codex with desktop troubleshooting instructions |
+| `jarvis` / `jarvis fast` | Start Codex with low reasoning effort; no automatic inspection task |
+| `jarvis normal` / `jarvis deep` | Default reasoning / medium reasoning for complex troubleshooting |
 | `jarvis status` | Show configured GUI MCP and monitoring status |
 | `jarvis gui-check` | Check GUI backend and navigation prerequisites |
 | `jarvis reports` | List diagnostic reports |
