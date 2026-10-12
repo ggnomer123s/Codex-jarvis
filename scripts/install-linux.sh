@@ -171,7 +171,13 @@ Unit=jarvis-codex-watch.service
 WantedBy=timers.target
 TIMER
   systemctl --user daemon-reload
-  systemctl --user enable --now jarvis-codex-watch.timer
+  if systemctl --user is-enabled --quiet jarvis-codex-watch.timer; then
+    systemctl --user start jarvis-codex-watch.timer
+    echo '[info] Preserved already-enabled monitor.'
+  else
+    echo '[info] Monitor installed but disabled by default (sends logs to Codex).'
+    echo '[info] Opt in: jarvis monitor on'
+  fi
 else
   echo '[info] User systemd not available; watcher skipped.'
 fi
