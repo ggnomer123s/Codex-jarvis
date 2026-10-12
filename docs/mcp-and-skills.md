@@ -24,7 +24,7 @@ uvx hypruse skill install --agent codex
 When missing, register the server (the Linux installer does this automatically):
 
 ~~~sh
-codex mcp add hypruse --env HYPRUSE_CONFINE=launched --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=1 -- uvx hypruse
+codex mcp add hypruse --env HYPRUSE_CONFINE=launched --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=0 -- uvx hypruse
 ~~~
 
 `HYPRUSE_CONFINE=launched` blocks interaction with unrelated existing windows. Existing MCP registrations are preserved rather than silently reset.
