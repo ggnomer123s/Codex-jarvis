@@ -84,6 +84,18 @@ Microphone dependencies: Linux requires a PortAudio runtime (such as `libportaud
 
 Confirmed-fix memory remains on **your own device**, not in this GitHub repository; it is read only as troubleshooting history and is never automatically populated. See the [Memory & Voice guide](docs/memory-and-voice.md).
 
+## Access to existing desktop applications (Hyprland)
+
+Hypruse's default `HYPRUSE_CONFINE=launched` refuses to control windows opened before the agent. You can **explicitly** allow Telegram and kitty without granting access to every window:
+
+```bash
+bash scripts/hypruse-access.sh telegram
+```
+
+The command shows current MCP settings, requires typing `APPLY`, backs up your Codex config and switches to `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`. Restart Codex afterwards. To restore the default, run `bash scripts/hypruse-access.sh restricted`.
+
+This is intentionally **not enabled by default**: messaging and terminal windows can contain sensitive content. You can restrict access to a single app using `bash scripts/hypruse-access.sh allow org.telegram.desktop`. See the [Hypruse application access guide](docs/hypruse-access.md) for scope, rollback and safety details.
+
 ## Commands
 
 | Command | What it does |
