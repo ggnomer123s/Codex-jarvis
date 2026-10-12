@@ -117,6 +117,29 @@ case "${1:-start}" in
       systemctl --user status jarvis-codex-watch.timer --no-pager || true
     else echo 'Monitoring not installed'; fi ;;
   reports) ls -lt "$HOME/.local/state/jarvis-codex/reports" 2>/dev/null || true ;;
+  gui-check)
+    echo "JARVIS GUI diagnostics — session: ${XDG_SESSION_TYPE:-unknown}, desktop: ${XDG_CURRENT_DESKTOP:-unknown}"
+    echo "Registered backend: $backend"
+    if [[ "$backend" != none ]]; then codex mcp get "$backend" || true; fi
+    if [[ "$backend" == hypruse ]]; then
+      uvx hypruse doctor || true
+      if command -v busctl >/dev/null 2>&1; then
+        echo '[ok] busctl available (AT-SPI accessibility still depends on the target app)'
+      else echo '[warn] busctl missing (Hypruse UI accessibility tools may be unavailable)'; fi
+      if command -v magick >/dev/null 2>&1; then
+        echo '[ok] ImageMagick CLI available (numbered control overlays supported when enabled by Hypruse)'
+      else
+        echo '[info] ImageMagick magick CLI missing. Named UI controls can still work; marks overlay may be unavailable.'
+      fi
+    elif [[ "$backend" == jarvis-x11 ]]; then
+      for tool in xdotool wmctrl maim; do
+        if command -v "$tool" >/dev/null 2>&1; then echo "[ok] $tool"; else echo "[missing] $tool"; fi
+      done
+      echo '[info] Verify input opt-in with: codex mcp get jarvis-x11'
+    elif [[ "$backend" == jarvis-wayland ]]; then
+      echo '[info] Generic Wayland is experimental. Ask the MCP describe_environment tool about screenshots and remote input.'
+    fi
+    echo '[info] GUI accuracy test instructions: docs/gui-navigation.md' ;;
   memory)
     exec uv run --no-project python "$APP/memory.py" "${@:2}" ;;
   voice)
@@ -148,7 +171,7 @@ case "${1:-start}" in
       off) systemctl --user disable --now jarvis-codex-watch.timer ;;
       *) echo 'Usage: jarvis monitor on|off' >&2; exit 2 ;;
     esac ;;
-  help|-h|--help) echo 'jarvis | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis test | jarvis stop' ;;
+  help|-h|--help) echo 'jarvis | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis test | jarvis stop' ;;
   *) echo 'Usage: jarvis help' >&2; exit 2 ;;
 esac
 ONE
