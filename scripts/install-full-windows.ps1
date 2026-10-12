@@ -46,6 +46,21 @@ foreach ($p in @($launcher, $cmdLauncher)) {
 New-Item -ItemType Directory -Path $fullHome, $bin -Force | Out-Null
 $env:CODEX_HOME = $fullHome
 
+$sourceSkill = Join-Path (Split-Path $PSScriptRoot -Parent) 'skills\jarvis-desktop\SKILL.md'
+if (Test-Path $sourceSkill) {
+  $skillDir = Join-Path $fullHome 'skills\jarvis-desktop'
+  New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+  $destSkill = Join-Path $skillDir 'SKILL.md'
+  Copy-Item $sourceSkill $destSkill -Force
+  Add-Content -Path $destSkill -Encoding UTF8 -Value @'
+## Dedicated Full Access profile
+Routine reversible changes clearly included in the user request are
+authorized without repetitive confirmations. Still ask before irreversible
+deletion, sending confidential data, purchases or security changes.
+OS privilege escalation is not authorized.
+'@
+}
+
 $agents = Join-Path $fullHome 'AGENTS.md'
 if (-not (Test-Path $agents)) {
   Set-Content -LiteralPath $agents -Encoding UTF8 -Value @'
