@@ -18,15 +18,25 @@ git pull --ff-only
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1
 ```
 
-Read the installer output before accepting its one-time confirmation. After installation:
+Read the installer output before accepting its one-time confirmation. After installation, sign in once and choose a reasoning profile:
 
 ```text
 jarvis-full login
-jarvis-full
+jarvis-full fast
+jarvis-full normal
+jarvis-full deep
 jarvis-full status
 ```
 
-The normal launcher is unchanged. Where supported, `jarvis full` launches the separately installed profile as an alias.
+| Launch command | Reasoning effort | Shell/desktop privilege profile |
+|---|---|---|
+| `jarvis-full` or `jarvis-full normal` | Configured default | Full Access |
+| `jarvis-full fast` | `low` | Full Access |
+| `jarvis-full deep` | `high` | Full Access |
+
+On supported normal JARVIS installers, `jarvis full fast`, `jarvis full normal`, and `jarvis full deep` are aliases to the **same independently installed full profile**. `jarvis full` selects its default profile.
+
+The new launcher **does not auto-send a startup task**: Codex opens interactively, with the selected reasoning setting and its existing Full Access profile instructions. This removes an unnecessary model turn during startup; it does not guarantee a specific GUI-task execution speed.
 
 ## Behavior and limitations
 
