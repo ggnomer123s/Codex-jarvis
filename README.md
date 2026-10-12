@@ -4,6 +4,78 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 
 > Not an official OpenAI product. Desktop automation has significant privacy and security implications. Desktop MCPs are independent upstream projects and capabilities vary by display server and compositor.
 
+## Start here: project handoff for another AI
+
+**Continuation status — 2026-10-12.** This README is the project's public entry point. A much more detailed, source-checked maintainer handoff is maintained at **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**. If you are an AI coding agent taking over JARVIS, read **both files**, then fetch the latest source, tests and GitHub Actions output before making changes. The code always takes precedence over any dated summary.
+
+### What we are building
+
+JARVIS is a **Codex CLI-based AI computer operator**, not a separately trained model or a standalone desktop application. It should understand requests and **use the computer**: open/focus applications, interact visually through mouse/keyboard/accessibility, edit video projects where supported, diagnose Linux/Windows problems, write code and manage files. For large tasks, it should favor reliable native application APIs/shell tools alongside GUI interactions. The human should not have to spell out every mouse click. Reliable outcome verification matters more than spectacular-looking cursor motion.
+
+**Architecture at a glance:**
+
+```text
+User text / optional push-to-talk
+      |
+      v
+jarvis (regular) / jarvis-full (separate opt-in profile)
+      |
+      v
+OpenAI Codex CLI + managed AGENTS.md + jarvis-desktop Skill
+      |
+      +---- GUI MCP: Hypruse (Hyprland), jarvis-x11 (X11),
+      |               wayland-mcp-kurojs (experimental Wayland),
+      |               Windows-MCP (Windows 11)
+      |
+      +---- Native shell / application APIs, where appropriate
+      |
+      +---- Optional user-confirmed repair memory and read-only monitors
+      |
+      v
+Observed result / user-facing report
+```
+
+### Features already added to the source
+
+| Area | Implemented source and behavior |
+|---|---|
+| Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
+| Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
+| Separate Full Access | `scripts/install-full-linux.sh`, `scripts/install-full-windows.ps1`, `scripts/jarvis-full-launcher.*`; independent `CODEX_HOME`, login and `fast|normal|deep` presets |
+| GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |
+| Window permissions | `scripts/hypruse-access.sh`; optional `jarvis access all` or restricted/class-based Hypruse permissions, with explicit confirmation and config backup |
+| Native X11 desktop MCP | `scripts/x11_mcp.py`; screenshots, region crops, human-selected capture rectangle, focus-checked shortcuts, pointer click/drag/scroll and input opt-in |
+| Voice | `scripts/jarvis_voice.py`; local faster-whisper push-to-talk, user reviews transcription before Codex submission |
+| Repair memory | `scripts/jarvis_memory.py`; local JSON of **explicitly confirmed** fixes, manual add/search/list/delete |
+| Diagnostics | `jarvis gui-check`; opt-in Linux systemd-user and Windows Application event watchers; read-only Codex analysis reports |
+| Maintenance | `scripts/sync_agents.py` refreshes only JARVIS's AGENTS block with backups; GitHub Actions checks Bash/PowerShell/Python/tests |
+
+**Security distinction:** Regular JARVIS uses a read-only Codex shell sandbox and normal approval flow, but GUI MCP input has separate permissions. Full Access deliberately disables Codex's shell sandbox/ordinary approvals under the **current user's account**, not root/Administrator. It is optional, has its own config and sign-in, and must never be silently enabled. Neither profile bypasses operating-system authentication, locked sessions or upstream MCP protections.
+
+### Important bugs already investigated
+
+- **Spotify/Firefox refused clicks** when Hypruse was configured with `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`. Visible windows and screenshots did not imply input permission. The explicit `jarvis access all` profile removes the filter; new regular installations remain restricted by default.
+- **Red borders** came from upstream Hypruse `HYPRUSE_MARK=1`. New registrations and access profiles now set `HYPRUSE_MARK=0`; old runtime rules may require a user-approved `hyprctl reload`.
+- **Sluggish screenshot loops** led to a smaller GUI Skill preferring `desktop`, `ui`, `click_ui`, `sequence`, `wait_for`, targeted screenshot/zoom and meaningful final verification. This is a behavioral improvement, **not a measured performance benchmark**.
+- **X11 shortcut focus** and missing drag/region capture were addressed with focus checks, bounded screenshot regions, drag cleanup, regression tests and support for negative monitor coordinates.
+- **Stale AGENTS.md** after reinstalls and **misplaced Full Access Skill** were corrected in installers. Full Access now supports `fast|normal|deep` without an extra startup task.
+
+### What is NOT implemented yet
+
+**JARVIS Profiler**, **Task Checkpoints/resume**, **JARVIS Doctor**, **automatic reasoning-mode switching**, **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, a graphical dashboard and an always-listening voice assistant remain **ideas or future work**, not finished features. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); our present validation is mostly static/unit CI, not broad hardware-level testing.
+
+### Instructions for the next coding agent
+
+1. Read **[the full AI handoff](docs/AI_HANDOFF.md)** and the implementation files related to the requested change, not only this overview.
+2. Preserve the existing user setup and the separation between regular and Full Access; diagnose before altering working MCP registrations or OS settings.
+3. When a user asks to operate an application, use an authorized GUI MCP if it exists; when deterministic APIs are more reliable, use them. Verify actions rather than inventing outcomes.
+4. For code changes, update related tests/docs and check the latest GitHub Actions result. Do not mistake a green syntax/unit-test run for successful real-world visual automation.
+5. Update this README and the detailed handoff whenever architecture, supported commands, known problems or major milestones change.
+
+**Source-of-truth files:** [main CLI installers](scripts/) · [GUI Skill](skills/jarvis-desktop/SKILL.md) · [managed agent rules](config/jarvis-agents.md) · [tests](tests/) · [CI workflow](.github/workflows/validate.yml) · [complete technical handoff](docs/AI_HANDOFF.md).
+
+---
+
 ## Supported environments
 
 | Operating system / desktop | GUI backend | Status |
