@@ -139,6 +139,14 @@ function jarvis --description 'Launch JARVIS desktop assistant'
 end
 FISH
 
+# Make the one-command launcher discoverable in common interactive shells.
+for rc in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
+  [[ -e "$rc" ]] || [[ "$rc" == "$HOME/.profile" ]] || continue
+  if ! grep -Fq '# JARVIS-CODEX PATH' "$rc" 2>/dev/null; then
+    printf '\n# JARVIS-CODEX PATH\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$rc"
+  fi
+done
+
 # Optional Linux systemd-user watcher; gracefully skip non-systemd systems.
 if command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1; then
   mkdir -p "$UNITS"
