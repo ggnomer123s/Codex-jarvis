@@ -6,7 +6,7 @@ JARVIS provides a **single `jarvis` launcher** for Codex CLI with desktop-contex
 
 - `jarvis` and `jarvis fast`: **low reasoning effort** and no auto-executed screen-inspection prompt. Recommended for short GUI tasks.
 - `jarvis normal`: use your ordinary Codex model/reasoning defaults.
-- `jarvis deep`: **medium reasoning effort**, useful for complicated troubleshooting.
+- `jarvis deep`: **high reasoning effort**, useful for complicated troubleshooting.
 
 These per-launch settings do not overwrite your Codex config file. Reasoning support varies by model. See [Performance](performance.md).
 
@@ -15,7 +15,7 @@ These per-launch settings do not overwrite your Codex config file. Reasoning sup
 | Command | Linux | Windows 11 |
 |---|---|---|
 | `jarvis` / `jarvis fast` | Low-reasoning responsive GUI mode | Low-reasoning responsive GUI mode |
-| `jarvis normal` / `jarvis deep` | Default / medium reasoning modes | Default / medium reasoning modes |
+| `jarvis normal` / `jarvis deep` | Default / high reasoning modes | Default / high reasoning modes |
 | `jarvis status` | GUI backend & monitor | Windows-MCP & monitor |
 | `jarvis reports` | Saved diagnostics | Saved diagnostics |
 | `jarvis gui-check` | Inspect backend, optional AT-SPI/marks helpers | Check registered Windows-MCP |
