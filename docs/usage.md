@@ -2,6 +2,14 @@
 
 JARVIS provides a **single `jarvis` launcher** for Codex CLI with desktop-context instructions. Desktop MCPs and installed Skills are discovered in the Codex session.
 
+## Launch speed modes
+
+- `jarvis` and `jarvis fast`: **low reasoning effort** and no auto-executed screen-inspection prompt. Recommended for short GUI tasks.
+- `jarvis normal`: use your ordinary Codex model/reasoning defaults.
+- `jarvis deep`: **medium reasoning effort**, useful for complicated troubleshooting.
+
+These per-launch settings do not overwrite your Codex config file. Reasoning support varies by model. See [Performance](performance.md).
+
 ## Main commands
 
 | Command | Linux | Windows 11 |
