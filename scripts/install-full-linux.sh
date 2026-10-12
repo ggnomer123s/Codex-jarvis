@@ -69,19 +69,12 @@ If unsure, stop and ask the user.
 AGENTS
 fi
 
-# A dedicated copy lets Full Access use the desktop workflow without
-# rewriting the normal user's JARVIS Skill.
+# Codex scans ~/.agents/skills for user skills. CODEX_HOME/skills alone is
+# not a supported discovery directory: install the same desktop Skill globally.
 if [[ -f "$ROOT/skills/jarvis-desktop/SKILL.md" ]]; then
-  mkdir -p "$FULL_HOME/skills/jarvis-desktop"
-  cp "$ROOT/skills/jarvis-desktop/SKILL.md" "$FULL_HOME/skills/jarvis-desktop/SKILL.md"
-  cat >> "$FULL_HOME/skills/jarvis-desktop/SKILL.md" <<'FULL_SCOPE'
-
-## Dedicated Full Access profile
-In this profile, routine, reversible changes clearly included in the user's
-requested task are authorized without repeated confirmations. Continue to ask
-before sending private data, irreversible deletion, payments, entering secrets,
-or changing security settings. No OS privilege escalation is authorized.
-FULL_SCOPE
+  dest="$HOME/.agents/skills/jarvis-desktop"
+  mkdir -p "$dest"
+  cp "$ROOT/skills/jarvis-desktop/SKILL.md" "$dest/SKILL.md"
 fi
 
 export CODEX_HOME="$FULL_HOME"
@@ -95,10 +88,10 @@ if [[ "$SESSION" == 'wayland' ]] && { [[ "$DESKTOP" == *Hyprland* ]] || [[ -n "$
       --env HYPRUSE_STRICT=1 \
       --env HYPRUSE_AUTH_GUARD=strict \
       --env HYPRUSE_JOURNAL=1 \
-      --env HYPRUSE_MARK=1 \
+      --env HYPRUSE_MARK=0 \
       -- uvx hypruse
   else
-    echo '[info] Existing Full Access Hypruse settings kept; inspect with CODEX_HOME=... codex mcp get hypruse.'
+    echo '[info] Existing Full Access Hypruse settings kept; verify MARK=0 and no CONFINE with jarvis-full status.'
   fi
 elif [[ "$SESSION" == 'x11' ]]; then
   for tool in xdotool wmctrl maim; do
