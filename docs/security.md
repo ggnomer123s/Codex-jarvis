@@ -14,7 +14,7 @@ JARVIS connects a powerful AI agent to external GUI MCP servers. A screenshot ma
 
 ## Platform-specific risk
 
-**Hyprland / Hypruse:** new registrations use `HYPRUSE_CONFINE=launched`, `HYPRUSE_STRICT=1`, `HYPRUSE_AUTH_GUARD=strict`, `HYPRUSE_JOURNAL=1`, and `HYPRUSE_MARK=1`. `jarvis stop` asks Hypruse to stop. It does not govern arbitrary Codex shell commands or other tools.
+**Hyprland / Hypruse:** new registrations use `HYPRUSE_CONFINE=launched`, `HYPRUSE_STRICT=1`, `HYPRUSE_AUTH_GUARD=strict`, `HYPRUSE_JOURNAL=1`, and `HYPRUSE_MARK=0`. `jarvis stop` asks Hypruse to stop. It does not govern arbitrary Codex shell commands or other tools.
 
 **Native X11 (GNOME Xorg, Plasma X11, XFCE, Cinnamon, i3, etc.):** input is initially disabled in the bundled `jarvis-x11` MCP. The `--enable-gui-input` option explicitly allows typing, clicking, focus and scrolling through xdotool. X11 lacks the application isolation expected from modern Wayland portals; a GUI agent may be able to interact with other apps on the same display.
 
