@@ -109,6 +109,15 @@ jarvis deep      # Medium reasoning for difficult problems
 
 Use `jarvis normal` if the selected model does not support low reasoning effort. Speed varies with model/MCP approvals, accessibility and application behavior. Read [Performance tuning](docs/performance.md).
 
+## Optional separate power-user profile
+
+Advanced operators can install a **separate**, opt-in Codex profile with its own login and desktop MCP configuration. These installers do **not** alter normal `jarvis` permissions. Read the scripts carefully and do not run elevated:
+
+- Linux: `bash scripts/install-full-linux.sh`
+- Windows 11: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1`
+
+They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full`. This profile is **unsafe for sensitive computers**, since it disables Codex's normal shell sandbox and approval prompts. OS authentication and privilege boundaries are unchanged.
+
 ## Commands
 
 | Command | What it does |
