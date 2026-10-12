@@ -1,64 +1,96 @@
-# JARVIS — Codex desktop assistant
+# JARVIS — cross-platform Codex desktop assistant
 
-**Одна команда запуска: `jarvis`.** Настройка Codex CLI + MCP для управления рабочим столом, Skill, AGENTS.md и безопасная диагностика. Это пользовательский community-проект, не официальный продукт OpenAI.
+A community project that connects **OpenAI Codex CLI** to desktop automation via **Model Context Protocol (MCP)**, and adds a simple **`jarvis` command**, reusable Skills, troubleshooting instructions, and optional error monitoring.
 
-| Возможность | Linux (CachyOS/Hyprland) | Windows 11 |
+> Not an official OpenAI product. Desktop automation has significant privacy and security implications. Desktop MCPs are independent upstream projects and capabilities vary by display server and compositor.
+
+## Supported environments
+
+| Operating system / desktop | GUI backend | Status |
 |---|---|---|
-| GUI MCP | [Hypruse](https://github.com/IlyasKhallouki/hypruse) | [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) |
-| Запуск | `jarvis` (fish) | `jarvis` (PowerShell/cmd) |
-| Skills | Hypruse + JARVIS | JARVIS |
-| Монитор | failed user systemd services | Windows Application errors (включить отдельно) |
-| Самостоятельные исправления | Нет, нужно разрешение | Нет, нужно разрешение |
+| Linux — Hyprland (Wayland) | [Hypruse](https://github.com/IlyasKhallouki/hypruse) | Working user setup; automatic configuration |
+| Linux — **GNOME Wayland**, **KDE Plasma Wayland** | [Wayland MCP](https://github.com/kurojs/wayland-mcp) via desktop portals | **Experimental**; portal + PyGObject prerequisites |
+| Linux — Sway, River, Niri, COSMIC, other Wayland compositors | Wayland MCP, capability dependent | **Experimental / partial**; no guarantee of pointer control |
+| Linux — GNOME on Xorg, KDE X11, XFCE, Cinnamon, MATE, i3, Openbox, bspwm | Bundled `jarvis-x11` (xdotool/maim/wmctrl) | Implemented, **not hardware-tested** |
+| Windows 11 | [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) | Installer available; not hardware-tested |
 
-## Установка — CachyOS / Arch + Hyprland
+**Distribution coverage** is not limited to Arch/CachyOS. See [Linux installation](docs/linux.md) for Debian, Ubuntu, Linux Mint, Fedora, openSUSE, Arch Linux, Manjaro, EndeavourOS, CachyOS and other Linux distributions. Most of the project is user-space; distro differences are system packages and active graphical session.
 
-Нужен установленный и авторизованный Codex CLI. Зависимости: `git`, `uvx`, `grim`, `wtype`, `notify-send`, `systemctl --user`.
+## How it works
+
+```text
+jarvis → Codex CLI → GUI MCP → active desktop
+                    ↘ Skills + AGENTS.md
+optional watcher → event logs → read-only Codex analysis report
+```
+
+**Important:** Codex does **not** watch your screen continuously. GUI MCP tools are called during an active agent task. The optional monitor only checks specific OS event sources and never auto-repairs.
+
+## Linux quick start
+
+Install and sign in to [Codex CLI](https://github.com/openai/codex). Install `git` and `uv` / `uvx`, then the display-specific native tools from [the Linux guide](docs/linux.md).
 
 ```bash
-sudo pacman -S --needed git uv grim wtype libnotify
 git clone https://github.com/ggnomer123s/Codex-jarvis.git
 cd Codex-jarvis
 bash scripts/install-linux.sh
 ```
 
-Открой новую сессию fish и запусти `jarvis`. Скрипт сохраняет существующее MCP-подключение, добавляет Skills/AGENTS.md, лаунчер и systemd-user monitor. Подробности — [Linux guide](docs/linux.md).
+Open a new terminal and run:
 
-## Установка — Windows 11
+```bash
+jarvis
+```
 
-Открой обычный PowerShell (не WSL). Установи базовые зависимости:
+For **native X11 only**, mouse/keyboard MCP actions are off by default. To opt in after reviewing the [security guide](docs/security.md):
+
+```bash
+bash scripts/install-linux.sh --enable-gui-input
+```
+
+This option affects **new registrations** only. An existing MCP configuration is intentionally not overridden.
+
+> For GNOME/KDE and generic Wayland, the installer registers a backend but **cannot guarantee** your portal supports both screenshots and remote input. Check `describe_environment` inside the MCP and see [advanced backend setup](docs/mcp-and-skills.md). No `/dev/input` permission change is performed.
+
+## Windows 11 quick start
+
+Open PowerShell on Windows (not WSL), install Git, Node.js LTS and uv, then install Codex. Full steps: [Windows 11 guide](docs/windows11.md).
 
 ```powershell
 winget install -e --id Git.Git
 winget install -e --id OpenJS.NodeJS.LTS
 winget install -e --id astral-sh.uv
-```
-
-Перезапусти PowerShell. Затем:
-
-```powershell
+# Reopen PowerShell
 npm.cmd install -g @openai/codex
-codex.cmd
 git clone https://github.com/ggnomer123s/Codex-jarvis.git
 cd Codex-jarvis
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
+# Reopen PowerShell, then: jarvis
 ```
 
-Перезапусти PowerShell и введи `jarvis`. Используй `codex.cmd` вместо `codex.ps1`, если блокирует Execution Policy. Полное руководство — [Windows 11](docs/windows11.md).
+## Commands
 
-## Управление
-
-| Команда | Назначение |
+| Command | What it does |
 |---|---|
-| `jarvis` | Открыть GUI-ассистента Codex |
-| `jarvis status` | Проверить MCP/monitor |
-| `jarvis reports` | Найти отчёты |
-| `jarvis monitor off` | Выключить монитор |
-| `jarvis monitor on` | Включить существующий монитор |
-| `jarvis test` | Linux: сымитировать сбой test user-service |
-| `jarvis stop` | Linux: аварийно остановить Hypruse |
+| `jarvis` | Start Codex with desktop troubleshooting instructions |
+| `jarvis status` | Show configured GUI MCP and monitoring status |
+| `jarvis reports` | List diagnostic reports |
+| `jarvis monitor on` / `jarvis monitor off` | Enable/disable an installed watcher |
+| `jarvis test` | Linux: simulate a failed **systemd user** service |
+| `jarvis stop` | Hyprland: stop Hypruse; other platforms: exit Codex |
 
-**Важно:** Codex не наблюдает экран постоянно. MCP вызывается только во время задач. Monitoring проверяет лишь конкретные системные сигналы. Выводы логов/скриншоты могут содержать личные данные и передаваться модели. `--sandbox read-only` **не является блокировкой GUI-MCP инструментов**. Никогда не давай агенту sudo/пароли или обход подтверждений.
+## Guides
 
-Документация: [Linux](docs/linux.md) · [Windows 11](docs/windows11.md) · [usage](docs/usage.md) · [MCP & Skills](docs/mcp-and-skills.md) · [security](docs/security.md).
+- [Linux installation for Debian/Ubuntu, Fedora, Arch, openSUSE and more](docs/linux.md)
+- [Desktop environment support and MCP/Skill setup](docs/mcp-and-skills.md)
+- [Windows 11 setup](docs/windows11.md)
+- [Daily usage and end-to-end testing](docs/usage.md)
+- [Security, permissions and privacy](docs/security.md)
 
-Upstream: [Codex CLI](https://github.com/openai/codex), [Hypruse](https://github.com/IlyasKhallouki/hypruse), [Windows-MCP](https://github.com/CursorTouch/Windows-MCP), [uv](https://docs.astral.sh/uv/getting-started/installation/).
+## Validation status
+
+The Linux installer and X11 MCP are new cross-desktop additions. They are not claimed tested on every distro. Your exact compositor, Wayland portal backend, Python distribution packages and Codex version can affect functionality. Report reproducible bugs with `echo $XDG_SESSION_TYPE`, `echo $XDG_CURRENT_DESKTOP`, `jarvis status` (after removing personal data).
+
+## Credits
+
+This project glues together third-party software; it does not own upstream MCP implementations. See the respective upstream repositories and their licenses. Source code is published here for review before installation.
