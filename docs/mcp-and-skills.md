@@ -1,54 +1,108 @@
-# MCP, Skills, AGENTS.md: полная настройка
+# Desktop MCP backends, Skills and Codex instructions
 
-**MCP** даёт инструменты (screenshots, окна, mouse/keyboard). **Skills** дают процесс выполнения задачи. **AGENTS.md** — постоянные инструкции для Codex. Ничто из этого не создаёт непрерывного наблюдения без отдельного мониторинга.
+This project has **one JARVIS command** and different GUI MCP implementations. The graphics **session**, not the Linux distribution, determines which input/screenshot APIs exist.
 
-## Linux — Hypruse
+## Overview
 
-```fish
+| Session | Primary backend | Notes |
+|---|---|---|
+| Hyprland/Wayland | [Hypruse](https://github.com/IlyasKhallouki/hypruse) | Compositor-specific IPC + native virtual input |
+| Native X11: GNOME Xorg, Plasma X11, XFCE, Cinnamon, MATE, i3, Openbox, bspwm | Bundled \`scripts/x11_mcp.py\` | Requires xdotool, maim, wmctrl; input opt-in |
+| GNOME / KDE / COSMIC and other Wayland | [wayland-mcp-kurojs](https://github.com/kurojs/wayland-mcp) | Portal/capture-dependent; experimental outside tested upstream setup |
+| Windows 11 | [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) | Native Windows UI Automation |
+
+**MCP** supplies tools. **Skills** supply workflows. **AGENTS.md** gives Codex persistent instructions. No component by itself means continuous observation or autonomous safe fixing.
+
+## Hyprland
+
+~~~sh
 uvx hypruse doctor
-codex mcp list
 codex mcp get hypruse
 uvx hypruse skill install --agent codex
-```
+~~~
 
-Если MCP отсутствует, новый сервер можно добавить командой:
+When missing, register the server (the Linux installer does this automatically):
 
-```fish
+~~~sh
 codex mcp add hypruse --env HYPRUSE_CONFINE=launched --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=1 -- uvx hypruse
-```
+~~~
 
-При настройке JARVIS вручную учитывай: если этот сервер уже зарегистрирован, `codex mcp add` может конфликтовать с существующим; сначала посмотри `codex mcp get hypruse`. Для GUI с существующими окнами иногда мешает `CONFINE=launched`; не снимай ограничения без понимания рисков.
+\`HYPRUSE_CONFINE=launched\` blocks interaction with unrelated existing windows. Existing MCP registrations are preserved rather than silently reset.
 
-## Windows 11 — Windows-MCP
+## X11
 
-```powershell
-codex.cmd mcp list
-codex.cmd mcp get windows-mcp
-uvx windows-mcp serve --help
-```
+The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides \`desktop_info\`, \`windows\`, \`active_window\`, \`screenshot\`, \`focus_window\`, \`click\`, \`key\`, \`type_text\` and \`scroll\`.
 
-Если подключения нет:
+~~~sh
+codex mcp get jarvis-x11
+~~~
 
-```powershell
-codex.cmd mcp add windows-mcp --env WINDOWS_MCP_EXCLUDE_TOOLS=PowerShell,Registry,Process,FileSystem,Clipboard -- uvx windows-mcp serve
-```
+The installer registers:
 
-`uvx windows-mcp serve` — stdio-server. Не нужно включать отдельную HTTP-службу и открывать порт ради локального Codex CLI. Если уже есть настройка MCP, установщик её не перезаписывает.
+~~~sh
+codex mcp add jarvis-x11 --env JARVIS_X11_ALLOW_INPUT=0 -- uv run --no-project --with mcp python "$HOME/.local/share/jarvis-codex/x11_mcp.py"
+~~~
 
-## Skill JARVIS
+Default is **read-only**. For input opt-in, review security guide then follow [Linux instructions](linux.md#enable-x11-gui-input). X11 MCP **does not** work on Wayland merely because XWayland is running.
 
-Файл `skills/jarvis-desktop/SKILL.md` устанавливается в `~/.agents/skills/jarvis-desktop/SKILL.md` (на Windows под `%USERPROFILE%`). В Linux отдельно устанавливается официальный Skill Hypruse. Перезапусти Codex и проверь `/skills`.
+## General Wayland: GNOME, KDE Plasma, Sway, Niri, COSMIC, River
 
-`AGENTS.md` установлен в `~/.codex/AGENTS.md` (на Windows аналог в профиле). Старое содержимое не затирается: добавляется помеченный блок, а существующий файл копируется в timestamp backup.
+The generic backend is [kurojs/wayland-mcp](https://github.com/kurojs/wayland-mcp):
 
-## Дополнительные MCP по желанию
+~~~sh
+codex mcp get jarvis-wayland
+# If missing:
+codex mcp add jarvis-wayland --env WAYLAND_MCP_NO_PERSIST=1 -- uvx wayland-mcp-kurojs
+~~~
 
-Официальная документация OpenAI:
+In your agent session ask for the MCP's \`describe_environment\` tool. It reports available capture/input methods. Full functionality is **not** guaranteed. GNOME and KDE commonly provide \`org.freedesktop.portal.RemoteDesktop\`, while many wlroots compositors do **not**. Portals may display an OS consent prompt and can require PyGObject.
 
-```bash
-codex mcp add openaiDeveloperDocs --url https://developers.openai.com/mcp
-```
+### PyGObject and uvx isolation
 
-Любой новый MCP сервер — внешнее ПО и расширение прав AI-агента. Проверь upstream код, зависимости, security flags и то, какие данные увидит агент. Не включай обход sandbox/approvals ради удобства.
+Your distro \`python3-gi\` may not be importable from \`uvx\`. A user-level Python environment with system packages visible is an option:
 
-Первоисточники: [Codex MCP](https://developers.openai.com/codex/mcp), [Codex Skills](https://developers.openai.com/codex/skills), [Hypruse](https://github.com/IlyasKhallouki/hypruse), [Windows-MCP](https://github.com/CursorTouch/Windows-MCP).
+~~~sh
+mkdir -p "$HOME/.local/share/jarvis-codex"
+uv venv --system-site-packages "$HOME/.local/share/jarvis-codex/wayland-venv"
+uv pip install --python "$HOME/.local/share/jarvis-codex/wayland-venv/bin/python" wayland-mcp-kurojs
+~~~
+
+After checking that the installed environment has the required portal runtime, point the \`jarvis-wayland\` Codex MCP command at \`$HOME/.local/share/jarvis-codex/wayland-venv/bin/wayland-mcp-kurojs\`. Remove/re-add an old registration **only deliberately**, because that changes a security boundary:
+
+~~~sh
+codex mcp get jarvis-wayland
+codex mcp remove jarvis-wayland
+codex mcp add jarvis-wayland --env WAYLAND_MCP_NO_PERSIST=1 -- "$HOME/.local/share/jarvis-codex/wayland-venv/bin/wayland-mcp-kurojs"
+~~~
+
+Do not run upstream legacy scripts that give world-writable access to \`/dev/input\`, install permissive udev rules or NOPASSWD sudoers changes.
+
+### Optional compositor-specific alternatives
+
+**GNOME Wayland:** [GNOME Desktop MCP](https://github.com/sbuysse/gnome-desktop-mcp) uses a GNOME Shell extension + D-Bus and an explicit consent/kill switch. Requires supported GNOME Shell and Python versions; follow upstream extension installation. Register its published command with Codex **only after** enabling the extension and verifying its own health check. Do not assume that \`uvx gnome-desktop-mcp\` installs the extension.
+
+**KDE Plasma 6 Wayland:** [kwin-mcp](https://github.com/isac322/kwin-mcp) supports virtual isolated sessions and opt-in live sessions. One example registration, after satisfying native build/runtime dependencies:
+
+~~~sh
+codex mcp add kwin-mcp -- uvx kwin-mcp --default-live-session
+~~~
+
+This targets the **real desktop**; use virtual mode for isolated tests when appropriate. Check upstream documentation for PyGObject/C compiler packages and KWin version compatibility.
+
+**Sway / River / Niri / COSMIC:** Portal support, screenshot backends and input vary; no single universal compositor-specific tool is assumed. Use \`describe_environment\` and test screenshots before attempting input.
+
+## JARVIS Skill and AGENTS.md
+
+The installer copies \`skills/jarvis-desktop/SKILL.md\` to \`~/.agents/skills/jarvis-desktop/SKILL.md\`. On Windows, the analogous path is under \`%USERPROFILE%\`.
+
+It also appends a managed block to \`~/.codex/AGENTS.md\`, preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill describes the observe → diagnose → confirm → act → verify workflow.
+
+Open a **fresh Codex session** after changing MCPs or Skills:
+
+~~~sh
+codex mcp list
+jarvis status
+jarvis
+~~~
+
+Upstream references: [Codex MCP](https://developers.openai.com/codex/mcp), [Codex Skills](https://developers.openai.com/codex/skills), [Hypruse](https://github.com/IlyasKhallouki/hypruse), [Wayland MCP](https://github.com/kurojs/wayland-mcp), [GNOME Desktop MCP](https://github.com/sbuysse/gnome-desktop-mcp), [kwin-mcp](https://github.com/isac322/kwin-mcp).
