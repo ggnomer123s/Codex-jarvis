@@ -26,6 +26,20 @@ menu and Windows Start menu installers are provided. See [Desktop application](d
 for prerequisites, installation, permissions and validation limits. The current
 release runs from source; signed standalone installers are not yet provided.
 
+### Fresh installation by operating system
+
+Copy-ready commands, including dependencies, Codex login and menu installation:
+
+| Operating system | Installation commands |
+|---|---|
+| CachyOS, Arch, Manjaro, EndeavourOS | [Arch-family installation](docs/install-desktop.md#cachyos-arch-manjaro-endeavouros) |
+| Ubuntu, Debian, Linux Mint, Pop!_OS | [Debian-family installation](docs/install-desktop.md#ubuntu-debian-linux-mint-pop_os) |
+| Fedora | [Fedora installation](docs/install-desktop.md#fedora) |
+| openSUSE Tumbleweed / Leap 16 | [openSUSE installation](docs/install-desktop.md#opensuse-tumbleweed--leap-16) |
+| Windows 11 | [Windows installation](docs/install-desktop.md#windows-11) |
+
+If you already cloned `Codex-jarvis-gui`, use the [update commands](docs/install-desktop.md#update-an-existing-gui-installation).
+
 > Not an official OpenAI product. Desktop automation has significant privacy and security implications. Desktop MCPs are independent upstream projects and capabilities vary by display server and compositor.
 
 ## Start here: project handoff for another AI
@@ -243,6 +257,7 @@ Read [GUI Operator](docs/gui-operator.md) for platform examples and the design c
 ## Guides
 
 - [Native desktop app for Linux and Windows 11](docs/desktop-app.md)
+- [Copy-ready installation commands by operating system](docs/install-desktop.md)
 - [Linux installation for Debian/Ubuntu, Fedora, Arch, openSUSE and more](docs/linux.md)
 - [Desktop environment support and MCP/Skill setup](docs/mcp-and-skills.md)
 - [High-accuracy GUI navigation: semantic controls, screenshots and zoom](docs/gui-navigation.md)

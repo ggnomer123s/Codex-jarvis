@@ -8,6 +8,9 @@ not a signed standalone EXE, AppImage, DEB or RPM release.
 
 ![JARVIS desktop command center](images/jarvis-desktop.png)
 
+For a fresh installation, use the [complete commands for your operating system](install-desktop.md).
+They cover Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11.
+
 ## Prerequisites
 
 - Install Git, [uv](https://docs.astral.sh/uv/getting-started/installation/)

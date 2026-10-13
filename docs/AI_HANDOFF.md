@@ -12,6 +12,11 @@ provided. The UI is implemented, while live Windows/microphone/authenticated
 Codex/desktop-MCP behavior still needs target-machine validation. Codex chat
 resume is distinct from the roadmap's task checkpoints.
 
+`docs/install-desktop.md` provides fresh-install and update commands for
+Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11. README links
+each platform directly. These recipes do not establish validation on every OS;
+the x86-64 Qt lock requires glibc 2.34+ on Linux.
+
 > **Start here if you are another AI or a developer continuing this project.** Read this file, `README.md`, and the specific source files you intend to edit. This handoff is a snapshot, not permission to invent past accomplishments or disregard newer code, the user's current request, tests, or security boundaries. **The repository source is authoritative if the handoff becomes stale.**
 
 ## 1. Mission and actual product
