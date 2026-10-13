@@ -12,11 +12,14 @@ DESKTOP="${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-unknown}}"
 umask 077
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  echo 'Usage: bash scripts/install-full-linux.sh'
+  echo 'Usage: bash scripts/install-full-linux.sh [--acknowledgement "ENABLE FULL ACCESS"]'
   echo 'Installs a separate unsandboxed jarvis-full launcher. Read docs/full-access.md.'
   exit 0
 fi
-if [[ $# -ne 0 ]]; then echo 'Unexpected option. See --help.' >&2; exit 2; fi
+acknowledgment=''
+if [[ $# -eq 2 && "$1" == --acknowledgement ]]; then
+  acknowledgment="$2"
+elif [[ $# -ne 0 ]]; then echo 'Unexpected option. See --help.' >&2; exit 2; fi
 if [[ "$EUID" -eq 0 ]]; then
   echo '[error] Do not install or run JARVIS Full Access as root.' >&2
   exit 1
@@ -39,7 +42,9 @@ The normal 'jarvis' installation and MCP permissions are unchanged.
 This installs a separate CODEX_HOME and separate login state.
 Do not use on machines with secrets or important unsaved data.
 WARNING
-read -r -p 'Type exactly ENABLE FULL ACCESS to continue: ' acknowledgment
+if [[ -z "$acknowledgment" ]]; then
+  read -r -p 'Type exactly ENABLE FULL ACCESS to continue: ' acknowledgment
+fi
 if [[ "$acknowledgment" != 'ENABLE FULL ACCESS' ]]; then
   echo 'Cancelled: no installation performed.'
   exit 1

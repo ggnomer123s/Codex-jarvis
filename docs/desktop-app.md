@@ -1,7 +1,7 @@
 # JARVIS desktop application
 
 A native Qt Quick window for Linux and Windows 11, with an animated cyan core,
-a conversation panel, workspace selection, reasoning presets and push-to-talk
+a conversation panel, model/workspace selection, reasoning presets and push-to-talk
 voice input. The same interface runs on both platforms; platform-specific
 launchers and menu installers are provided. This is a source distribution,
 not a signed standalone EXE, AppImage, DEB or RPM release.
@@ -86,14 +86,49 @@ point, avoiding shell interpolation of paths or requests.
 5. **New conversation** or Ctrl+N starts a fresh context. Changing the workspace
    or access mode also resets the context.
 
+Preferences has **Intelligence**, **Voice** and **Access** tabs. Intelligence
+offers a model picker from the active profile's local `models_cache.json`, an
+editable model ID, and a Refresh button. No credentials are read from that file.
+The cache can be empty or stale: run Codex once and refresh, or enter an ID from
+your provider. Availability is validated by the actual request, not by the cache.
+An empty selection / **Codex default** inherits the configured model. Changing
+the model starts a fresh conversation. The selected ID is passed as a separate
+`--model` argument to both new and resumed requests.
+
 Preferences offer Fast (`low`), Normal (existing Codex default) and Deep (`high`)
 reasoning. Choose Normal if your configured model does not support low reasoning.
 Workspace access defaults to **Observe only** (`read-only`). **Allow workspace
 edits** explicitly selects `workspace-write` for the chosen folder. This frontend
 uses noninteractive `codex exec --json`; additional approval requests cannot be
 answered in the window and fail under `approval_policy="never"`. Use the regular
-interactive CLI for tasks needing those approvals. Full Access is not exposed
-as a GUI toggle.
+interactive CLI for tasks needing those approvals.
+
+## Full Access from the GUI
+
+1. Open **Preferences > Access** and select **Full Access - separate profile**.
+2. Check the acknowledgement and type `ENABLE FULL ACCESS`.
+3. Click **Prepare and enable Full Access** (or **Enable Full Access** if installed).
+   The app invokes the existing full-profile installer after this explicit action.
+   Missing desktop prerequisites are reported in the profile log.
+4. Use **Sign in to full profile** if this profile has no authentication. The
+   device sign-in URL and code appear in the panel; **Open sign-in page** opens
+   the official device page in your browser. Credentials are never copied from
+   the normal profile.
+5. Click **Save preferences**. An amber Full Access indicator remains visible.
+
+Full Access runs `codex exec --dangerously-bypass-approvals-and-sandbox` as the
+current user, with the same separate `CODEX_HOME` used by `jarvis-full`. It can
+change user-accessible files and run commands without Codex's sandbox or command
+approvals. It does not grant root/Administrator access, bypass OS authentication
+or override upstream MCP guards. Elevated execution is refused.
+
+**Disable Full Access** restores the retained normal access setting. Switching
+profiles clears the current conversation so thread IDs cannot cross profiles.
+Full Access is enabled only for the current window and returns to normal mode
+after restart. Profile preparation and login are cancellable. Cancelling setup
+does not remove files already installed. Automatic preparation requires the
+source checkout; packaged-wheel users can prepare the profile using the
+[existing Full Access installers](full-access.md).
 
 MCP mouse/keyboard permissions are independent of the shell sandbox and are
 inherited from your existing setup. The UI does not claim that CLI detection
@@ -114,8 +149,9 @@ The transcript is placed in the composer and **never submitted automatically**.
 Review/edit it, then press Send to submit its text to Codex. Cancel is available
 during microphone startup, recording, downloading and transcription. Request
 microphone permission in Windows Privacy settings or your Linux desktop when
-necessary. `JARVIS_VOICE_LANGUAGE` can override language detection, for example
-`ru`; `JARVIS_VOICE_MODEL` can select another model.
+necessary. Before the first launch, `JARVIS_VOICE_LANGUAGE` (for example `ru`)
+and `JARVIS_VOICE_MODEL` seed these preferences. Later changes can be made in
+the Voice tab and are retained in user settings.
 
 For text-only use, without the voice packages:
 
@@ -154,8 +190,45 @@ Live Windows desktop behavior, microphone capture/transcription, authenticated
 model requests and compositor-specific GUI actions require checks on the target
 machine. Do not interpret simulated test results as those checks.
 
-The app stores only workspace/reasoning/access preferences in user settings.
+The app stores workspace, model, reasoning, normal access and voice preferences in user settings.
 Conversation text stays in app memory; Codex maintains its own session history
 under its existing configuration. Closing the app stops its active workers.
 `JARVIS_GUI_CODEX` can point to an alternative Codex executable for development;
 it is a path, not a shell command.
+
+## Local speech languages and models
+
+In **Preferences > Voice**, choose Auto detect or one of 15 explicit languages:
+Russian, English, Ukrainian, German, French, Spanish, Italian, Portuguese,
+Polish, Turkish, Arabic, Chinese, Japanese, Korean and Hindi. Russian uses the
+Whisper `ru` language code; this preserves the original speech language rather
+than translating it into English. Auto detect also supports other languages
+covered by multilingual Whisper. Accuracy varies by language, audio and model.
+
+The model picker offers `tiny`, `base`, `small`, and `medium`. Larger models use
+more memory and computation. Other official multilingual Whisper sizes or a
+local converted model folder can be entered manually. English-only `.en` model
+names are not accepted. The saved selection is supplied to the voice worker
+as `--language` and `--model`; existing `JARVIS_VOICE_*` variables seed the initial
+preferences. Recordings remain capped at 60 seconds and are never submitted
+automatically.
+
+![Local voice preferences](images/jarvis-voice-settings.png)
+
+The settings window now uses dark controls and tabs. The main screen shows the
+selected Codex model, reasoning, voice language/model and active access level.
+The core animation is limited to about 30 frames per second and pauses when
+minimized. No model or transcription latency benchmark is claimed.
+
+## Next performance improvements to investigate
+
+- Keep a voice worker/model warm after first use, while leaving microphone
+  capture off between recordings; measure latency against the memory cost.
+- Use a persistent Codex app-server connection to avoid CLI/MCP initialization
+  on each message and support richer progress and interactive approvals.
+- Measure microphone, model startup, Codex and tool latency separately before
+  adding automatic Fast/Deep routing.
+- Add a Doctor screen for login, model, microphone, MCP and desktop readiness,
+  plus resumable checkpoints for long editing workflows.
+
+These are proposed follow-ups, not implemented features.

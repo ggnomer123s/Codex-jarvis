@@ -17,6 +17,20 @@ Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11. README links
 each platform directly. These recipes do not establish validation on every OS;
 the x86-64 Qt lock requires glibc 2.34+ on Linux.
 
+**GUI preferences update — 2026-10-13:** the desktop app now supports explicit
+Full Access enablement through the existing separate-profile installers, device
+sign-in, per-window enablement and return to the normal profile. Installation
+and login execute in child processes; the normal process environment and
+authentication are retained. The GUI also reads safe model IDs from the active
+profile's local catalog, accepts custom IDs, and has 15 voice language presets
+including Russian plus automatic detection. Whisper size/local folder and
+language settings persist. Model/profile changes clear the conversation context.
+The dark preferences tabs, status badges and approximately 30 FPS/minimized
+animation behavior are implemented. Persistent Codex/Whisper workers, automatic
+reasoning selection and Doctor/checkpoints remain proposals. Tests simulate
+processes/audio; actual Full Access installation/login and microphone/model
+execution still need validation on a target machine.
+
 > **Start here if you are another AI or a developer continuing this project.** Read this file, `README.md`, and the specific source files you intend to edit. This handoff is a snapshot, not permission to invent past accomplishments or disregard newer code, the user's current request, tests, or security boundaries. **The repository source is authoritative if the handoff becomes stale.**
 
 ## 1. Mission and actual product

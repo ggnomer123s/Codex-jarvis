@@ -28,5 +28,6 @@ Button {
         font.weight: control.primary ? Font.DemiBold : Font.Normal
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
+        elide: Text.ElideRight
     }
 }

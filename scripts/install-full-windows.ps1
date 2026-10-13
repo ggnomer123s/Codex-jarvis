@@ -1,7 +1,7 @@
 # JARVIS-CODEX MANAGED — optional separate Windows 11 Full Access installation
 # Use only on your own device. Does not bypass Windows UAC or require admin.
 [CmdletBinding()]
-param()
+param([string]$Acknowledgement)
 $ErrorActionPreference = 'Stop'
 
 if ([Security.Principal.WindowsIdentity]::GetCurrent() -and
@@ -31,7 +31,7 @@ This profile has independent CODEX_HOME and login state.
 Do not run as Administrator or on sensitive accounts.
 '@
 
-$approval = Read-Host 'Type exactly ENABLE FULL ACCESS to continue'
+$approval = if ($Acknowledgement) { $Acknowledgement } else { Read-Host 'Type exactly ENABLE FULL ACCESS to continue' }
 if ($approval -cne 'ENABLE FULL ACCESS') { Write-Host 'Cancelled. No installation performed.'; exit 1 }
 
 $fullHome = Join-Path $env:LOCALAPPDATA 'jarvis-codex\full-codex-home'

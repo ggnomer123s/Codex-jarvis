@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 
-from PySide6.QtCore import QSettings, QTimer, QUrl
+from PySide6.QtCore import QObject, QMetaObject, QSettings, QTimer, QUrl
 from PySide6.QtGui import QIcon
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
@@ -19,6 +19,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="JARVIS desktop console")
     parser.add_argument("--smoke-test", action="store_true", help="Load the actual UI, then exit without sending a request")
     parser.add_argument("--screenshot", type=Path, help="Save a window image before the smoke-test exits")
+    parser.add_argument("--settings-tab", choices=["intelligence", "voice", "access"], help="Show a preferences tab during the smoke test")
     args = parser.parse_args()
     app = QApplication(sys.argv[:1])
     app.setApplicationName("JARVIS")
@@ -35,6 +36,10 @@ def main() -> int:
         return 1
     app.aboutToQuit.connect(backend.shutdown)
     if args.smoke_test:
+        if args.settings_tab:
+            window = engine.rootObjects()[0]
+            QMetaObject.invokeMethod(window.findChild(QObject, "preferences"), "open")
+            window.findChild(QObject, "preferenceTabs").setProperty("currentIndex", ["intelligence", "voice", "access"].index(args.settings_tab))
         def finish():
             window = engine.rootObjects()[0]
             if args.screenshot:

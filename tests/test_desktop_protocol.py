@@ -8,9 +8,35 @@ from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gui"))
 from jarvis_gui.core import build_arguments, launch_command, parse_event
+from jarvis_gui.preferences import LANGUAGES, cached_models
 
 
 class TestDesktopProtocol(unittest.TestCase):
+    def test_full_access_uses_bypass_and_explicit_model(self):
+        with tempfile.TemporaryDirectory() as folder:
+            args = build_arguments(folder, access="full-access", model="custom/codex-model")
+        self.assertIn("--dangerously-bypass-approvals-and-sandbox", args)
+        self.assertNotIn("--sandbox", args)
+        self.assertEqual(args[args.index("--model") + 1], "custom/codex-model")
+
+    def test_model_id_cannot_be_a_cli_option(self):
+        with tempfile.TemporaryDirectory() as folder:
+            with self.assertRaises(ValueError):
+                build_arguments(folder, model="--dangerously-bypass-approvals-and-sandbox")
+
+    def test_model_catalog_filters_hidden_invalid_and_duplicate_entries(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "models_cache.json"
+            path.write_text(json.dumps({"models": [{"slug": "model-a"}, {"slug": "hidden", "visibility": "hide"}, {"slug": "model-a"}, {"slug": "--invalid"}, None, {"id": "provider/model-b"}]}))
+            self.assertEqual(cached_models(folder), ["model-a", "provider/model-b"])
+            path.write_text("not JSON")
+            self.assertEqual(cached_models(folder), [])
+
+    def test_language_presets_include_russian_and_auto_detection(self):
+        self.assertEqual(len(LANGUAGES), 16)
+        self.assertIn(("ru", "Russian"), LANGUAGES)
+        self.assertEqual(LANGUAGES[0][0], "auto")
+
     def test_prompt_uses_stdin_and_selected_sandbox(self):
         with tempfile.TemporaryDirectory() as folder:
             args = build_arguments(folder, "high", "workspace-write")

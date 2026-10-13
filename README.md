@@ -5,8 +5,9 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 ## JARVIS desktop app — Linux and Windows 11
 
 A native desktop interface is now available: an animated cyan JARVIS core,
-Codex chat with continuing conversation context, task cancellation, workspace
-and reasoning settings, and local push-to-talk transcription. Voice text is
+Codex chat with continuing conversation context, task cancellation, model/workspace
+and reasoning settings, an explicit separate Full Access mode, and local
+push-to-talk transcription with 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
 
 ![JARVIS desktop app](docs/images/jarvis-desktop.png)
@@ -78,7 +79,7 @@ Observed result / user-facing report
 | Area | Implemented source and behavior |
 |---|---|
 | Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
-| Native desktop frontend | `gui/`; Qt Quick interface, Codex JSON process bridge with session resume, local voice transcript review, separate Linux/Windows launchers and menu shortcuts |
+| Native desktop frontend | `gui/`; Qt Quick interface, model selection, Codex chat/resume, explicit separate Full Access setup/device login, 15 local voice language presets including Russian, Linux/Windows launchers and menu shortcuts |
 | Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
 | Separate Full Access | `scripts/install-full-linux.sh`, `scripts/install-full-windows.ps1`, `scripts/jarvis-full-launcher.*`; independent `CODEX_HOME`, login and `fast|normal|deep` presets |
 | GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |

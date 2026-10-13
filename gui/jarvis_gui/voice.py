@@ -10,6 +10,8 @@ import json
 import os
 import sys
 import threading
+import argparse
+from .preferences import LANGUAGES, valid_voice_model
 
 MAX_SECONDS = 60
 SAMPLE_RATE = 16000
@@ -26,7 +28,14 @@ def dependencies_available() -> bool:
                for name in ("numpy", "sounddevice", "faster_whisper"))
 
 
-def main() -> int:
+def main(argv=()) -> int:
+    parser = argparse.ArgumentParser(description="Local multilingual JARVIS voice worker")
+    parser.add_argument("--language", default=os.environ.get("JARVIS_VOICE_LANGUAGE") or "auto")
+    parser.add_argument("--model", default=os.environ.get("JARVIS_VOICE_MODEL", "base"))
+    options = parser.parse_args(argv)
+    if options.language not in dict(LANGUAGES) or not valid_voice_model(options.model):
+        emit("error", message="Choose Auto detect or a supported language, and a multilingual Whisper model or local model folder.")
+        return 2
     if not dependencies_available():
         emit("error", message="Voice packages are missing. Launch with the voice extra; see docs/desktop-app.md.")
         return 2
@@ -79,10 +88,11 @@ def main() -> int:
         emit("transcribing")
         from faster_whisper import WhisperModel
         # Cached by faster-whisper; first use downloads the multilingual model.
-        model = WhisperModel(os.environ.get("JARVIS_VOICE_MODEL", "base"),
+        model = WhisperModel(options.model,
                              device="cpu", compute_type="int8")
         segments, _ = model.transcribe(audio, beam_size=3, vad_filter=True,
-                                       language=os.environ.get("JARVIS_VOICE_LANGUAGE") or None,
+                                       task="transcribe",
+                                       language=None if options.language == "auto" else options.language,
                                        condition_on_previous_text=False)
         text = " ".join(segment.text.strip() for segment in segments).strip()
         if text:
@@ -96,4 +106,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

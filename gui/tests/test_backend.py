@@ -33,7 +33,7 @@ class TestBackend(unittest.TestCase):
     def backend(self, source, **kwargs):
         script = self.root / "fake_cli.py"
         script.write_text(source, encoding="utf-8")
-        backend = Backend(self.settings, codex_command=[sys.executable, "-u", str(script)], **kwargs)
+        backend = Backend(self.settings, codex_command=[sys.executable, "-u", str(script)], full_home=self.root / "full-profile", **kwargs)
         self.backends.append(backend)
         return backend
 
@@ -105,12 +105,14 @@ for fragment in (data[:-2], data[-2:]):
         voice = self.root / "fake_voice.py"
         voice.write_text("""
 import json,sys
+assert sys.argv[1:] == ['--language','ru','--model','medium']
 print(json.dumps({'type':'recording'}),flush=True)
 if sys.stdin.readline().strip() == 'stop':
     print(json.dumps({'type':'transcribing'}),flush=True)
     print(json.dumps({'type':'transcript','text':'review this voice request'}),flush=True)
 """)
         backend = self.backend("raise RuntimeError('Codex must not be started')", voice_command=[sys.executable, "-u", str(voice)])
+        backend.savePreferences("low", "read-only", "", "ru", "medium")
         received = []
         backend.transcriptReady.connect(received.append)
         with mock.patch("jarvis_gui.backend.dependencies_available", return_value=True):
@@ -128,6 +130,92 @@ if sys.stdin.readline().strip() == 'stop':
             backend.toggleVoice()
         self.assertEqual(backend.voiceState, "idle")
         self.assertIn("Voice packages are missing", backend.messages[-1]["text"])
+
+    def prepare_profile(self, backend):
+        backend.profile.home.mkdir()
+        (backend.profile.home / "AGENTS.md").write_text("Full Access test profile")
+        (backend.profile.home / "backend.txt").write_text("none")
+
+    def test_full_access_is_explicit_isolated_and_not_restored_on_restart(self):
+        backend = self.backend("""
+import json,os,sys
+sys.stdin.read()
+text=json.dumps({'home':os.environ.get('CODEX_HOME',''), 'args':sys.argv[1:]})
+print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':text}}))
+""")
+        self.prepare_profile(backend)
+        backend._thread_id = "normal-context"
+        self.assertFalse(backend.enableFullAccess("yes"))
+        self.assertFalse(backend.fullAccess)
+        with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+            self.assertTrue(backend.enableFullAccess("ENABLE FULL ACCESS"))
+            self.assertEqual(backend._thread_id, "")
+            backend.send("test")
+            self.wait(lambda: not backend.busy)
+        import json
+        result = json.loads(backend.messages[-1]["text"])
+        self.assertEqual(result["home"], str(backend.profile.home))
+        self.assertIn("--dangerously-bypass-approvals-and-sandbox", result["args"])
+        backend.disableFullAccess()
+        self.assertFalse(backend.fullAccess)
+        backend.send("normal")
+        self.wait(lambda: not backend.busy)
+        result = json.loads(backend.messages[-1]["text"])
+        self.assertNotEqual(result["home"], str(backend.profile.home))
+        self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", result["args"])
+        reopened = Backend(self.settings, full_home=backend.profile.home)
+        self.backends.append(reopened)
+        self.assertFalse(reopened.fullAccess)
+
+    def test_full_access_cannot_be_enabled_through_general_preferences(self):
+        backend = self.backend("pass")
+        self.assertFalse(backend.savePreferences("low", "full-access", "", "ru", "base"))
+        self.assertFalse(backend.fullAccess)
+
+    def test_full_access_refuses_elevated_execution(self):
+        backend = self.backend("pass")
+        self.prepare_profile(backend)
+        with mock.patch("jarvis_gui.backend.elevated", return_value=True):
+            self.assertFalse(backend.enableFullAccess("ENABLE FULL ACCESS"))
+        self.assertFalse(backend.fullAccess)
+
+    def test_model_and_voice_preferences_persist_and_reset_model_context(self):
+        backend = self.backend("pass")
+        backend._thread_id = "previous"
+        self.assertTrue(backend.savePreferences("default", "read-only", "test-model", "ru", "small"))
+        self.assertEqual(backend._thread_id, "")
+        self.assertEqual((backend.model, backend.language, backend.voiceModel), ("test-model", "ru", "small"))
+        self.assertEqual(self.settings.value("language"), "ru")
+        self.assertEqual(self.settings.value("model"), "test-model")
+
+    def test_separate_login_uses_full_home_without_starting_a_task(self):
+        backend = self.backend("import sys; assert sys.argv[1:] == ['login','--device-auth']; print('Complete device sign-in at https://auth.openai.com/codex/device')")
+        self.prepare_profile(backend)
+        backend.profile.login()
+        self.wait(lambda: not backend.profile.busy)
+        self.assertEqual(backend.profile.process.processEnvironment().value("CODEX_HOME"), str(backend.profile.home))
+        self.assertEqual(backend.profile.loginUrl, "https://auth.openai.com/codex/device")
+        self.assertFalse(backend.fullAccess)
+        self.assertFalse(backend.busy)
+
+    def test_successful_profile_preparation_activates_only_after_process_finishes(self):
+        backend = self.backend("pass")
+        installer = self.root / "prepare.py"
+        installer.write_text("from pathlib import Path; import sys; p=Path(sys.argv[1]); p.mkdir(); (p/'AGENTS.md').write_text('rules'); (p/'backend.txt').write_text('none')")
+        backend.profile._start("install", sys.executable, [str(installer), str(backend.profile.home)])
+        self.assertFalse(backend.fullAccess)
+        self.wait(lambda: not backend.profile.busy)
+        self.assertTrue(backend.fullAccess)
+
+    def test_cancelled_profile_install_does_not_activate_full_access(self):
+        backend = self.backend("pass")
+        self.prepare_profile(backend)
+        installer = self.root / "slow.py"
+        installer.write_text("import time; time.sleep(60)")
+        backend.profile._start("install", sys.executable, [str(installer)])
+        backend.profile.cancel()
+        self.wait(lambda: not backend.profile.busy)
+        self.assertFalse(backend.fullAccess)
 
 
 if __name__ == "__main__":

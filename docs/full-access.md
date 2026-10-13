@@ -4,6 +4,14 @@ An optional advanced setup for complex development, media-editing and desktop wo
 
 ## Installation
 
+The desktop app can prepare and enable this same profile through
+**Preferences > Access > Full Access**, after typing `ENABLE FULL ACCESS`.
+It includes a separate device-login panel and a visible active-mode indicator.
+The mode is scoped to the current window and returns to normal after restart.
+See [Desktop app Full Access](desktop-app.md#full-access-from-the-gui).
+The installers accept an explicit acknowledgement argument for this GUI flow;
+ordinary terminal installation still prompts interactively by default.
+
 On Linux, after completing the normal prerequisites:
 
 ```bash

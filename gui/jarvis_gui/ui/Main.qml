@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Window
 
 ApplicationWindow {
     id: window
@@ -11,10 +12,10 @@ ApplicationWindow {
     color: "#080e14"
     font.family: "Segoe UI"
     property bool voiceActive: bridge.voiceState !== "idle"
-    property bool locked: bridge.busy || voiceActive
+    property bool locked: bridge.busy || voiceActive || bridge.fullProfile.busy
     property bool compact: width < 1250
 
-    Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice() } }
+    Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel() } }
     Shortcut { sequence: "Ctrl+N"; enabled: !window.locked; onActivated: bridge.newSession() }
     Connections {
         target: bridge
@@ -72,7 +73,7 @@ ApplicationWindow {
                 }
                 HudButton { Layout.fillWidth: true; text: "New conversation"; glyph: "+"; enabled: !window.locked; onClicked: bridge.newSession() }
                 HudButton { Layout.fillWidth: true; text: "Workspace"; glyph: "⌑"; enabled: !window.locked; onClicked: bridge.chooseFolder() }
-                HudButton { Layout.fillWidth: true; text: "Preferences"; glyph: "⚙"; enabled: !window.locked; onClicked: preferences.open() }
+                HudButton { Layout.fillWidth: true; text: "Preferences"; glyph: "⚙"; enabled: !bridge.busy && !window.voiceActive; onClicked: preferences.open() }
                 Item { Layout.fillHeight: true }
                 Rectangle {
                     Layout.fillWidth: true; implicitHeight: workspaceLabel.implicitHeight + 66; radius: 12; color: "#101e27"; border.color: "#213640"
@@ -80,7 +81,7 @@ ApplicationWindow {
                         anchors.fill: parent; anchors.margins: 14; spacing: 10
                         Text { text: "WORKSPACE"; color: "#718b9b"; font.pixelSize: 9; font.letterSpacing: 1.5 }
                         Text { id: workspaceLabel; width: parent.width; text: bridge.folder; color: "#b9ccd6"; font.pixelSize: 11; wrapMode: Text.WrapAnywhere; maximumLineCount: 3; elide: Text.ElideMiddle }
-                        Text { text: bridge.access === "read-only" ? "◉  Observe only" : "◉  Workspace edits"; color: "#64d3c3"; font.pixelSize: 10 }
+                        Text { text: bridge.fullAccess ? "◉  FULL ACCESS" : (bridge.access === "read-only" ? "◉  Observe only" : "◉  Workspace edits"); color: bridge.fullAccess ? "#f3b972" : "#64d3c3"; font.pixelSize: 10 }
                     }
                 }
                 Text { Layout.topMargin: 14; text: "BUILT FOR YOUR DESKTOP"; color: "#536c7d"; font.pixelSize: 8; font.letterSpacing: 1.2 }
@@ -102,6 +103,18 @@ ApplicationWindow {
                         Text { text: "A little less friction. A little more possibility."; color: "#6d8798"; font.pixelSize: 11 }
                     }
                     Item { Layout.fillWidth: true }
+                    HudButton {
+                        implicitHeight: 30; Layout.maximumWidth: window.compact ? 140 : 200
+                        text: bridge.model || "Codex default"; font.pixelSize: 10
+                        enabled: !bridge.busy && !window.voiceActive
+                        onClicked: { preferences.open(); preferenceTabs.currentIndex = 0 }
+                        ToolTip.visible: hovered; ToolTip.text: "Choose a model and reasoning mode"
+                    }
+                    Rectangle {
+                        visible: bridge.fullAccess
+                        width: 106; height: 30; radius: 15; color: "#332619"; border.color: "#8e5f32"
+                        Text { anchors.centerIn: parent; text: "FULL ACCESS"; color: "#ffd29a"; font.pixelSize: 9; font.letterSpacing: 1 }
+                    }
                     Rectangle {
                         width: 128; height: 30; radius: 15; color: "#10251f"; border.color: "#254c3e"
                         Row { anchors.centerIn: parent; spacing: 8
@@ -137,17 +150,24 @@ ApplicationWindow {
                         Layout.preferredWidth: window.compact ? 310 : 360
                         Layout.preferredHeight: window.compact ? 310 : 360
                         Layout.minimumHeight: 220
-                        active: bridge.busy || window.voiceActive
+                        active: bridge.busy || window.voiceActive || bridge.fullProfile.busy
                         listening: bridge.voiceState === "recording"
                         level: bridge.audioLevel
+                        animate: window.visibility !== Window.Minimized
                     }
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter; spacing: 8
                         Rectangle { width: 5; height: 5; radius: 3; color: "#43e8da" }
                         Text {
                             Layout.maximumWidth: window.compact ? 310 : 400
-                            text: bridge.activity; color: "#89b9be"; font.pixelSize: 11; elide: Text.ElideRight
+                            text: bridge.fullProfile.busy ? "Preparing profile / waiting for sign-in" : bridge.activity; color: "#89b9be"; font.pixelSize: 11; elide: Text.ElideRight
                         }
+                    }
+                    RowLayout {
+                        Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 10; spacing: 14
+                        Text { text: bridge.effort.toUpperCase() + " REASONING"; color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
+                        Rectangle { width: 1; height: 10; color: "#2a4752" }
+                        Text { text: "LOCAL VOICE / " + bridge.language.toUpperCase() + " / " + (bridge.voiceModels.indexOf(bridge.voiceModel) >= 0 ? bridge.voiceModel.toUpperCase() : "CUSTOM"); color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
                     }
                     Item { Layout.fillHeight: true; Layout.minimumHeight: 14 }
                     RowLayout {
@@ -193,7 +213,7 @@ ApplicationWindow {
                                     id: micButton; objectName: "microphoneButton"
                                     implicitWidth: 44; text: ""
                                     primary: bridge.voiceState === "recording"
-                                    enabled: !bridge.busy && bridge.voiceState !== "transcribing"
+                                    enabled: !bridge.busy && !bridge.fullProfile.busy && bridge.voiceState !== "transcribing"
                                     Accessible.name: bridge.voiceState === "recording" ? "Finish voice recording" : "Start voice recording"
                                     onClicked: bridge.toggleVoice()
                                     ToolTip.visible: hovered
@@ -210,7 +230,7 @@ ApplicationWindow {
                                 }
                                 HudButton {
                                     visible: window.locked; text: "Stop"; danger: true
-                                    onClicked: { if (bridge.busy) bridge.stop(); else bridge.cancelVoice() }
+                                    onClicked: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else bridge.fullProfile.cancel() }
                                 }
                                 HudButton {
                                     id: sendButton; objectName: "sendButton"
@@ -302,43 +322,143 @@ ApplicationWindow {
 
     Popup {
         id: preferences
+        objectName: "preferences"
         anchors.centerIn: parent
-        width: 460; padding: 26
+        width: 600; height: Math.min(window.height - 60, 700); padding: 24
         modal: true; focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         background: Rectangle { radius: 18; color: "#111f2b"; border.color: "#345463" }
         Overlay.modal: Rectangle { color: "#b0081018" }
         onOpened: {
             effortChoice.currentIndex = ["low", "default", "high"].indexOf(bridge.effort)
-            accessChoice.currentIndex = bridge.access === "read-only" ? 0 : 1
+            accessChoice.currentIndex = ["read-only", "workspace-write", "full-access"].indexOf(bridge.access)
+            modelChoice.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
+            modelChoice.editText = bridge.model || "Codex default"
+            languageChoice.currentIndex = languageChoice.indexOfValue(bridge.language)
+            voiceModelChoice.currentIndex = bridge.voiceModels.indexOf(bridge.voiceModel)
+            voiceModelChoice.editText = bridge.voiceModel
+            acknowledgement.clear(); riskAccepted.checked = false
         }
         contentItem: ColumnLayout {
-            spacing: 16
+            spacing: 14
             Text { text: "Make it yours."; color: "#def2f4"; font.pixelSize: 26; font.weight: Font.Light }
-            Text { text: "Reasoning"; color: "#8eadbd"; font.pixelSize: 12 }
-            ComboBox {
-                id: effortChoice; Layout.fillWidth: true
-                model: ["Fast - low reasoning", "Normal - Codex default", "Deep - high reasoning"]
+            Text { text: "Your model. Your voice. Your level of control."; color: "#6d929f"; font.pixelSize: 11 }
+            RowLayout {
+                id: preferenceTabs
+                objectName: "preferenceTabs"
+                property int currentIndex: 0
+                Layout.fillWidth: true; spacing: 8
+                Repeater {
+                    model: ["Intelligence", "Voice", "Access"]
+                    HudButton {
+                        required property string modelData
+                        required property int index
+                        Layout.fillWidth: true; text: modelData; implicitHeight: 36
+                        primary: preferenceTabs.currentIndex === index
+                        onClicked: preferenceTabs.currentIndex = index
+                    }
+                }
             }
-            Text { text: "Workspace access"; color: "#8eadbd"; font.pixelSize: 12 }
-            ComboBox {
-                id: accessChoice; Layout.fillWidth: true
-                model: ["Observe only", "Allow workspace edits"]
-            }
-            Text {
-                Layout.fillWidth: true; wrapMode: Text.WordWrap
-                text: "Workspace edits allow Codex to change files in the selected folder. Desktop MCP permissions come from your existing JARVIS setup. Actions requiring additional approval fail in this noninteractive interface."
-                color: "#91aab8"; font.pixelSize: 12; lineHeight: 1.4
-            }
-            Text {
-                Layout.fillWidth: true; wrapMode: Text.WordWrap
-                text: "Microphone audio is transcribed on this computer. Review the text before sending it to Codex. First use downloads a Whisper model."
-                color: "#6f909f"; font.pixelSize: 11; lineHeight: 1.4
+            StackLayout {
+                currentIndex: preferenceTabs.currentIndex
+                Layout.fillWidth: true; Layout.fillHeight: true
+                ColumnLayout {
+                    spacing: 14
+                    Text { text: "Codex model"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox { id: modelChoice; objectName: "modelChoice"; Layout.fillWidth: true; editable: true; model: bridge.models; enabled: !window.locked }
+                    RowLayout {
+                        Text { Layout.fillWidth: true; text: "From the local Codex catalog. You can also enter a model ID."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        HudButton { text: "Refresh"; implicitHeight: 30; enabled: !window.locked; onClicked: bridge.refreshModels() }
+                    }
+                    Text { text: "Reasoning"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox {
+                        id: effortChoice; Layout.fillWidth: true; enabled: !window.locked
+                        model: ["Fast - low reasoning", "Normal - Codex default", "Deep - high reasoning"]
+                    }
+                    Text { Layout.fillWidth: true; text: "Model availability depends on your Codex account and provider. Normal uses the configured reasoning default. Changing model starts a fresh conversation."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Item { Layout.fillHeight: true }
+                }
+                ColumnLayout {
+                    spacing: 14
+                    Text { text: "Speech language"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox {
+                        id: languageChoice; objectName: "languageChoice"; Layout.fillWidth: true; enabled: !window.locked
+                        model: bridge.languageOptions; textRole: "label"; valueRole: "code"
+                    }
+                    Text { Layout.fillWidth: true; text: "15 language presets, including Russian. Auto detect also handles other languages supported by multilingual Whisper."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Text { text: "Local Whisper model"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox { id: voiceModelChoice; Layout.fillWidth: true; editable: true; model: bridge.voiceModels; enabled: !window.locked }
+                    Text { Layout.fillWidth: true; text: "tiny: smaller and faster. base: balanced. small / medium: larger models for more demanding speech. You can enter a local multilingual model folder for offline use."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Rectangle {
+                        Layout.fillWidth: true; height: 90; radius: 12; color: "#0d2629"; border.color: "#275451"
+                        Text { anchors.fill: parent; anchors.margins: 16; text: "LOCAL FIRST\nAudio stays in memory on this computer. Review the transcript before sending it to Codex."; color: "#8fc5c0"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    }
+                    Item { Layout.fillHeight: true }
+                }
+                ScrollView {
+                    clip: true
+                    contentWidth: availableWidth
+                    ColumnLayout {
+                        width: parent.width; spacing: 12
+                        Text { text: "System access"; color: "#8eadbd"; font.pixelSize: 12 }
+                        HudComboBox {
+                            id: accessChoice; objectName: "accessChoice"; Layout.fillWidth: true; enabled: !window.locked
+                            model: ["Observe only", "Allow workspace edits", "Full Access - separate profile"]
+                        }
+                        Text { Layout.fillWidth: true; visible: accessChoice.currentIndex !== 2; text: "Workspace edits allow changes in the selected folder. Desktop MCP permissions come from your existing profile. Commands needing additional approval fail in the normal GUI modes."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Text { Layout.fillWidth: true; visible: accessChoice.currentIndex === 2; text: "Full Access lets Codex change your user files and run commands without its sandbox or command approvals. It uses a separate profile and login. Root / Administrator privileges and OS authentication are unchanged."; color: "#dfb987"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        CheckBox {
+                            id: riskAccepted; objectName: "fullRiskAccepted"; visible: accessChoice.currentIndex === 2 && !bridge.fullAccess
+                            text: "I want to enable Full Access for this window"
+                            enabled: !window.locked
+                            contentItem: Text { text: riskAccepted.text; color: "#c1d5dc"; font.pixelSize: 11; leftPadding: riskAccepted.indicator.width + 8; verticalAlignment: Text.AlignVCenter }
+                        }
+                        TextField {
+                            id: acknowledgement; objectName: "fullAcknowledgement"
+                            Layout.fillWidth: true; implicitHeight: 42
+                            visible: accessChoice.currentIndex === 2 && !bridge.fullAccess
+                            placeholderText: "Type ENABLE FULL ACCESS"; placeholderTextColor: "#6e8798"
+                            color: "#e3edf0"; selectByMouse: true; enabled: !window.locked
+                            background: Rectangle { radius: 9; color: "#0a1720"; border.color: "#745536" }
+                        }
+                        HudButton {
+                            Layout.fillWidth: true; visible: accessChoice.currentIndex === 2 && !bridge.fullAccess
+                            text: bridge.fullProfile.ready ? "Enable Full Access" : "Prepare and enable Full Access"
+                            objectName: "fullAccessButton"
+                            danger: true; enabled: !window.locked && riskAccepted.checked && acknowledgement.text === "ENABLE FULL ACCESS"
+                            onClicked: bridge.enableFullAccess(acknowledgement.text)
+                        }
+                        Text { visible: bridge.fullAccess; text: "FULL ACCESS IS ACTIVE FOR THIS WINDOW"; color: "#f4c185"; font.pixelSize: 10; font.letterSpacing: 1 }
+                        HudButton {
+                            Layout.fillWidth: true; visible: bridge.fullAccess; text: "Disable Full Access"; enabled: !window.locked
+                            onClicked: { bridge.disableFullAccess(); accessChoice.currentIndex = bridge.access === "read-only" ? 0 : 1 }
+                        }
+                        RowLayout {
+                            visible: accessChoice.currentIndex === 2
+                            HudButton { text: "Sign in to full profile"; enabled: bridge.fullProfile.ready && !window.locked; onClicked: bridge.fullProfile.login() }
+                            HudButton { text: "Open sign-in page"; visible: bridge.fullProfile.loginUrl.length > 0; onClicked: bridge.fullProfile.openLoginPage() }
+                            HudButton { text: "Cancel"; visible: bridge.fullProfile.busy; danger: true; onClicked: bridge.fullProfile.cancel() }
+                        }
+                        Text { Layout.fillWidth: true; visible: accessChoice.currentIndex === 2; text: "Sign in once if this separate profile has no login. Follow the device link and code below. Full Access returns to your normal mode when you reopen JARVIS."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        TextArea {
+                            Layout.fillWidth: true; Layout.preferredHeight: 115
+                            visible: bridge.fullProfile.output.length > 0
+                            text: bridge.fullProfile.output; color: "#acc9d0"; font.pixelSize: 10; wrapMode: TextEdit.Wrap
+                            readOnly: true; selectByMouse: true; textFormat: TextEdit.PlainText
+                            background: Rectangle { color: "#08141c"; radius: 8 }
+                        }
+                    }
+                }
             }
             HudButton {
                 Layout.fillWidth: true; primary: true; text: "Save preferences"
-                onClicked: { bridge.configure(["low", "default", "high"][effortChoice.currentIndex], accessChoice.currentIndex === 0 ? "read-only" : "workspace-write"); preferences.close() }
+                enabled: !window.locked && (accessChoice.currentIndex !== 2 || bridge.fullAccess)
+                onClicked: {
+                    let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
+                    if (bridge.savePreferences(["low", "default", "high"][effortChoice.currentIndex], ["read-only", "workspace-write", "full-access"][accessChoice.currentIndex], model, languageChoice.currentValue, voiceModelChoice.editText)) preferences.close()
+                }
             }
+            Text { Layout.fillWidth: true; visible: bridge.preferencesError.length > 0; text: bridge.preferencesError; color: "#f5a4a4"; font.pixelSize: 11; wrapMode: Text.WordWrap }
         }
     }
 }

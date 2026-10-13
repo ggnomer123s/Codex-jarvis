@@ -24,7 +24,7 @@ class AudioArray:
 
 
 class TestDesktopVoice(unittest.TestCase):
-    def run_worker(self, frames=16000, transcript="A reviewed request", microphone_error=None):
+    def run_worker(self, frames=16000, transcript="A reviewed request", microphone_error=None, argv=()):
         class Stream:
             def __init__(self, **kwargs):
                 self.callback = kwargs["callback"]
@@ -49,7 +49,7 @@ class TestDesktopVoice(unittest.TestCase):
         with mock.patch.object(voice, "dependencies_available", return_value=True), \
                 mock.patch.dict(sys.modules, modules), mock.patch.object(sys, "stdin", io.StringIO("stop\n")), \
                 contextlib.redirect_stdout(output):
-            code = voice.main()
+            code = voice.main(argv)
         events = [json.loads(line) for line in output.getvalue().splitlines()]
         return code, events, model
 
@@ -76,6 +76,23 @@ class TestDesktopVoice(unittest.TestCase):
         code, events, _ = self.run_worker(transcript="")
         self.assertEqual(code, 1)
         self.assertEqual(events[-1]["type"], "error")
+
+    def test_russian_and_medium_model_are_forwarded_to_local_whisper(self):
+        code, events, model = self.run_worker(argv=["--language", "ru", "--model", "medium"], transcript="\u041f\u0440\u0438\u0432\u0435\u0442")
+        self.assertEqual(code, 0)
+        self.assertEqual(model.call_args.args[0], "medium")
+        self.assertEqual(model.return_value.transcribe.call_args.kwargs["language"], "ru")
+        self.assertEqual(events[-1]["text"], "\u041f\u0440\u0438\u0432\u0435\u0442")
+
+    def test_auto_language_uses_whisper_detection(self):
+        _, _, model = self.run_worker(argv=["--language", "auto", "--model", "tiny"])
+        self.assertIsNone(model.return_value.transcribe.call_args.kwargs["language"])
+
+    def test_invalid_language_fails_before_microphone_is_opened(self):
+        code, events, model = self.run_worker(argv=["--language", "invalid"])
+        self.assertEqual(code, 2)
+        self.assertEqual(events[0]["type"], "error")
+        model.assert_not_called()
 
 
 if __name__ == "__main__":

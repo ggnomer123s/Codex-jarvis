@@ -6,13 +6,14 @@ Item {
     property bool listening: false
     property real level: 0
     property real phase: 0
+    property bool animate: true
     property color accent: listening ? "#8bf6eb" : "#43e8da"
     implicitWidth: 380
     implicitHeight: 380
 
-    NumberAnimation on phase {
-        from: 0; to: 360; duration: orb.active ? 16000 : 48000
-        loops: Animation.Infinite; running: orb.visible
+    Timer {
+        interval: 33; repeat: true; running: orb.visible && orb.animate
+        onTriggered: orb.phase = (orb.phase + (orb.active ? 0.75 : 0.25)) % 360
     }
     onPhaseChanged: rings.requestPaint()
     onLevelChanged: rings.requestPaint()

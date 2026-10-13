@@ -7,11 +7,14 @@ from pathlib import Path
 import signal
 import sys
 
-from PySide6.QtCore import QObject, Property, QProcess, QSettings, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Property, QProcess, QProcessEnvironment, QSettings, QTimer, Signal, Slot
 from PySide6.QtWidgets import QFileDialog
 
 from .core import build_arguments, find_codex, launch_command, parse_event
 from .voice import dependencies_available
+from .preferences import (LANGUAGES, VOICE_MODELS, FULL_ACKNOWLEDGEMENT, cached_models,
+                          elevated, valid_model_id, valid_voice_model)
+from .profiles import FullProfile
 
 
 class Backend(QObject):
@@ -19,7 +22,7 @@ class Backend(QObject):
     messagesChanged = Signal()
     transcriptReady = Signal(str)
 
-    def __init__(self, settings: QSettings | None = None, *, codex_command=None, voice_command=None):
+    def __init__(self, settings: QSettings | None = None, *, codex_command=None, voice_command=None, full_home=None):
         super().__init__()
         self.settings = settings or QSettings("Jarvis", "Desktop")
         saved_folder = str(self.settings.value("folder", str(Path.home())))
@@ -30,6 +33,17 @@ class Backend(QObject):
             self._effort = "low"
         if self._access not in ("read-only", "workspace-write"):
             self._access = "read-only"
+        self._model = str(self.settings.value("model", ""))
+        if not valid_model_id(self._model):
+            self._model = ""
+        self._language = str(self.settings.value("language", os.environ.get("JARVIS_VOICE_LANGUAGE") or "auto"))
+        if self._language not in dict(LANGUAGES):
+            self._language = "auto"
+        self._voice_model = str(self.settings.value("voiceModel", os.environ.get("JARVIS_VOICE_MODEL", "base")))
+        if not valid_voice_model(self._voice_model):
+            self._voice_model = "base"
+        self._normal_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
+        self._models = cached_models(self._normal_home)
         self._codex = os.environ.get("JARVIS_GUI_CODEX") or find_codex() or ""
         self._codex_command = codex_command
         worker_python = str(Path(sys.executable).with_name("python.exe")) if os.name == "nt" else sys.executable
@@ -41,6 +55,7 @@ class Backend(QObject):
         self._level = 0.0
         self._activity = "Ready when you are" if self._codex else "Install Codex CLI to connect"
         self._messages = []
+        self._preferences_error = ""
         self._thread_id = ""
         self._cancelled = False
         self._failed = False
@@ -68,6 +83,10 @@ class Backend(QObject):
         self._kill_timer = QTimer(self)
         self._kill_timer.setSingleShot(True)
         self._kill_timer.timeout.connect(self._force_stop)
+        self.profile = FullProfile(self._codex_launch, self, home=full_home)
+        self.profile.changed.connect(self.changed.emit)
+        self.profile.error.connect(lambda text: self._message("error", text))
+        self.profile.prepared.connect(self._activate_full)
 
     @Property("QVariantList", notify=messagesChanged)
     def messages(self):
@@ -94,6 +113,51 @@ class Backend(QObject):
         return self._access
 
     @Property(bool, notify=changed)
+    def fullAccess(self):
+        return self._access == "full-access"
+
+    @Property(QObject, constant=True)
+    def fullProfile(self):
+        return self.profile
+
+    @Property(str, notify=changed)
+    def model(self):
+        return self._model
+
+    @Property("QStringList", notify=changed)
+    def models(self):
+        names = list(self._models)
+        if self._model and self._model not in names:
+            names.append(self._model)
+        return ["Codex default", *names]
+
+    @Property(str, notify=changed)
+    def language(self):
+        return self._language
+
+    @Property("QVariantList", constant=True)
+    def languageOptions(self):
+        return [{"code": code, "label": label} for code, label in LANGUAGES]
+
+    @Property(str, notify=changed)
+    def voiceModel(self):
+        return self._voice_model
+
+    @Property("QStringList", constant=True)
+    def voiceModels(self):
+        return VOICE_MODELS
+
+    @Property(str, notify=changed)
+    def preferencesError(self):
+        return self._preferences_error
+
+    def _settings_error(self, text):
+        self._preferences_error = text
+        self._message("error", text)
+        self.changed.emit()
+        return False
+
+    @Property(bool, notify=changed)
     def codexAvailable(self):
         return bool(self._codex)
 
@@ -113,20 +177,29 @@ class Backend(QObject):
         self._messages.append({"role": role, "text": text})
         self.messagesChanged.emit()
 
+    def _codex_launch(self, args):
+        if not self._codex:
+            raise ValueError("Codex CLI was not found. Install it and reopen JARVIS.")
+        if self._codex_command:
+            return self._codex_command[0], self._codex_command[1:] + args
+        return launch_command(self._codex, args)
+
+    def _locked(self):
+        return self._busy or self._voice_state != "idle" or self.profile.busy
+
     @Slot(str)
     def send(self, prompt):
         prompt = prompt.strip()
-        if not prompt or self._busy or self._voice_state != "idle":
+        if not prompt or self._locked():
             return
         if not self._codex:
             self._message("error", "Codex CLI was not found. Install @openai/codex, run codex login in a terminal, then reopen JARVIS.")
             return
         try:
-            args = build_arguments(self._folder, self._effort, self._access, self._thread_id)
-            if self._codex_command:
-                program, args = self._codex_command[0], self._codex_command[1:] + args
-            else:
-                program, args = launch_command(self._codex, args)
+            if self.fullAccess and elevated():
+                raise ValueError("Full Access must run as a normal user, not root or Administrator.")
+            args = build_arguments(self._folder, self._effort, self._access, self._thread_id, self._model)
+            program, args = self._codex_launch(args)
         except ValueError as exc:
             self._message("error", str(exc))
             return
@@ -138,6 +211,10 @@ class Backend(QObject):
         self._activity = "Connecting to Codex"
         self._message("user", prompt)
         self.changed.emit()
+        environment = QProcessEnvironment.systemEnvironment()
+        if self.fullAccess:
+            environment.insert("CODEX_HOME", str(self.profile.home))
+        self.process.setProcessEnvironment(environment)
         self.process.setWorkingDirectory(self._folder)
         self.process.start(program, args)
 
@@ -230,7 +307,7 @@ class Backend(QObject):
 
     @Slot()
     def newSession(self):
-        if self._busy or self._voice_state != "idle":
+        if self._locked():
             return
         self._thread_id = ""
         self._messages = []
@@ -240,7 +317,7 @@ class Backend(QObject):
 
     @Slot()
     def chooseFolder(self):
-        if self._busy or self._voice_state != "idle":
+        if self._locked():
             return
         folder = QFileDialog.getExistingDirectory(None, "Choose your workspace", self._folder)
         if folder and folder != self._folder:
@@ -250,23 +327,74 @@ class Backend(QObject):
 
     @Slot(str, str)
     def configure(self, effort, access):
-        if self._busy or self._voice_state != "idle":
-            return
+        return self.savePreferences(effort, access, self._model, self._language, self._voice_model)
+
+    @Slot(str, str, str, str, str, result=bool)
+    def savePreferences(self, effort, access, model, language, voice_model):
+        if self._locked():
+            return False
+        model, voice_model = model.strip(), voice_model.strip()
+        self._preferences_error = ""
         try:
-            build_arguments(self._folder, effort, access)
-        except ValueError:
-            return
-        if access != self._access:
-            # Start a fresh context when permissions change.
+            if access == "full-access" and not self.fullAccess:
+                raise ValueError("Enable Full Access explicitly in the Access tab first.")
+            build_arguments(self._folder, effort, access, model=model)
+            if language not in dict(LANGUAGES):
+                raise ValueError("Choose a supported voice language or Auto detect.")
+            if not valid_voice_model(voice_model):
+                raise ValueError("Choose tiny, base, small, medium, or an existing local multilingual model folder.")
+        except ValueError as exc:
+            return self._settings_error(str(exc))
+        if access != self._access or model != self._model:
             self.newSession()
         self._effort, self._access = effort, access
+        self._model, self._language, self._voice_model = model, language, voice_model
         self.settings.setValue("effort", effort)
-        self.settings.setValue("access", access)
+        # Full Access is enabled for this app session only; normal mode is retained.
+        if access != "full-access":
+            self.settings.setValue("access", access)
+        for key, value in (("model", model), ("language", language), ("voiceModel", voice_model)):
+            self.settings.setValue(key, value)
+        self.refreshModels()
+        return True
+
+    @Slot()
+    def refreshModels(self):
+        self._models = cached_models(self.profile.home if self.fullAccess else self._normal_home)
         self.changed.emit()
+
+    @Slot(str, result=bool)
+    def enableFullAccess(self, acknowledgement):
+        if self._locked():
+            return False
+        if acknowledgement != FULL_ACKNOWLEDGEMENT:
+            return self._settings_error("Type ENABLE FULL ACCESS to enable the separate profile.")
+        if elevated():
+            return self._settings_error("Run JARVIS as a normal user before enabling Full Access.")
+        self._preferences_error = ""
+        if self.profile.ready:
+            self._activate_full()
+        else:
+            self.profile.install(acknowledgement)
+        return self.fullAccess or self.profile.busy
+
+    def _activate_full(self):
+        if self._locked() or not self.profile.ready:
+            return
+        self.newSession()
+        self._access = "full-access"
+        self._activity = "Full Access enabled for this window"
+        self.refreshModels()
+
+    @Slot()
+    def disableFullAccess(self):
+        if self.fullAccess and not self._locked():
+            normal = str(self.settings.value("access", "read-only"))
+            self.configure(self._effort, normal if normal in ("read-only", "workspace-write") else "read-only")
 
     @Slot()
     def toggleVoice(self):
-        if self._busy:
+        if self._busy or self.profile.busy:
             return
         if self._voice_state in ("starting", "recording"):
             self._voice_stop_requested = True
@@ -283,7 +411,8 @@ class Backend(QObject):
             self._voice_stop_requested = False
             self._voice_state = "starting"
             self._activity = "Opening microphone"
-            self.voice.start(self._voice_command[0], self._voice_command[1:])
+            self.voice.start(self._voice_command[0], [*self._voice_command[1:],
+                             "--language", self._language, "--model", self._voice_model])
         self.changed.emit()
 
     def _voice_started(self):
@@ -343,6 +472,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.profile.shutdown()
         if self._busy:
             self.stop()
             if not self.process.waitForFinished(1800):

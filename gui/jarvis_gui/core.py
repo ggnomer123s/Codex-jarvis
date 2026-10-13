@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+from .preferences import valid_model_id
 
 
 @dataclass(frozen=True)
@@ -33,18 +34,25 @@ def launch_command(executable: str, arguments: list[str], *, windows: bool | Non
 
 
 def build_arguments(folder: str, effort: str = "low", access: str = "read-only",
-                    thread_id: str = "") -> list[str]:
+                    thread_id: str = "", model: str = "") -> list[str]:
     if not Path(folder).is_dir():
         raise ValueError("Choose an existing workspace folder.")
     if effort not in ("low", "default", "high"):
         raise ValueError("Unknown reasoning mode.")
-    if access not in ("read-only", "workspace-write"):
+    if access not in ("read-only", "workspace-write", "full-access"):
         raise ValueError("Unknown workspace access mode.")
+    if not valid_model_id(model):
+        raise ValueError("Enter a valid Codex model ID, or select Codex default.")
     # Prompt is sent through stdin, never interpreted as a command-line option.
     # exec is noninteractive; explicitly keep approvals at never so operations
     # outside the selected sandbox fail instead of waiting for an invisible UI.
-    args = ["exec", "--json", "--sandbox", access, "--config", "approval_policy=\"never\"",
-            "--skip-git-repo-check", "-C", str(Path(folder).resolve())]
+    args = ["exec", "--json", "--skip-git-repo-check", "-C", str(Path(folder).resolve())]
+    if access == "full-access":
+        args += ["--dangerously-bypass-approvals-and-sandbox"]
+    else:
+        args += ["--sandbox", access, "--config", "approval_policy=\"never\""]
+    if model:
+        args += ["--model", model]
     if effort != "default":
         args += ["--config", f"model_reasoning_effort={effort}"]
     if thread_id:
