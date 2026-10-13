@@ -1,19 +1,30 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled against the `main` branch on 2026-10-12._
 
+**Desktop frontend addition — 2026-10-13:** `gui/` now contains a native
+PySide6/Qt Quick application for Linux and Windows 11, with an animated JARVIS
+core, Codex JSON subprocess chat, session resume, cancellation, workspace and
+reasoning preferences, and isolated local push-to-talk transcription. Separate
+launch scripts and user-level menu installers are under `scripts/*gui*`.
+See [desktop-app.md](desktop-app.md) for the exact workflow and current limits.
+The app runs from source with `gui/uv.lock`; signed EXE/AppImage packages are not
+provided. The UI is implemented, while live Windows/microphone/authenticated
+Codex/desktop-MCP behavior still needs target-machine validation. Codex chat
+resume is distinct from the roadmap's task checkpoints.
+
 > **Start here if you are another AI or a developer continuing this project.** Read this file, `README.md`, and the specific source files you intend to edit. This handoff is a snapshot, not permission to invent past accomplishments or disregard newer code, the user's current request, tests, or security boundaries. **The repository source is authoritative if the handoff becomes stale.**
 
 ## 1. Mission and actual product
 
 **Repository:** [ggnomer123s/Codex-jarvis](https://github.com/ggnomer123s/Codex-jarvis); default branch: `main`.
 
-JARVIS is a cross-platform **terminal-launched computer assistant** built around the **OpenAI Codex CLI**. It connects Codex to the user's desktop through MCP and augments it with reusable agent instructions, local confirmed-repair memory, push-to-talk speech transcription, and optional error monitoring. This is an independently developed community project, **not an official OpenAI product**.
+JARVIS is a cross-platform **computer assistant with terminal and native desktop interfaces** built around the **OpenAI Codex CLI**. It connects Codex to the user's desktop through MCP and augments it with reusable agent instructions, local confirmed-repair memory, push-to-talk speech transcription, and optional error monitoring. This is an independently developed community project, **not an official OpenAI product**.
 
 The intended experience: say/type a real computer task, have Codex select the correct **GUI, compositor API, application scripting API, or shell route**, perform the permitted actions, and confirm the result. The goal encompasses **video editing, Linux diagnostics, programming, file management, browser workflows and other demanding tasks**—not merely taking screenshots and pressing buttons.
 
 The original active setup was reported as **CachyOS / Hyprland / fish**, with interest in **Windows 11 and Adobe Premiere Pro** support. This does not mean all platforms have been tested. Do not commit personal data, authentication secrets, screen captures, chat histories or machine-specific configuration.
 
-**Do not misrepresent implementation:** There is no separately trained JARVIS model, no standalone GUI dashboard, no autonomous visual video editor, and no guaranteed always-on background operator. Codex provides the reasoning; the repo provides launchers, backends, instructions, and utilities.
+**Do not misrepresent implementation:** There is no separately trained JARVIS model, no autonomous visual video editor, and no guaranteed always-on background operator. Codex provides the reasoning; the repo provides a desktop frontend, launchers, backends, instructions, and utilities.
 
 ## 2. Architecture (as implemented)
 
@@ -140,6 +151,11 @@ These are **code changes and test outcomes**, not proof of full end-to-end succe
 | Path | Role |
 |---|---|
 | `README.md` | Public overview, install quick starts, commands and AI handoff entry point |
+| `gui/jarvis_gui/` | Qt Quick frontend, asynchronous CLI bridge, local voice worker and dependency-free JSON protocol |
+| `gui/pyproject.toml`, `gui/uv.lock` | Desktop app and optional voice dependencies, locked for Linux/Windows |
+| `scripts/*gui*` | Separate Linux/Windows launchers and current-user application menu installers |
+| `gui/tests/`, `tests/test_desktop_*.py` | Protocol, simulated audio, Qt process and actual QML-window tests |
+| `docs/desktop-app.md` | Desktop app setup, voice, access modes and test limitations |
 | `docs/AI_HANDOFF.md` | This detailed technical history/status/continuation plan |
 | `scripts/install-linux.sh` | Installs regular Linux launchers, MCP, Skill, managed rules and optional systemd watcher |
 | `scripts/install-windows.ps1` | Regular Windows launcher, Windows-MCP, Skill, managed rules and optional Windows watcher |
@@ -228,7 +244,7 @@ Some commands may depend on Codex versions, chosen model, installed GUI tools, a
 - Robust retry after interrupted MCP operations, a deterministic emergency stop, carefully scoped rollback/undo, and safer Full Access usability. Do not weaken user privacy or OS safeguards to make an error disappear.
 - Cross-platform accessibility coverage and visual grounding for apps that expose no tree.
 
-**Explicitly NOT implemented:** JARVIS Voice wake word, continuous video recording/understanding, hidden always-on monitoring, a universal Premiere integration, a GUI app/dashboard, autonomous model switching inside a session, guaranteed replay/undo of arbitrary GUI actions.
+**Explicitly NOT implemented:** JARVIS Voice wake word, continuous video recording/understanding, hidden always-on monitoring, a universal Premiere integration, autonomous model switching inside a session, guaranteed replay/undo of arbitrary GUI actions.
 
 ## 10. Instructions for the next AI maintaining this repo
 

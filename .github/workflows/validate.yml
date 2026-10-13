@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check Bash syntax
-        run: bash -n scripts/install-linux.sh scripts/install-full-linux.sh scripts/jarvis-full-launcher.sh scripts/watch-linux.sh scripts/hypruse-access.sh
+        run: bash -n scripts/*.sh
       - name: Check PowerShell syntax
         shell: pwsh
         run: |
@@ -35,3 +35,28 @@ jobs:
               assert not any("\u0400" <= c <= "\u052f" for c in text), f"Unexpected Cyrillic text: {path}"
           print("Documentation and scripts: English only")
           PY
+
+  desktop-ui:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QT_QUICK_BACKEND: software
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.23'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install locked desktop dependencies
+        run: uv sync --project gui --frozen
+      - name: Test process bridge and actual QML window
+        run: uv run --project gui --frozen python -m unittest discover -s gui/tests -v
+      - name: Test protocol and simulated audio
+        run: python -m unittest discover -s tests -p "test_desktop_*.py" -v
+      - name: Load desktop window
+        run: uv run --project gui --frozen jarvis-gui --smoke-test

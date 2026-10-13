@@ -2,15 +2,39 @@
 
 A community project that connects **OpenAI Codex CLI** to desktop automation via **Model Context Protocol (MCP)**, and adds a simple **`jarvis` command**, reusable Skills, troubleshooting instructions, and optional error monitoring.
 
+## JARVIS desktop app — Linux and Windows 11
+
+A native desktop interface is now available: an animated cyan JARVIS core,
+Codex chat with continuing conversation context, task cancellation, workspace
+and reasoning settings, and local push-to-talk transcription. Voice text is
+reviewed before sending. The app uses your existing Codex login and MCP setup.
+
+![JARVIS desktop app](docs/images/jarvis-desktop.png)
+
+```bash
+# Linux, from this checkout
+bash scripts/jarvis-gui-linux.sh
+```
+
+```powershell
+# Windows 11, from this checkout
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\jarvis-gui-windows.ps1
+```
+
+Install `uv` and Codex CLI, then run `codex login` first. Separate Linux application
+menu and Windows Start menu installers are provided. See [Desktop application](docs/desktop-app.md)
+for prerequisites, installation, permissions and validation limits. The current
+release runs from source; signed standalone installers are not yet provided.
+
 > Not an official OpenAI product. Desktop automation has significant privacy and security implications. Desktop MCPs are independent upstream projects and capabilities vary by display server and compositor.
 
 ## Start here: project handoff for another AI
 
-**Continuation status — 2026-10-12.** This README is the project's public entry point. A much more detailed, source-checked maintainer handoff is maintained at **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**. If you are an AI coding agent taking over JARVIS, read **both files**, then fetch the latest source, tests and GitHub Actions output before making changes. The code always takes precedence over any dated summary.
+**Continuation status — 2026-10-13.** This README is the project's public entry point. A much more detailed, source-checked maintainer handoff is maintained at **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**. If you are an AI coding agent taking over JARVIS, read **both files**, then fetch the latest source, tests and GitHub Actions output before making changes. The code always takes precedence over any dated summary.
 
 ### What we are building
 
-JARVIS is a **Codex CLI-based AI computer operator**, not a separately trained model or a standalone desktop application. It should understand requests and **use the computer**: open/focus applications, interact visually through mouse/keyboard/accessibility, edit video projects where supported, diagnose Linux/Windows problems, write code and manage files. For large tasks, it should favor reliable native application APIs/shell tools alongside GUI interactions. The human should not have to spell out every mouse click. Reliable outcome verification matters more than spectacular-looking cursor motion.
+JARVIS is a **Codex CLI-based AI computer operator** with terminal and native desktop interfaces. Codex supplies model reasoning. It should understand requests and **use the computer**: open/focus applications, interact visually through mouse/keyboard/accessibility, edit video projects where supported, diagnose Linux/Windows problems, write code and manage files. For large tasks, it should favor reliable native application APIs/shell tools alongside GUI interactions. The human should not have to spell out every mouse click. Reliable outcome verification matters more than spectacular-looking cursor motion.
 
 **Architecture at a glance:**
 
@@ -40,6 +64,7 @@ Observed result / user-facing report
 | Area | Implemented source and behavior |
 |---|---|
 | Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
+| Native desktop frontend | `gui/`; Qt Quick interface, Codex JSON process bridge with session resume, local voice transcript review, separate Linux/Windows launchers and menu shortcuts |
 | Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
 | Separate Full Access | `scripts/install-full-linux.sh`, `scripts/install-full-windows.ps1`, `scripts/jarvis-full-launcher.*`; independent `CODEX_HOME`, login and `fast|normal|deep` presets |
 | GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |
@@ -62,7 +87,7 @@ Observed result / user-facing report
 
 ### What is NOT implemented yet
 
-**JARVIS Profiler**, **Task Checkpoints/resume**, **JARVIS Doctor**, **automatic reasoning-mode switching**, **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, a graphical dashboard and an always-listening voice assistant remain **ideas or future work**, not finished features. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); our present validation is mostly static/unit CI, not broad hardware-level testing.
+**JARVIS Profiler**, **Task Checkpoints/resume**, **JARVIS Doctor**, **automatic reasoning-mode switching**, **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and an always-listening voice assistant remain **ideas or future work**, not finished features. The desktop frontend resumes Codex conversations, which does not implement general task checkpoint/replay. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); our present validation is mostly static/unit CI and simulated desktop-frontend tests, not broad hardware-level testing.
 
 ### Instructions for the next coding agent
 
@@ -217,6 +242,7 @@ Read [GUI Operator](docs/gui-operator.md) for platform examples and the design c
 
 ## Guides
 
+- [Native desktop app for Linux and Windows 11](docs/desktop-app.md)
 - [Linux installation for Debian/Ubuntu, Fedora, Arch, openSUSE and more](docs/linux.md)
 - [Desktop environment support and MCP/Skill setup](docs/mcp-and-skills.md)
 - [High-accuracy GUI navigation: semantic controls, screenshots and zoom](docs/gui-navigation.md)
