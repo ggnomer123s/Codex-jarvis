@@ -32,6 +32,13 @@ This update implements the earlier warm-worker/profiler proposals; general
 task replay, Doctor auto-repair, editor bridges and always-listening voice remain
 future work. No measured end-to-end speedup is claimed.
 
+**CI environment fix — 2026-10-14:** the Linux runner lacked `libEGL.so.1`,
+which prevented importing Qt even in offscreen tests. The desktop job now
+installs its Linux Qt runtime libraries explicitly. Both OS jobs run independently
+(`fail-fast: false`), and `scripts/check_desktop_ui.py` publishes fixture-test
+failures/crashes as GitHub annotations so failures are visible without API log
+access. This is CI observability and environment setup, not live desktop proof.
+
 **Desktop frontend addition — 2026-10-13:** `gui/` now contains a native
 PySide6/Qt Quick application for Linux and Windows 11, with an animated JARVIS
 core, Codex JSON subprocess chat, session resume, cancellation, workspace and
