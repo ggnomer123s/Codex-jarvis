@@ -1,6 +1,37 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled against the `main` branch on 2026-10-12._
 
+**Persistent runtime update — 2026-10-14:** the GUI now uses an owned Codex
+app-server stdio JSON-RPC process as its only model transport. This supersedes
+earlier descriptions of per-message `codex exec`, completed-only chat and
+one-shot GUI voice workers. `app_server.py` owns initialization, bounded RPCs,
+timeouts, protocol interruption and process cleanup; `messages.py` updates chat
+rows incrementally. Profile/access changes close the process and clear runtime
+context. Model/profile/workspace-scoped thread pointers support explicit
+conversation resume, without replaying actions. Extra approvals are declined
+under the existing never policy; Full Access remains checkbox-gated and separate.
+
+`voice.py --worker` retains one multilingual model, opens the mic only for an
+explicit recording and handles bounded PCM queues outside the audio callback.
+The model unloads after five idle minutes. CPU/CUDA, beam, microphone and optional
+chunk-preview settings are in the GUI. Preview is energy-pause/chunk processing,
+not true online decoding; final text still requires review and manual Send.
+`runtime.py` records content-free timing history and checkpoints. `workflows.py`
+implements user-saved exact aliases and 1–5 desktop MCP steps with pre/postchecks,
+stop-on-refusal and bounded observation retries. X11 now returns structured
+active-window identity and offers bounded synchronous window waiting.
+
+The optional local reasoning heuristic adds no classifier model request.
+Runtime/Automation tabs, state-driven orb colors, smoothed audio response and
+live provisional-text presentation are implemented. See [runtime.md](runtime.md)
+and [related-projects.md](related-projects.md) for behavior, checked external
+sources and limits. A real Codex CLI 0.159.2 initialize/config-read probe passed
+on Linux. Qt/audio/MCP tests use simulated counterparts; authenticated requests,
+live Windows, CUDA and desktop workflows still need target-machine validation.
+This update implements the earlier warm-worker/profiler proposals; general
+task replay, Doctor auto-repair, editor bridges and always-listening voice remain
+future work. No measured end-to-end speedup is claimed.
+
 **Desktop frontend addition — 2026-10-13:** `gui/` now contains a native
 PySide6/Qt Quick application for Linux and Windows 11, with an animated JARVIS
 core, Codex JSON subprocess chat, session resume, cancellation, workspace and
@@ -166,7 +197,7 @@ Read [gui-operator.md](gui-operator.md), [gui-navigation.md](gui-navigation.md),
 
 1. **Spotify/Firefox out of scope:** the user had `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`; screenshots worked but clicks/focus on Spotify or Firefox failed with `outside the agent's confinement scope`. The `jarvis access all` helper is an *explicit user-driven* way to change this, not a global default or hidden workaround. Correct GUI window visibility or workspace alone does **not** remove confinement.
 2. **Red borders:** `HYPRUSE_MARK=1` tagged agent-opened windows and installed red outlines. Fresh registrations and access helper now use `HYPRUSE_MARK=0`. Previously installed runtime rules may remain until user-approved Hyprland config reload. `docs/security.md` and other older docs may need consistency checks after future changes.
-3. **Excessive screenshots / reasoning loops:** Skill was consolidated to prefer semantic UI, window crops, action batching, event waits and appropriate reasoning effort. **No profiler or measured speedup exists yet**; instructions alone cannot promise a timing reduction.
+3. **Excessive screenshots / reasoning loops:** Skill was consolidated to prefer semantic UI, window crops, action batching, event waits and appropriate reasoning effort. The GUI now adds actual task/tool/voice timing records, but no measured end-to-end speedup is claimed; instructions alone cannot promise one.
 4. **Wrong X11 keyboard focus:** `key(...,window_id=...)` now verifies activated window before typing; refusal is better than typing into a different app.
 5. **Limited X11 region capabilities:** added bounded region screenshots, selection drag with interpolated mouse motion/cleanup, interactive human region capture and support for negative monitor coordinates.
 6. **Stale AGENTS instructions:** Linux and Windows installers now use `scripts/sync_agents.py` and `config/jarvis-agents.md` to refresh the managed block while preserving custom text with backup.
@@ -181,7 +212,7 @@ These are **code changes and test outcomes**, not proof of full end-to-end succe
 | Path | Role |
 |---|---|
 | `README.md` | Public overview, install quick starts, commands and AI handoff entry point |
-| `gui/jarvis_gui/` | Qt Quick frontend, asynchronous CLI bridge, local voice worker and dependency-free JSON protocol |
+| `gui/jarvis_gui/` | Qt Quick frontend, owned persistent app-server transport, incremental messages, warm voice, metrics/checkpoints and checked workflows |
 | `gui/pyproject.toml`, `gui/uv.lock` | Desktop app and optional voice dependencies, locked for Linux/Windows |
 | `scripts/*gui*` | Separate Linux/Windows launchers and current-user application menu installers |
 | `gui/tests/`, `tests/test_desktop_*.py` | Protocol, simulated audio, Qt process and actual QML-window tests |
@@ -258,17 +289,19 @@ Some commands may depend on Codex versions, chosen model, installed GUI tools, a
 
 ## 9. Roadmap — ideas, NOT already implemented
 
-**Priority 1 — real reliability and observability:**
+**Priority 1 — real reliability and observability:** The GUI timing/connection
+controls now implement the initial profiler scope. Expand measurements and
+target-machine coverage rather than treating the older proposal as unimplemented.
 - **JARVIS Profiler**: capture real per-tool latency and reasoning/tool-turn counts; compare same end-to-end task before/after tuning. Avoid speculative "x times faster" claims.
 - **JARVIS Doctor**: one diagnostic overview of Codex, MCP, Hypruse configuration, desktop session, Skills, dependencies and conflicting installed profiles; provide evidence-first repair guidance.
 - **GUI end-to-end tests**: reproducible disposable text editor/browser/window/rectangle tasks with screenshots, timings and an authorization-refusal test. Avoid destructive production tests.
 - **Documentation consistency**: ensure README, `docs/security.md`, launcher help and actual new/default MCP env flags all agree. Pay special attention to `HYPRUSE_MARK=0` and pre-existing registrations.
 
 **Priority 2 — complex workflows:**
-- **Task Checkpoints**: store user-authorized progress, milestones, verification and resume state without recording secrets. Requires designing a state machine and failure semantics, not just an instruction to "remember".
+- **Task Checkpoints**: GUI conversation pointers and completed-step counts are implemented; general action replay and app-specific continuation remain future work.
 - **Native editing bridges** (e.g., Premiere UXP where supported, DaVinci scripting, FFmpeg for media transformations). These do not exist yet. Need host OS/editor version and local verification before claiming timeline or render control.
 - **Application-specific Skills** for browser, file manager, editor, terminal. Keep them small and testable; avoid flooding Codex context.
-- **Adaptive reasoning/auto task router**: not yet implemented. Currently users choose presets manually; the Skill offers qualitative routing to GUI vs shell.
+- **Adaptive reasoning/auto task router**: an optional local GUI reasoning heuristic and exact checked-workflow aliases are implemented. Broader semantic task classification and app-specific routing remain future work.
 
 **Priority 3 — advanced features:**
 - Robust retry after interrupted MCP operations, a deterministic emergency stop, carefully scoped rollback/undo, and safer Full Access usability. Do not weaken user privacy or OS safeguards to make an error disappear.

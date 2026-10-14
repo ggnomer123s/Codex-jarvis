@@ -64,3 +64,12 @@ If a short GUI task still takes unusually long:
 The repository's CI runs static checks and memory tests, **not live performance benchmarks**. These changes are expected to lower avoidable round trips, but speed improvements depend on the selected model, application, approvals and network latency. No guaranteed speedup or time estimate is claimed.
 
 See [GUI navigation](gui-navigation.md) and [Security](security.md).
+
+## Desktop GUI runtime
+
+The GUI now uses persistent Codex app-server and local voice workers, streamed
+chat, content-free timings, exact checked workflow aliases and optional local
+reasoning adaptation. These changes remove repeated initialization paths from
+the source; they are not a measured end-to-end benchmark. Use Runtime to compare
+cold/warm requests and verify success alongside duration. See [runtime.md](runtime.md)
+and [the related-project source review](related-projects.md).

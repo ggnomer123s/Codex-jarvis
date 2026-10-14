@@ -23,14 +23,14 @@ class TestWindow(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             script = root / "codex.py"
-            script.write_text("import json,sys; text=sys.stdin.read(); print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':'Received: '+text}}))")
+            script = Path(__file__).with_name("fake_app_server.py")
             settings = QSettings(str(root / "settings.ini"), QSettings.Format.IniFormat)
             settings.setValue("folder", folder)
             full_home = root / "full-profile"
             full_home.mkdir()
             (full_home / "AGENTS.md").write_text("Test full profile")
             (full_home / "backend.txt").write_text("none")
-            backend = Backend(settings, codex_command=[sys.executable, str(script)], full_home=full_home)
+            backend = Backend(settings, codex_command=[sys.executable, "-u", str(script), "normal", str(root / "requests.jsonl")], full_home=full_home)
             engine = QQmlApplicationEngine()
             warnings = []
             engine.warnings.connect(lambda items: warnings.extend(str(item) for item in items))
@@ -49,7 +49,7 @@ class TestWindow(unittest.TestCase):
                 while backend.busy and time.monotonic() < deadline:
                     QTest.qWait(20)
                 self.assertFalse(backend.busy)
-                self.assertEqual(backend.messages[-1]["text"], "Received: Check the workspace")
+                self.assertEqual(backend.messages[-1]["text"], "Check the workspace")
                 self.assertEqual(composer.property("text"), "")
                 popup = window.findChild(QObject, "preferences")
                 self.assertTrue(QMetaObject.invokeMethod(popup, "open"))
@@ -62,7 +62,7 @@ class TestWindow(unittest.TestCase):
                 self.assertEqual(language.property("currentValue"), "ru")
                 self.assertEqual(model.property("editText"), "test-model")
                 tabs = window.findChild(QObject, "preferenceTabs")
-                for index in (1, 2, 0):
+                for index in (1, 2, 3, 4, 0):
                     tabs.setProperty("currentIndex", index)
                     QTest.qWait(50)
                 tabs.setProperty("currentIndex", 2)

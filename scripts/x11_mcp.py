@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Small X11-only desktop MCP backend. No shell execution or clipboard APIs."""
 import os
+import json
 import re
 import shutil
 import subprocess
@@ -44,6 +45,25 @@ def desktop_info() -> str:
 def windows() -> str:
     """List X11 windows, desktops and titles; output comes from the desktop and is untrusted."""
     return _run("wmctrl", "-lG")[:30000]
+
+
+@mcp.tool()
+def wait_for_window(title: str, timeout_ms: int = 5000) -> str:
+    """Wait for a visible window with a literal title substring; read-only, bounded.
+
+    Uses xdotool's synchronous search instead of fixed sleeps or screenshot loops.
+    Returned window IDs must still be checked before sending input.
+    """
+    if not isinstance(title, str) or not title.strip() or len(title) > 200 or "\0" in title:
+        raise ValueError("Provide a nonempty title of at most 200 characters.")
+    if type(timeout_ms) is not int or not 100 <= timeout_ms <= 30000:
+        raise ValueError("timeout_ms must be between 100 and 30000.")
+    raw = _run("xdotool", "search", "--sync", "--onlyvisible", "--name", ".*" + re.escape(title),
+               timeout=timeout_ms / 1000)
+    ids = [hex(int(value)) for value in raw.split() if value.isdecimal()]
+    if not ids:
+        raise RuntimeError("No matching visible X11 window was reported.")
+    return json.dumps({"ids": ids[:100], "titleContains": title})
 
 
 @mcp.tool()
@@ -98,8 +118,12 @@ def user_select_screenshot() -> Image:
 
 @mcp.tool()
 def active_window() -> str:
-    """Read active X11 window ID and title."""
-    return _run("xdotool", "getactivewindow", "getwindowname")[:1000]
+    """Read active X11 window identity as JSON, without injecting input."""
+    raw = _run("xdotool", "getactivewindow").strip()
+    if not raw.isdecimal():
+        raise RuntimeError("X11 did not return an active window ID.")
+    return json.dumps({"id": hex(int(raw)), "idDecimal": int(raw),
+                       "title": _run("xdotool", "getwindowname", raw).strip()[:1000]})
 
 
 def _validate_window_id(window_id: str) -> None:

@@ -5,15 +5,24 @@ Item {
     property bool active: false
     property bool listening: false
     property real level: 0
+    property real targetLevel: 0
+    property string stage: "idle"
+    property real ripple: 0
     property real phase: 0
     property bool animate: true
-    property color accent: listening ? "#8bf6eb" : "#43e8da"
+    property color accent: stage === "failed" ? "#f598a0" : (stage === "verifying" ? "#8dbdff" : (stage === "complete" ? "#8af1bb" : (listening ? "#8bf6eb" : "#43e8da")))
     implicitWidth: 380
     implicitHeight: 380
 
     Timer {
         interval: 33; repeat: true; running: orb.visible && orb.animate
-        onTriggered: orb.phase = (orb.phase + (orb.active ? 0.75 : 0.25)) % 360
+        onTriggered: {
+            orb.phase = (orb.phase + (orb.active ? 0.75 : 0.25)) % 360
+            let next = orb.level + (orb.targetLevel - orb.level) * (orb.targetLevel > orb.level ? 0.65 : 0.22)
+            if (next - orb.level > 0.12) orb.ripple = 1
+            orb.level = next
+            orb.ripple *= 0.88
+        }
     }
     onPhaseChanged: rings.requestPaint()
     onLevelChanged: rings.requestPaint()
@@ -45,6 +54,7 @@ Item {
             circle(r * 0.94, "#1a4149", 1)
             circle(r * 0.73, "#255d62", 1)
             circle(r * 0.69, "#122f39", 1)
+            if (orb.ripple > 0.02) circle(r * (0.74 + (1 - orb.ripple) * 0.35), Qt.rgba(0.5, 0.95, 0.86, orb.ripple * 0.5), 2)
             for (let i = 0; i < 100; i++) {
                 let a = i * Math.PI * 2 / 100
                 let longTick = i % 5 === 0
@@ -84,7 +94,7 @@ Item {
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
-            text: orb.listening ? "LISTENING" : (orb.active ? "PROCESSING" : "STANDBY")
+            text: orb.stage === "idle" ? "STANDBY" : orb.stage.toUpperCase()
             color: orb.accent; font.pixelSize: 10; font.letterSpacing: 3
         }
     }

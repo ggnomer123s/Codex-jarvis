@@ -5,10 +5,18 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 ## JARVIS desktop app — Linux and Windows 11
 
 A native desktop interface is now available: an animated cyan JARVIS core,
-Codex chat with continuing conversation context, task cancellation, model/workspace
+streaming Codex app-server chat with continuing conversation context, task cancellation, model/workspace
 and reasoning settings, an included separate Full Access profile with a checkbox, and local
-push-to-talk transcription with 15 language presets including Russian. Voice text is
+warm local push-to-talk transcription with 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
+
+The GUI now keeps an owned **Codex app-server** connection between messages,
+keeps Whisper ready between recordings, and includes checked desktop workflow
+aliases, timing export, optional adaptive reasoning and scoped conversation
+checkpoints. **Preferences > Runtime / Automation** exposes the new controls.
+See [runtime guide](docs/runtime.md) and the [source review of other Jarvis,
+Codex and OpenCode projects](docs/related-projects.md). Codex app-server is the
+GUI's only model transport; there is no OpenCode runtime or exec fallback.
 
 ![JARVIS desktop app](docs/images/jarvis-desktop.png)
 
@@ -62,7 +70,7 @@ JARVIS is a **Codex CLI-based AI computer operator** with terminal and native de
 User text / optional push-to-talk
       |
       v
-jarvis (regular) / jarvis-full (separate opt-in profile)
+GUI (owned app-server) / terminal jarvis or jarvis-full
       |
       v
 OpenAI Codex CLI + managed AGENTS.md + jarvis-desktop Skill
@@ -84,13 +92,13 @@ Observed result / user-facing report
 | Area | Implemented source and behavior |
 |---|---|
 | Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
-| Native desktop frontend | `gui/`; Qt Quick interface, model selection, Codex chat/resume, included Full Access profile with a checkbox and separate device login, 15 local voice language presets including Russian, Linux/Windows launchers and menu shortcuts |
+| Native desktop frontend | `gui/`; streaming app-server chat, live model selection, scoped conversation resume, Full Access checkbox/profile, warm multilingual voice, checked workflows and timings |
 | Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
 | Separate Full Access | `scripts/install-full-linux.sh`, `scripts/install-full-windows.ps1`, `scripts/jarvis-full-launcher.*`; independent `CODEX_HOME`, login and `fast|normal|deep` presets |
 | GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |
 | Window permissions | `scripts/hypruse-access.sh`; optional `jarvis access all` or restricted/class-based Hypruse permissions, with explicit confirmation and config backup |
 | Native X11 desktop MCP | `scripts/x11_mcp.py`; screenshots, region crops, human-selected capture rectangle, focus-checked shortcuts, pointer click/drag/scroll and input opt-in |
-| Voice | `scripts/jarvis_voice.py`; local faster-whisper push-to-talk, user reviews transcription before Codex submission |
+| Voice | `gui/jarvis_gui/voice.py` warm worker; `scripts/jarvis_voice.py` one-shot CLI; local faster-whisper, review before submission |
 | Repair memory | `scripts/jarvis_memory.py`; local JSON of **explicitly confirmed** fixes, manual add/search/list/delete |
 | Diagnostics | `jarvis gui-check`; opt-in Linux systemd-user and Windows Application event watchers; read-only Codex analysis reports |
 | Maintenance | `scripts/sync_agents.py` refreshes only JARVIS's AGENTS block with backups; GitHub Actions checks Bash/PowerShell/Python/tests |
@@ -107,7 +115,7 @@ Observed result / user-facing report
 
 ### What is NOT implemented yet
 
-**JARVIS Profiler**, **Task Checkpoints/resume**, **JARVIS Doctor**, **automatic reasoning-mode switching**, **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and an always-listening voice assistant remain **ideas or future work**, not finished features. The desktop frontend resumes Codex conversations, which does not implement general task checkpoint/replay. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); our present validation is mostly static/unit CI and simulated desktop-frontend tests, not broad hardware-level testing.
+General **task replay/rollback**, **JARVIS Doctor auto-repair**, an **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and an always-listening voice assistant remain future work. The GUI now provides content-free task/voice timings, an optional local reasoning heuristic, connection/MCP diagnostics, checked short workflows and explicit conversation checkpoint resume. Conversation resume does not replay desktop actions. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); validation is mostly static/unit CI and simulated desktop-frontend tests, plus a Linux app-server handshake/config probe, not broad hardware-level testing.
 
 ### Instructions for the next coding agent
 
@@ -271,6 +279,8 @@ Read [GUI Operator](docs/gui-operator.md) for platform examples and the design c
 - [Keyboard shortcuts on Hyprland, Linux X11 and Windows](docs/shortcuts.md)
 - [Optional separate Full Access profile](docs/full-access.md)
 - [Performance tuning: fast mode and fewer model/tool round trips](docs/performance.md)
+- [Persistent app-server, warm voice, checked workflows and timings](docs/runtime.md)
+- [Other Jarvis/Codex/OpenCode projects: checked sources and design decisions](docs/related-projects.md)
 - [Windows 11 setup](docs/windows11.md)
 - [Daily usage and end-to-end testing](docs/usage.md)
 - [Security, permissions and privacy](docs/security.md)

@@ -190,6 +190,27 @@ class TestX11Shortcuts(unittest.TestCase):
             with self.assertRaises(ValueError):
                 mod.drag(10, 10, 20, 20, steps=41)
 
+    def test_active_window_is_read_only_and_returns_structured_identity(self):
+        import json
+        mod=self.backend
+        with mock.patch.object(mod,"_run",side_effect=["4660\n","Editor\n"]) as call, mock.patch.object(mod,"_require_input") as guard:
+            result=json.loads(mod.active_window())
+        self.assertEqual(result,{"id":"0x1234","idDecimal":4660,"title":"Editor"})
+        guard.assert_not_called()
+        self.assertEqual(call.call_args_list[-1].args,("xdotool","getwindowname","4660"))
+
+    def test_window_wait_is_bounded_and_escapes_title_regex(self):
+        import json
+        mod=self.backend
+        with mock.patch.object(mod,"_run",return_value="4660\n") as call:
+            result=json.loads(mod.wait_for_window("Editor [demo]",1200))
+        self.assertEqual(result["ids"],["0x1234"])
+        self.assertEqual(call.call_args.kwargs["timeout"],1.2)
+        self.assertIn("--sync",call.call_args.args)
+        self.assertIn("\\[demo\\]",call.call_args.args[-1])
+        with self.assertRaises(ValueError):mod.wait_for_window("",1000)
+        with self.assertRaises(ValueError):mod.wait_for_window("Editor",60000)
+
 
 
 if __name__ == "__main__":

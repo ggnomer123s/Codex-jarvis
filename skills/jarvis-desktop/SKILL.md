@@ -35,6 +35,11 @@ description: Detect when a request needs real desktop GUI actions; route to the 
 
 **X11:** `drag(x1,y1,x2,y2,window_id=...)` verifies optional window focus and releases the held button on failure. `screenshot_region(x,y,width,height)` captures a rectangle; `user_select_screenshot()` waits for the **human** to select one with maim; `key(key_sequence='ctrl+shift+t',window_id=...)` checks focus. Mouse/keyboard actions require X11 input opt-in.
 
+X11 `active_window()` returns JSON with canonical hex `id`, `idDecimal` and `title`.
+Use `wait_for_window(title=...,timeout_ms=...)` for bounded visible-window waiting
+instead of fixed sleeps or screenshot loops; it returns IDs for matching windows.
+Verify focus/identity before sending input. These observations do not enable input.
+
 **Windows-MCP:** `Move(drag=True,from_loc=[x1,y1],loc=[x2,y2])` and optional `MultiSelect`; `Screenshot(region=[left,top,right,bottom])`, `Snapshot`, `DisplayInventory`, `Shortcut`. Use current tool schemas; names/features may vary by server version.
 
 **Other Wayland:** check actual portal MCP capabilities; don't assume synthetic dragging is supported. If the tool is absent, state the limitation rather than trying a less-protected workaround.

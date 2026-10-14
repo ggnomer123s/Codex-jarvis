@@ -1,8 +1,9 @@
 # JARVIS desktop application
 
 A native Qt Quick window for Linux and Windows 11, with an animated cyan core,
-a conversation panel, model/workspace selection, reasoning presets and push-to-talk
-voice input. The same interface runs on both platforms; platform-specific
+a streaming conversation panel, model/workspace selection, reasoning presets and
+warm local push-to-talk voice input. Runtime and Automation tabs expose task
+timings, scoped conversation resume and checked desktop workflows. The same interface runs on both platforms; platform-specific
 launchers and menu installers are provided. This is a source distribution,
 not a signed standalone EXE, AppImage, DEB or RPM release.
 
@@ -98,21 +99,23 @@ including `C:\Users\Cosmo`, see [Windows installation](install-desktop.md#window
    or access mode also resets the context.
 
 Preferences has **Intelligence**, **Voice** and **Access** tabs. Intelligence
-offers a model picker from the active profile's local `models_cache.json`, an
-editable model ID, and a Refresh button. No credentials are read from that file.
+offers a live `model/list` picker when app-server is connected, the active
+profile's local `models_cache.json` before connection, an editable model ID, and
+a Refresh button. No credentials are read from that file.
 The cache can be empty or stale: run Codex once and refresh, or enter an ID from
 your provider. Availability is validated by the actual request, not by the cache.
 An empty selection / **Codex default** inherits the configured model. Changing
-the model starts a fresh conversation. The selected ID is passed as a separate
-`--model` argument to both new and resumed requests.
+the model starts a fresh conversation. The selected ID is supplied as structured
+app-server thread/turn parameters.
 
 Preferences offer Fast (`low`), Normal (existing Codex default) and Deep (`high`)
 reasoning. Choose Normal if your configured model does not support low reasoning.
 Workspace access defaults to **Observe only** (`read-only`). **Allow workspace
 edits** explicitly selects `workspace-write` for the chosen folder. This frontend
-uses noninteractive `codex exec --json`; additional approval requests cannot be
-answered in the window and fail under `approval_policy="never"`. Use the regular
-interactive CLI for tasks needing those approvals.
+uses an owned persistent `codex app-server --listen stdio://` connection;
+additional approvals are declined under `approvalPolicy="never"`. Use the regular
+interactive CLI for tasks needing those approvals. No exec fallback or OpenCode
+backend is used in the GUI.
 
 ## Full Access from the GUI
 
@@ -127,8 +130,9 @@ interactive CLI for tasks needing those approvals.
    the retained normal workspace access mode. Save preferences applies any
    model, reasoning or voice edits made in the other tabs.
 
-Full Access runs `codex exec --dangerously-bypass-approvals-and-sandbox` as the
-current user, with the same separate `CODEX_HOME` used by `jarvis-full`. It can
+Full Access sets app-server thread sandbox `danger-full-access` and approval
+policy `never` as the current user, with the same separate `CODEX_HOME` used by
+`jarvis-full`. Switching profiles closes the former owned app-server process. It can
 change user-accessible files and run commands without Codex's sandbox or command
 approvals. It does not grant root/Administrator access, bypass OS authentication
 or override upstream MCP guards. Elevated execution is refused.
@@ -153,9 +157,9 @@ establishes login or desktop readiness: request errors are displayed in the chat
 
 Click the microphone button, speak, then click it again. Recording stops after
 60 seconds at most. The ring responds to the microphone level. Local
-faster-whisper transcribes on the CPU using the multilingual `base` model;
-Russian and other languages are detected automatically. The first transcription
-downloads and caches the model. Internet access to the Hugging Face model/CDN
+faster-whisper defaults to CPU int8 with the multilingual `base` model;
+Russian and other languages are detected automatically. The first voice use
+loads/downloads the model; subsequent recordings reuse it for five idle minutes. Internet access to the Hugging Face model/CDN
 hosts is needed for that download; a configured local model directory can be
 supplied through `JARVIS_VOICE_MODEL` for offline use. Audio is held in memory
 and is not saved or uploaded by the voice worker.
@@ -207,7 +211,9 @@ machine. Do not interpret simulated test results as those checks.
 
 The app stores workspace, model, reasoning, normal access and voice preferences in user settings.
 Conversation text stays in app memory; Codex maintains its own session history
-under its existing configuration. Closing the app stops its active workers.
+under its existing configuration. GUI settings retain bounded, profile/workspace/
+model-scoped thread pointers and status for explicit resume, without copying
+conversation text. Closing the app stops its workers, including idle processes.
 `JARVIS_GUI_CODEX` can point to an alternative Codex executable for development;
 it is a path, not a shell command.
 
@@ -223,9 +229,10 @@ covered by multilingual Whisper. Accuracy varies by language, audio and model.
 The model picker offers `tiny`, `base`, `small`, and `medium`. Larger models use
 more memory and computation. Other official multilingual Whisper sizes or a
 local converted model folder can be entered manually. English-only `.en` model
-names are not accepted. The saved selection is supplied to the voice worker
-as `--language` and `--model`; existing `JARVIS_VOICE_*` variables seed the initial
-preferences. Recordings remain capped at 60 seconds and are never submitted
+names are not accepted. The saved model is supplied when the persistent worker starts; language is
+supplied per recording. Existing `JARVIS_VOICE_*` variables seed the initial
+preferences. CPU/CUDA, beam size, microphone and optional provisional-text
+controls are described in [the runtime guide](runtime.md). Recordings remain capped at 60 seconds and are never submitted
 automatically.
 
 ![Local voice preferences](images/jarvis-voice-settings.png)
@@ -235,15 +242,19 @@ selected Codex model, reasoning, voice language/model and active access level.
 The core animation is limited to about 30 frames per second and pauses when
 minimized. No model or transcription latency benchmark is claimed.
 
-## Next performance improvements to investigate
+## Persistent runtime and new controls
 
-- Keep a voice worker/model warm after first use, while leaving microphone
-  capture off between recordings; measure latency against the memory cost.
-- Use a persistent Codex app-server connection to avoid CLI/MCP initialization
-  on each message and support richer progress and interactive approvals.
-- Measure microphone, model startup, Codex and tool latency separately before
-  adding automatic Fast/Deep routing.
-- Add a Doctor screen for login, model, microphone, MCP and desktop readiness,
-  plus resumable checkpoints for long editing workflows.
+The owned Codex app-server stays connected between messages. Whisper stays
+loaded between explicit recordings, then unloads after five idle minutes.
+Replies stream into incremental chat rows. **Preferences > Runtime** displays
+connection/MCP status and task/voice timings and exports content-free JSON.
+**Resume previous** restores a conversation scoped to workspace, profile, access
+and model without replaying actions. **Preferences > Automation** stores exact
+aliases for checked desktop MCP sequences. The optional reasoning heuristic is
+in Intelligence; voice device/beam/preview options are in Voice.
 
-These are proposed follow-ups, not implemented features.
+Read [runtime.md](runtime.md) for local commands, workflow JSON examples,
+permissions, cancellation, timing semantics and validation limits, and
+[related-projects.md](related-projects.md) for the checked external references.
+General task replay, Doctor auto-repair, editor API bridges, wake words and
+spoken TTS answers remain future work.

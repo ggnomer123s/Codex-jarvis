@@ -1,32 +1,37 @@
-"""Qt bridge: asynchronous Codex sessions and isolated push-to-talk voice."""
+"""Qt coordinator for persistent Codex, local voice and checked desktop actions."""
 from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
-import signal
 import sys
+import uuid
 
-from PySide6.QtCore import QObject, Property, QProcess, QProcessEnvironment, QSettings, QTimer, Signal, Slot
+from PySide6.QtCore import QObject, Property, QProcess, QProcessEnvironment, QSettings, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog
 
-from .core import build_arguments, find_codex, launch_command, parse_event
+from .app_server import AppServer, terminate_tree
+from .core import find_codex, launch_command, thread_options, turn_options
+from .messages import Messages
 from .voice import dependencies_available
-from .preferences import (LANGUAGES, VOICE_MODELS, cached_models,
-                          elevated, valid_model_id, valid_voice_model)
+from .preferences import LANGUAGES, VOICE_MODELS, cached_models, elevated, valid_model_id, valid_voice_model
 from .profiles import FullProfile
+from .runtime import Checkpoints, Profiler
+from .workflows import WorkflowRunner, match_workflow, validate_workflows
 
 
 class Backend(QObject):
     changed = Signal()
     messagesChanged = Signal()
     transcriptReady = Signal(str)
+    transcriptPreview = Signal(str)
 
-    def __init__(self, settings: QSettings | None = None, *, codex_command=None, voice_command=None, full_home=None):
+    def __init__(self, settings=None, *, codex_command=None, voice_command=None, full_home=None):
         super().__init__()
         self.settings = settings or QSettings("Jarvis", "Desktop")
-        saved_folder = str(self.settings.value("folder", str(Path.home())))
-        self._folder = saved_folder if Path(saved_folder).is_dir() else str(Path.home())
+        saved = str(self.settings.value("folder", str(Path.home())))
+        self._folder = saved if Path(saved).is_dir() else str(Path.home())
         self._effort = str(self.settings.value("effort", "low"))
         self._access = str(self.settings.value("access", "read-only"))
         if self._effort not in ("low", "default", "high"):
@@ -42,47 +47,91 @@ class Backend(QObject):
         self._voice_model = str(self.settings.value("voiceModel", os.environ.get("JARVIS_VOICE_MODEL", "base")))
         if not valid_voice_model(self._voice_model):
             self._voice_model = "base"
+        self._auto_reasoning = str(self.settings.value("autoReasoning", "false")).lower() == "true"
+        try:
+            beam = int(self.settings.value("voiceBeam", 3))
+        except (TypeError, ValueError):
+            beam = 3
+        self._voice_options = {"device": str(self.settings.value("voiceDevice", "cpu")),
+                               "beam": beam,
+                               "preview": str(self.settings.value("voicePreview", "false")).lower() == "true",
+                               "microphone": str(self.settings.value("microphone", ""))}
+        if self._voice_options["device"] not in ("cpu", "cuda"):
+            self._voice_options["device"] = "cpu"
+        if self._voice_options["beam"] not in (1, 3, 5):
+            self._voice_options["beam"] = 3
         self._normal_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
         self._models = cached_models(self._normal_home)
+        self._model_efforts = {}
         self._codex = os.environ.get("JARVIS_GUI_CODEX") or find_codex() or ""
         self._codex_command = codex_command
-        worker_python = str(Path(sys.executable).with_name("python.exe")) if os.name == "nt" else sys.executable
-        self._voice_command = voice_command or [worker_python, "-u", "-m", "jarvis_gui.voice"]
         if codex_command:
             self._codex = codex_command[0]
+        python = str(Path(sys.executable).with_name("python.exe")) if os.name == "nt" else sys.executable
+        self._voice_command = voice_command or [python, "-u", "-m", "jarvis_gui.voice"]
         self._busy = False
+        self._stage = "idle"
         self._voice_state = "idle"
+        self._voice_ready = False
         self._level = 0.0
         self._activity = "Ready when you are" if self._codex else "Install Codex CLI to connect"
-        self._messages = []
+        self.chat = Messages(self)
+        self._messages = self.chat.items
         self._preferences_error = ""
         self._thread_id = ""
+        self._thread_loaded = False
+        self._turn_id = ""
+        self._retired_turns = set()
+        self._epoch = 0
+        self._task_id = ""
         self._cancelled = False
-        self._failed = False
-        self._got_answer = False
-        self._voice_cancelled = False
-        self._voice_result = False
-        self._voice_stop_requested = False
-        self._stdout = b""
+        self._completed_steps = 0
+        self._needs_deep = False
+        self._server_waiters = []
+        self._item_rows = {}
+        self._pending_text = {}
+        self._mcp_status = "Not inspected yet"
+        self._voice_id = ""
         self._voice_buffer = b""
-        self._stderr = b""
-        self.process = QProcess(self)
-        if os.name != "nt":
-            self.process.setUnixProcessParameters(QProcess.UnixProcessFlag.CreateNewSession)
-        self.process.started.connect(self._send_prompt)
-        self.process.readyReadStandardOutput.connect(self._read_codex)
-        self.process.readyReadStandardError.connect(self._read_stderr)
-        self.process.finished.connect(self._finished)
-        self.process.errorOccurred.connect(self._process_error)
+        self._voice_stop_requested = False
+        self._voice_cancelled = False
+        self._microphones = [{"id": "", "label": "System default"}]
+        self._workflows_text = str(self.settings.value("workflows", "[]"))
+        try:
+            self._workflows = validate_workflows(self._workflows_text)
+        except ValueError:
+            self._workflows = []
+        self.profiler = Profiler()
+        self.checkpoints = Checkpoints(self.settings)
+        self.server = AppServer(self)
+        self.process = self.server.process
+        self.server.ready.connect(self._server_ready)
+        self.server.notification.connect(self._notification)
+        self.server.failed.connect(self._server_failed)
+        self.server.disconnected.connect(self._disconnected)
+        self.runner = WorkflowRunner(self.server, self.profiler, self)
+        self.runner.progress.connect(self._workflow_progress)
+        self.runner.finished.connect(self._workflow_finished)
         self.voice = QProcess(self)
         self.voice.started.connect(self._voice_started)
         self.voice.readyReadStandardOutput.connect(self._read_voice)
         self.voice.readyReadStandardError.connect(lambda: self.voice.readAllStandardError())
         self.voice.finished.connect(self._voice_finished)
         self.voice.errorOccurred.connect(self._voice_error)
-        self._kill_timer = QTimer(self)
-        self._kill_timer.setSingleShot(True)
-        self._kill_timer.timeout.connect(self._force_stop)
+        self._stop_timer = QTimer(self)
+        self._stop_timer.setSingleShot(True)
+        self._stop_timer.timeout.connect(self._force_stop)
+        self._stream_timer = QTimer(self)
+        self._stream_timer.setSingleShot(True)
+        self._stream_timer.setInterval(33)
+        self._stream_timer.timeout.connect(self._flush_text)
+        self._voice_idle_timer = QTimer(self)
+        self._voice_idle_timer.setSingleShot(True)
+        self._voice_idle_timer.setInterval(300000)
+        self._voice_idle_timer.timeout.connect(self._close_voice)
+        self._ui_tick = QTimer(self)
+        self._ui_tick.setInterval(1000)
+        self._ui_tick.timeout.connect(self.changed.emit)
         self.profile = FullProfile(self._codex_launch, self, home=full_home)
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
@@ -178,8 +227,75 @@ class Backend(QObject):
     def audioLevel(self):
         return self._level
 
+    @Property(QObject, constant=True)
+    def messageModel(self):
+        return self.chat
+
+    @Property(str, notify=changed)
+    def stage(self):
+        return self._voice_state if self._voice_state != "idle" else self._stage
+
+    @Property(bool, notify=changed)
+    def serverReady(self):
+        return self.server.connected
+
+    @Property(bool, notify=changed)
+    def voiceReady(self):
+        return self._voice_ready
+
+    @Property(str, notify=changed)
+    def metricsSummary(self):
+        return self.profiler.summary()
+
+    @Property(str, notify=changed)
+    def runtimeDetails(self):
+        voice = json.dumps(self.profiler.voice, indent=2)
+        return (f"Codex app-server: {'connected' if self.server.connected else 'not connected'}\n"
+                f"Desktop MCP: {self._mcp_status}\nTask: {self.profiler.summary()}\n"
+                f"Verified/completed steps: {self._completed_steps}\nLocal voice timings (ms):\n{voice}")
+
+    @Property(bool, notify=changed)
+    def canResume(self):
+        return bool(self.checkpoints.get(self._checkpoint_key())) and not self._locked()
+
+    @Property(str, notify=changed)
+    def workflowsText(self):
+        return self._workflows_text
+
+    @Property(bool, notify=changed)
+    def autoReasoning(self):
+        return self._auto_reasoning
+
+    @Property(str, notify=changed)
+    def voiceDevice(self):
+        return self._voice_options["device"]
+
+    @Property(int, notify=changed)
+    def voiceBeam(self):
+        return self._voice_options["beam"]
+
+    @Property(bool, notify=changed)
+    def voicePreview(self):
+        return self._voice_options["preview"]
+
+    @Property(str, notify=changed)
+    def microphone(self):
+        return self._voice_options["microphone"]
+
+    @Property("QVariantList", notify=changed)
+    def microphones(self):
+        names = list(self._microphones)
+        selected = self._voice_options["microphone"]
+        if selected and not any(x["id"] == selected for x in names):
+            names.append({"id": selected, "label": "Saved microphone " + selected})
+        return names
+
+    def _checkpoint_key(self):
+        home = self.profile.home if self.fullAccess else self._normal_home
+        return Checkpoints.key(home, Path(self._folder), self._access, self._model)
+
     def _message(self, role, text):
-        self._messages.append({"role": role, "text": text})
+        self.chat.append(role, text)
         self.messagesChanged.emit()
 
     def _codex_launch(self, args):
@@ -192,133 +308,399 @@ class Backend(QObject):
     def _locked(self):
         return self._busy or self._voice_state != "idle" or self.profile.busy
 
+    def _guard(self, callback):
+        epoch, task = self._epoch, self._task_id
+        def guarded(result, error):
+            if epoch == self._epoch and task == self._task_id:
+                callback(result, error)
+        return guarded
+
+    def _ensure_server(self, callback):
+        if self.server.connected:
+            self.profiler.mark("serverReady")
+            callback()
+            return
+        self._server_waiters.append((self._epoch, callback))
+        if self.process.state() == QProcess.ProcessState.NotRunning:
+            try:
+                program, args = self._codex_launch(["app-server", "--listen", "stdio://"])
+            except ValueError as exc:
+                self._server_failed(str(exc))
+                return
+            environment = QProcessEnvironment.systemEnvironment()
+            if self.fullAccess:
+                environment.insert("CODEX_HOME", str(self.profile.home))
+            self.server.start(program, args, environment, self._folder)
+        self.changed.emit()
+
+    def _server_ready(self):
+        self.profiler.mark("serverReady")
+        self._fetch_models()
+        waiters, self._server_waiters = self._server_waiters, []
+        for epoch, callback in waiters:
+            if epoch == self._epoch:
+                callback()
+        self.changed.emit()
+
+    def _ensure_thread(self, callback, *, restore=False):
+        if self._thread_id and self._thread_loaded:
+            callback()
+            return
+        options = thread_options(self._folder, self._access, self._model)
+        method = "thread/resume" if self._thread_id else "thread/start"
+        if self._thread_id:
+            options["threadId"] = self._thread_id
+        def ready(result, error):
+            if error:
+                self._finish("failed", error)
+                return
+            thread = result.get("thread", {}) if isinstance(result, dict) else {}
+            if not isinstance(thread.get("id"), str) or not thread["id"]:
+                self._finish("failed", "Codex did not return a valid thread ID.")
+                return
+            self._thread_id = thread["id"]
+            self._thread_loaded = True
+            self.profiler.mark("threadReady")
+            self.checkpoints.save(self._checkpoint_key(), self._thread_id, "running", self._completed_steps)
+            if restore:
+                self._restore_chat(thread)
+            self._inspect_mcp()
+            callback()
+        self.server.request(method, options, self._guard(ready), 60000)
+
+    def _inspect_mcp(self):
+        epoch = self._epoch
+        def returned(result, error):
+            if epoch != self._epoch:
+                return
+            if error:
+                self._mcp_status = "Inventory unavailable: " + error
+            else:
+                servers = result.get("data", []) if isinstance(result, dict) else []
+                self._mcp_status = ", ".join(str(x.get("name", "MCP")) for x in servers if isinstance(x, dict)) or "No desktop servers reported"
+            self.changed.emit()
+        self.server.request("mcpServerStatus/list", {"threadId": self._thread_id, "limit": 100}, returned)
+
+    def _fetch_models(self):
+        epoch = self._epoch
+        def returned(result, error):
+            if epoch != self._epoch or error or not isinstance(result, dict):
+                return
+            entries = result.get("data", [])
+            if not isinstance(entries, list):
+                return
+            names = []
+            for item in entries:
+                if not isinstance(item, dict) or item.get("hidden"):
+                    continue
+                name = item.get("model", item.get("id", ""))
+                if isinstance(name, str) and name and valid_model_id(name) and name not in names:
+                    names.append(name)
+                    efforts = [x.get("reasoningEffort") for x in item.get("supportedReasoningEfforts", []) if isinstance(x, dict)]
+                    self._model_efforts[name] = efforts
+                    if item.get("isDefault"):
+                        self._model_efforts[""] = efforts
+            self._models = names
+            self.changed.emit()
+        self.server.request("model/list", {"limit": 100}, returned)
+
+    def _begin(self, kind):
+        self._task_id = str(uuid.uuid4())
+        self._busy = True
+        self._cancelled = False
+        self._turn_id = ""
+        self._task_kind = kind
+        self._completed_steps = 0
+        self._item_rows = {}
+        self._pending_text = {}
+        self.profiler.begin(kind)
+        self._ui_tick.start()
+        self._stage = "connecting"
+        self._activity = "Connecting to Codex app-server"
+        self.changed.emit()
+
     @Slot(str)
     def send(self, prompt):
         prompt = prompt.strip()
         if not prompt or self._locked():
             return
-        if not self._codex:
-            self._message("error", "Codex CLI was not found. Install @openai/codex, run codex login in a terminal, then reopen JARVIS.")
+        if len(prompt) > 200000:
+            self._message("error", "Request is too long.")
+            return
+        if self._local_command(prompt):
             return
         try:
+            thread_options(self._folder, self._access, self._model)
             if self.fullAccess and elevated():
                 raise ValueError("Full Access must run as a normal user, not root or Administrator.")
-            args = build_arguments(self._folder, self._effort, self._access, self._thread_id, self._model)
-            program, args = self._codex_launch(args)
+            if not self._codex:
+                raise ValueError("Install Codex CLI, run codex login, then reopen JARVIS.")
         except ValueError as exc:
             self._message("error", str(exc))
             return
-        self._prompt = prompt
-        self._stdout = b""
-        self._stderr = b""
-        self._cancelled = self._failed = self._got_answer = False
-        self._busy = True
-        self._activity = "Connecting to Codex"
+        workflow = match_workflow(self._workflows, prompt)
+        self._begin("workflow" if workflow else "codex")
         self._message("user", prompt)
+        if workflow:
+            action = lambda: self.runner.start(workflow, self._thread_id)
+        else:
+            action = lambda: self._start_turn(prompt)
+        self._ensure_server(lambda: self._ensure_thread(action))
+
+    def _chosen_effort(self, prompt):
+        effort = self._effort
+        if self._auto_reasoning:
+            deep = ("debug", "diagnos", "investigat", "architecture", "crash", "ошиб", "диагност", "исслед", "сбой")
+            simple = ("open ", "focus ", "play ", "открой", "включи", "переключи")
+            if self._needs_deep or any(x in prompt.casefold() for x in deep):
+                effort = "high"
+            elif any(prompt.casefold().startswith(x) for x in simple):
+                effort = "low"
+        supported = self._model_efforts.get(self._model)
+        return "default" if supported and effort != "default" and effort not in supported else effort
+
+    def _start_turn(self, prompt):
+        self._stage = "planning"
+        self._activity = "Understanding your request"
+        def started(result, error):
+            if error:
+                if "timed out" in error:
+                    # An accepted start may be running after the RPC timed out.
+                    self.server.close()
+                self._finish("failed", error)
+                return
+            turn = result.get("turn", {}) if isinstance(result, dict) else {}
+            turn_id = turn.get("id")
+            if not isinstance(turn_id, str) or not turn_id:
+                self._finish("failed", "Codex did not return a valid turn ID.")
+                return
+            if self._busy:
+                self._turn_id = turn_id
+                if self._cancelled:
+                    self._interrupt()
+        self.server.request("turn/start", turn_options(self._thread_id, prompt, self._chosen_effort(prompt), self._model), self._guard(started), 60000)
         self.changed.emit()
-        environment = QProcessEnvironment.systemEnvironment()
-        if self.fullAccess:
-            environment.insert("CODEX_HOME", str(self.profile.home))
-        self.process.setProcessEnvironment(environment)
-        self.process.setWorkingDirectory(self._folder)
-        self.process.start(program, args)
 
-    def _send_prompt(self):
-        if self._cancelled:
-            self._force_stop()
+    def _notification(self, method, params):
+        if method == "jarvis/requestDeclined":
+            self._message("system", "A request needing additional input/approval was declined. Use the interactive CLI for that request.")
             return
-        self.process.write(self._prompt.encode("utf-8"))
-        self.process.closeWriteChannel()
-
-    def _read_stderr(self):
-        self._stderr = (self._stderr + bytes(self.process.readAllStandardError()))[-8000:]
-
-    def _handle_codex(self, line):
-        event = parse_event(line.decode("utf-8", errors="replace"))
-        if not event:
+        if not self._busy or self._task_kind != "codex" or params.get("threadId") != self._thread_id:
             return
-        if event.kind == "thread":
-            self._thread_id = event.text
-        elif event.kind == "answer" and event.text:
-            self._got_answer = True
-            self._message("assistant", event.text)
-        elif event.kind == "activity":
-            self._activity = event.text
-            self.changed.emit()
-        elif event.kind == "error":
-            self._failed = True
-            self._message("error", event.text)
-
-    def _read_codex(self):
-        self._stdout += bytes(self.process.readAllStandardOutput())
-        while b"\n" in self._stdout:
-            line, self._stdout = self._stdout.split(b"\n", 1)
-            self._handle_codex(line)
-
-    def _finished(self, code, status):
-        self._kill_timer.stop()
-        self._read_codex()
-        self._read_stderr()
-        if self._stdout.strip():
-            self._handle_codex(self._stdout)
-        self._stdout = b""
+        turn = params.get("turn", {})
+        turn_id = params.get("turnId") or (turn.get("id") if isinstance(turn, dict) else None)
+        if (self._epoch, turn_id) in self._retired_turns or (self._turn_id and turn_id and turn_id != self._turn_id):
+            return
+        if method == "turn/started" and isinstance(turn_id, str):
+            self._turn_id = turn_id
+        if method == "turn/completed":
+            if not self._turn_id and isinstance(turn_id, str):
+                self._turn_id = turn_id
+            status = turn.get("status", "failed")
+            error = turn.get("error")
+            message = error.get("message", "Codex turn failed.") if isinstance(error, dict) else ""
+            self._finish("interrupted" if self._cancelled else status, message)
+            return
         if self._cancelled:
-            self._message("system", "Task stopped. Actions already completed have not been undone.")
-        elif code != 0 and not self._failed:
-            detail = self._stderr.decode("utf-8", errors="replace").strip()
-            self._message("error", detail[-2000:] or f"Codex exited with code {code}.")
-        elif code == 0 and not self._failed and not self._got_answer:
-            self._message("system", "Codex finished without a text response. Check the task result before continuing.")
+            return
+        if method == "item/agentMessage/delta":
+            item_id, delta = params.get("itemId"), params.get("delta")
+            if isinstance(item_id, str) and isinstance(delta, str):
+                self.profiler.mark("firstText")
+                self._pending_text[item_id] = self._pending_text.get(item_id, "") + delta
+                if not self._stream_timer.isActive():
+                    self._stream_timer.start()
+        elif method in ("item/started", "item/completed"):
+            item = params.get("item", {})
+            if not isinstance(item, dict):
+                return
+            kind, item_id = item.get("type"), item.get("id", "")
+            if kind == "agentMessage" and method == "item/completed":
+                self._flush_text()
+                text = item.get("text", "")
+                if isinstance(text, str):
+                    self.profiler.mark("firstText")
+                    self._set_item_text(item_id, text, replace=True)
+            elif kind in ("mcpToolCall", "commandExecution", "fileChange", "webSearch"):
+                name = str(item.get("tool", kind))
+                if method == "item/started":
+                    self.profiler.tool_start(item_id, name)
+                    self._stage = "acting"
+                    self._activity = "Using " + name[:100]
+                else:
+                    self.profiler.tool_end(item_id)
+                    self._completed_steps += 1
+                    self.checkpoints.save(self._checkpoint_key(), self._thread_id, "running", self._completed_steps)
+                    self._stage = "verifying"
+                    self._activity = "Checking task progress"
+            elif kind == "reasoning":
+                self._stage = "planning"
+                self._activity = "Planning the next step"
+        elif method == "error" and not params.get("willRetry"):
+            error = params.get("error", {})
+            self._message("error", str(error.get("message", "Codex reported an error.")))
+        self.changed.emit()
+
+    def _set_item_text(self, item_id, text, replace=False):
+        row = self._item_rows.get(item_id)
+        if row is None:
+            row = self.chat.append("assistant", text)
+            self._item_rows[item_id] = row
+        else:
+            previous = self._messages[row]["text"]
+            self.chat.update(row, text if replace else previous + text)
+        self.messagesChanged.emit()
+
+    def _flush_text(self):
+        self._stream_timer.stop()
+        values, self._pending_text = self._pending_text, {}
+        for item_id, delta in values.items():
+            self._set_item_text(item_id, delta)
+
+    def _finish(self, status, error=""):
+        if not self._busy:
+            return
+        self._stop_timer.stop()
+        self._ui_tick.stop()
+        self._flush_text()
+        if self._turn_id:
+            self._retired_turns.add((self._epoch, self._turn_id))
+            if len(self._retired_turns) > 100:
+                self._retired_turns = {(self._epoch, self._turn_id)}
+        self.profiler.finish(status)
+        self.checkpoints.save(self._checkpoint_key(), self._thread_id, status, self._completed_steps)
         self._busy = False
-        self._activity = "Task stopped" if self._cancelled else ("Request failed" if self._failed or code else "Ready when you are")
+        self._task_id = ""
+        if status == "interrupted":
+            self._message("system", "Task stopped. Completed actions have not been undone; inspect before resuming.")
+            self._stage, self._activity = "stopped", "Task stopped"
+        elif error or status == "failed":
+            self._message("error", error or "Codex task failed.")
+            self._stage, self._activity = "failed", "Request failed"
+            self._needs_deep = True
+        else:
+            self._stage, self._activity = "complete", "Ready when you are"
+            self._needs_deep = False
         self.changed.emit()
 
-    def _process_error(self, error):
-        if error == QProcess.ProcessError.FailedToStart:
-            self._busy = False
-            self._activity = "Could not start Codex"
-            self._message("error", self.process.errorString())
-            self.changed.emit()
+    def _server_failed(self, text):
+        self._thread_loaded = False
+        self._server_waiters = []
+        if self._busy:
+            self.runner.cancel()
+            self._finish("interrupted" if self._cancelled else "failed", text)
+        else:
+            self._message("error", text)
+        self.changed.emit()
+
+    def _disconnected(self):
+        self._thread_loaded = False
+        self.changed.emit()
+
+    def _workflow_progress(self, text, count):
+        self._completed_steps = count
+        self._stage = "verifying" if text.startswith("Verified") else "acting"
+        self._activity = text
+        self.checkpoints.save(self._checkpoint_key(), self._thread_id, "running", count)
+        self.changed.emit()
+
+    def _workflow_finished(self, error, count):
+        self._completed_steps = count
+        if not error:
+            self._message("assistant", f"Workflow completed: {count} steps verified.")
+        self._finish("failed" if error else "completed", error)
+
+    def _local_command(self, prompt):
+        if not prompt.startswith("/"):
+            return False
+        commands = {
+            "/help": "Local commands: /status, /metrics, /workflows, /open-workspace, /resume, /new. Exact workflow aliases execute checked desktop steps without model inference.",
+            "/status": self.runtimeDetails,
+            "/metrics": json.dumps(self.profiler.export(), indent=2),
+            "/workflows": "\n".join(item["name"] + ": " + ", ".join(item["aliases"]) for item in self._workflows) or "No workflows saved. Add one in Preferences > Automation.",
+        }
+        if prompt in commands:
+            self._message("system", commands[prompt])
+        elif prompt == "/open-workspace":
+            accepted = QDesktopServices.openUrl(QUrl.fromLocalFile(self._folder))
+            self._message("system" if accepted else "error", "Workspace open request accepted by the desktop." if accepted else "The desktop could not open this workspace.")
+        elif prompt == "/resume":
+            self.resumePrevious()
+        elif prompt == "/new":
+            self.newSession()
+        else:
+            return False
+        return True
 
     @Slot()
     def stop(self):
         if not self._busy:
             return
         self._cancelled = True
-        self._activity = "Stopping task"
-        pid = self.process.processId()
-        if pid:
-            if os.name == "nt":
-                # Kill only the task process tree, including its MCP children.
-                killer = QProcess(self)
-                killer.finished.connect(killer.deleteLater)
-                killer.start("taskkill", ["/PID", str(pid), "/T", "/F"])
-            else:
-                try:
-                    os.killpg(pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-        self._kill_timer.start(1500)
+        self._stage, self._activity = "stopping", "Stopping task"
+        if self.runner.running or not self._turn_id:
+            self._force_stop()
+        else:
+            self._interrupt()
         self.changed.emit()
 
+    def _interrupt(self):
+        self.server.request("turn/interrupt", {"threadId": self._thread_id, "turnId": self._turn_id},
+                            self._guard(lambda result, error: self._force_stop() if error else None), 2000)
+        self._stop_timer.start(2500)
+
     def _force_stop(self):
-        pid = self.process.processId()
-        if pid and os.name != "nt":
-            try:
-                os.killpg(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
-        self.process.kill()
+        self.runner.cancel()
+        self.server.close()
+        self._thread_loaded = False
+        self._server_waiters = []
+        self._finish("interrupted" if self._cancelled else "failed", "Codex connection stopped.")
+
+    def _reset_context(self):
+        self._epoch += 1
+        self._task_id = ""
+        self._server_waiters = []
+        self._thread_id = ""
+        self._thread_loaded = False
+        self._turn_id = ""
+        self._pending_text = {}
+        self._item_rows = {}
+        self.chat.clear()
+        self._mcp_status = "Not inspected yet"
+        self._activity, self._stage = "Ready when you are", "idle"
+        self.messagesChanged.emit()
+        self.changed.emit()
 
     @Slot()
     def newSession(self):
         if self._locked():
             return
-        self._thread_id = ""
-        self._messages = []
-        self._activity = "Ready when you are"
+        self.checkpoints.forget(self._checkpoint_key())
+        self._reset_context()
+
+    def _restore_chat(self, thread):
+        self.chat.clear()
+        for turn in thread.get("turns", [])[-8:]:
+            for item in turn.get("items", []):
+                if item.get("type") == "agentMessage":
+                    self.chat.append("assistant", str(item.get("text", "")))
+                elif item.get("type") == "userMessage":
+                    text = "\n".join(str(x.get("text", "")) for x in item.get("content", []) if x.get("type") == "text")
+                    self.chat.append("user", text)
         self.messagesChanged.emit()
-        self.changed.emit()
+
+    @Slot()
+    def resumePrevious(self):
+        if self._locked():
+            return
+        checkpoint = self.checkpoints.get(self._checkpoint_key())
+        if not checkpoint:
+            self._message("system", "No conversation checkpoint for this workspace, model and access profile.")
+            return
+        self._reset_context()
+        self._thread_id = checkpoint["threadId"]
+        self._begin("resume")
+        self._ensure_server(lambda: self._ensure_thread(lambda: self._finish("completed"), restore=True))
 
     @Slot()
     def chooseFolder(self):
@@ -326,9 +708,10 @@ class Backend(QObject):
             return
         folder = QFileDialog.getExistingDirectory(None, "Choose your workspace", self._folder)
         if folder and folder != self._folder:
+            self._reset_context()
             self._folder = folder
             self.settings.setValue("folder", folder)
-            self.newSession()
+            self.changed.emit()
 
     @Slot(str, str)
     def configure(self, effort, access):
@@ -343,29 +726,40 @@ class Backend(QObject):
         try:
             if access == "full-access" and not self.fullAccess:
                 raise ValueError("Enable Full Access explicitly in the Access tab first.")
-            build_arguments(self._folder, effort, access, model=model)
-            if language not in dict(LANGUAGES):
-                raise ValueError("Choose a supported voice language or Auto detect.")
-            if not valid_voice_model(voice_model):
-                raise ValueError("Choose tiny, base, small, medium, or an existing local multilingual model folder.")
+            thread_options(self._folder, access, model)
+            if effort not in ("low", "default", "high") or language not in dict(LANGUAGES) or not valid_voice_model(voice_model):
+                raise ValueError("Choose supported reasoning, voice language and multilingual model settings.")
         except ValueError as exc:
             return self._settings_error(str(exc))
-        if access != self._access or model != self._model:
-            self.newSession()
+        if access != self._access:
+            self._reset_context()
+            self.server.close()
+            self._model_efforts = {}
+        elif model != self._model:
+            self._reset_context()
+        if voice_model != self._voice_model:
+            self._close_voice()
         self._effort, self._access = effort, access
         self._model, self._language, self._voice_model = model, language, voice_model
         self.settings.setValue("effort", effort)
-        # Full Access is enabled for this app session only; normal mode is retained.
         if access != "full-access":
             self.settings.setValue("access", access)
         for key, value in (("model", model), ("language", language), ("voiceModel", voice_model)):
             self.settings.setValue(key, value)
-        self.refreshModels()
+        self._models = cached_models(self.profile.home if self.fullAccess else self._normal_home)
+        if self.server.connected:
+            self._fetch_models()
+        self.changed.emit()
         return True
 
     @Slot()
     def refreshModels(self):
+        if self._locked():
+            return
         self._models = cached_models(self.profile.home if self.fullAccess else self._normal_home)
+        self._ensure_server(lambda: None)
+        if self.server.connected:
+            self._fetch_models()
         self.changed.emit()
 
     @Slot(bool, result=bool)
@@ -387,16 +781,94 @@ class Backend(QObject):
     def _activate_full(self):
         if self._locked() or not self.profile.ready:
             return
-        self.newSession()
+        self._reset_context()
+        self.server.close()
         self._access = "full-access"
+        self._models = cached_models(self.profile.home)
+        self._model_efforts = {}
         self._activity = "Full Access enabled for this window"
-        self.refreshModels()
+        self.changed.emit()
 
     @Slot()
     def disableFullAccess(self):
         if self.fullAccess and not self._locked():
-            normal = str(self.settings.value("access", "read-only"))
-            self.configure(self._effort, normal if normal in ("read-only", "workspace-write") else "read-only")
+            self.configure(self._effort, self.normalAccess)
+
+    @Slot(str, bool, str, int, bool, str, result=bool)
+    def saveRuntimePreferences(self, workflows, adaptive, device, beam, preview, microphone):
+        if self._locked():
+            return False
+        try:
+            definitions = validate_workflows(workflows)
+            if device not in ("cpu", "cuda") or beam not in (1, 3, 5) or len(microphone) > 200:
+                raise ValueError("Choose CPU/CUDA and beam size 1, 3 or 5.")
+        except ValueError as exc:
+            return self._settings_error(str(exc))
+        self._workflows, self._workflows_text = definitions, workflows
+        self._auto_reasoning = adaptive
+        options = {"device": device, "beam": beam, "preview": preview, "microphone": microphone}
+        if options != self._voice_options:
+            self._close_voice()
+        self._voice_options = options
+        for key, value in (("workflows", workflows), ("autoReasoning", adaptive), ("voiceDevice", device),
+                           ("voiceBeam", beam), ("voicePreview", preview), ("microphone", microphone)):
+            self.settings.setValue(key, value)
+        self._preferences_error = ""
+        self.changed.emit()
+        return True
+
+    @Slot(str, str, str, str, str, str, bool, str, int, bool, str, result=bool)
+    def saveAllPreferences(self, effort, access, model, language, voice_model, workflows, adaptive, device, beam, preview, microphone):
+        if self._locked():
+            return False
+        try:
+            thread_options(self._folder, access, model.strip())
+            if access == "full-access" and not self.fullAccess:
+                raise ValueError("Enable Full Access explicitly in the Access tab first.")
+            if effort not in ("low", "default", "high") or language not in dict(LANGUAGES) or not valid_voice_model(voice_model.strip()):
+                raise ValueError("Choose supported reasoning, voice language and multilingual model settings.")
+            validate_workflows(workflows)
+            if device not in ("cpu", "cuda") or beam not in (1, 3, 5) or len(microphone) > 200:
+                raise ValueError("Choose CPU/CUDA and beam size 1, 3 or 5.")
+        except ValueError as exc:
+            return self._settings_error(str(exc))
+        self.saveRuntimePreferences(workflows, adaptive, device, beam, preview, microphone)
+        return self.savePreferences(effort, access, model, language, voice_model)
+
+    @Slot()
+    def exportMetrics(self):
+        path, _ = QFileDialog.getSaveFileName(None, "Export timings (no task content)", "jarvis-timings.json", "JSON (*.json)")
+        if path:
+            try:
+                Path(path).write_text(json.dumps(self.profiler.export(), indent=2) + "\n", encoding="utf-8")
+            except OSError as exc:
+                self._message("error", "Could not export timings: " + str(exc))
+
+    def _voice_write(self, command, **values):
+        self.voice.write((json.dumps({"command": command, "id": self._voice_id, **values}) + "\n").encode())
+
+    @Slot()
+    def warmVoice(self):
+        if self._locked() or not self.voiceAvailable:
+            return
+        self._voice_id = str(uuid.uuid4())
+        self._voice_state, self._activity = "loading", "Preparing local voice model"
+        self._start_voice()
+        self.changed.emit()
+
+    def _start_voice(self):
+        self._voice_idle_timer.stop()
+        if self.voice.state() == QProcess.ProcessState.Running and self._voice_ready:
+            if self._voice_state == "starting":
+                self._voice_write("record", language=self._language, **self._voice_options)
+            else:
+                self._voice_state = "idle"
+            return
+        if self.voice.state() == QProcess.ProcessState.NotRunning:
+            self._voice_buffer = b""
+            self._voice_ready = False
+            self.voice.start(self._voice_command[0], [*self._voice_command[1:], "--worker", "--model", self._voice_model,
+                              "--device", self._voice_options["device"]])
 
     @Slot()
     def toggleVoice(self):
@@ -404,68 +876,94 @@ class Backend(QObject):
             return
         if self._voice_state in ("starting", "recording"):
             self._voice_stop_requested = True
-            if self.voice.state() == QProcess.ProcessState.Running:
-                self.voice.write(b"stop\n")
-            self._voice_state = "transcribing"
-            self._activity = "Transcribing locally"
+            if self._voice_ready:
+                self._voice_write("stop")
+            self._voice_state, self._activity = "transcribing", "Transcribing locally"
         elif self._voice_state == "idle":
             if not self.voiceAvailable:
-                self._message("error", "Voice packages are missing. Use the voice-enabled launcher described in docs/desktop-app.md.")
+                self._message("error", "Voice packages are missing. Use the voice-enabled launcher.")
                 return
-            self._voice_buffer = b""
-            self._voice_result = self._voice_cancelled = False
+            self._voice_id = str(uuid.uuid4())
+            self._voice_cancelled = False
             self._voice_stop_requested = False
-            self._voice_state = "starting"
-            self._activity = "Opening microphone"
-            self.voice.start(self._voice_command[0], [*self._voice_command[1:],
-                             "--language", self._language, "--model", self._voice_model])
+            self._voice_state, self._activity = "starting", "Opening local voice input"
+            self._start_voice()
         self.changed.emit()
 
     def _voice_started(self):
-        if self._voice_stop_requested:
-            self.voice.write(b"stop\n")
+        pass  # Worker reports ready after loading; microphone remains off until record.
 
     @Slot()
     def cancelVoice(self):
         self._voice_cancelled = True
-        self.voice.kill()
+        self._voice_id = str(uuid.uuid4())  # Late transcripts belong to the abandoned recording.
+        self._close_voice()
+        self._voice_state, self._activity = "idle", "Voice cancelled"
+        self._level = 0
+        self.changed.emit()
 
     def _read_voice(self):
         self._voice_buffer += bytes(self.voice.readAllStandardOutput())
+        if len(self._voice_buffer) > 1000000:
+            self.cancelVoice()
+            self._message("error", "Voice worker sent an oversized event.")
+            return
         while b"\n" in self._voice_buffer:
             line, self._voice_buffer = self._voice_buffer.split(b"\n", 1)
             try:
                 event = json.loads(line)
-            except ValueError:
+            except (ValueError, UnicodeError):
                 continue
-            if self._voice_cancelled:
+            if not isinstance(event, dict):
                 continue
             kind = event.get("type")
-            if kind == "recording" and self._voice_state == "starting":
-                self._voice_state = "recording"
-                self._activity = "Listening - click microphone to finish"
+            if kind == "ready":
+                self._voice_ready = True
+                self.profiler.voice["modelLoadMs"] = event.get("modelLoadMs", 0)
+                self._microphones = [{"id": "", "label": "System default"}, *event.get("microphones", [])]
+                if self._voice_state in ("starting", "transcribing") and not self._voice_cancelled:
+                    self._voice_write("record", language=self._language, **self._voice_options)
+                    if self._voice_stop_requested:
+                        self._voice_write("stop")
+                else:
+                    self._voice_state = "idle"
+                    self._activity = "Local voice model ready"
+                    self._voice_idle_timer.start()
+                self.changed.emit()
+                continue
+            if event.get("id") != self._voice_id or self._voice_cancelled:
+                if kind == "error" and not event.get("id"):
+                    self._message("error", str(event.get("message", "Voice failed.")))
+                continue
+            if kind == "recording":
+                if not self._voice_stop_requested:
+                    self._voice_state = "recording"
+                    self._activity = "Listening - click microphone to finish"
             elif kind == "transcribing":
-                self._voice_state = "transcribing"
-                self._activity = "Transcribing locally - first use downloads a model"
+                self._voice_state, self._activity = "transcribing", "Transcribing locally"
             elif kind == "level":
-                self._level = float(event.get("value", 0))
+                self._level = max(0, min(1, float(event.get("value", 0))))
+            elif kind == "preview":
+                self.transcriptPreview.emit(str(event.get("text", "")))
             elif kind == "transcript":
-                self._voice_result = True
+                self.profiler.voice.update(event.get("timings", {}))
                 self.transcriptReady.emit(str(event.get("text", "")))
                 self._activity = "Review your transcript, then press Send"
             elif kind == "error":
-                self._voice_result = True
                 self._message("error", str(event.get("message", "Voice failed.")))
                 self._activity = "Voice unavailable"
+            elif kind == "idle":
+                self._voice_state = "idle"
+                self._level = 0
+                self._voice_idle_timer.start()
             self.changed.emit()
 
     def _voice_finished(self, code, status):
         self._read_voice()
-        if self._voice_cancelled:
-            self._activity = "Voice cancelled"
-        elif not self._voice_result:
+        self._voice_ready = False
+        if self._voice_state != "idle" and not self._voice_cancelled:
+            self._message("error", "Voice worker stopped before producing a transcript. Check the model and microphone.")
             self._activity = "Voice unavailable"
-            self._message("error", "Voice worker stopped before producing a transcript.")
         self._voice_state = "idle"
         self._level = 0
         self.changed.emit()
@@ -476,15 +974,22 @@ class Backend(QObject):
             self._message("error", "Could not start the voice worker: " + self.voice.errorString())
             self.changed.emit()
 
+    def _close_voice(self):
+        self._voice_idle_timer.stop()
+        self._voice_ready = False
+        if self.voice.state() != QProcess.ProcessState.NotRunning:
+            self._voice_write("shutdown")
+            if not self.voice.waitForFinished(200):
+                self.voice.kill()
+                self.voice.waitForFinished(1000)
+
     @Slot()
     def shutdown(self):
         self.profile.shutdown()
         if self._busy:
-            self.stop()
-            if not self.process.waitForFinished(1800):
-                self._force_stop()
-                self.process.waitForFinished(1000)
-        if self.voice.state() != QProcess.ProcessState.NotRunning:
-            self._voice_cancelled = True
-            self.voice.kill()
-            self.voice.waitForFinished(1000)
+            self._cancelled = True
+            self._force_stop()
+        self._epoch += 1
+        self.server.close()
+        self._voice_cancelled = True
+        self._close_voice()

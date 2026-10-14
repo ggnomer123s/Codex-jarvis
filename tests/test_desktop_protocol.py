@@ -1,4 +1,4 @@
-"""Desktop CLI protocol tests; no Qt, microphone or network required."""
+"""App-server parameter and executable discovery tests; no Qt or network."""
 import json
 from pathlib import Path
 import sys
@@ -7,22 +7,22 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gui"))
-from jarvis_gui.core import build_arguments, launch_command, parse_event
+from jarvis_gui.core import thread_options, turn_options, launch_command
 from jarvis_gui.preferences import LANGUAGES, cached_models
 
 
 class TestDesktopProtocol(unittest.TestCase):
-    def test_full_access_uses_bypass_and_explicit_model(self):
+    def test_full_access_is_an_explicit_server_thread_policy(self):
         with tempfile.TemporaryDirectory() as folder:
-            args = build_arguments(folder, access="full-access", model="custom/codex-model")
-        self.assertIn("--dangerously-bypass-approvals-and-sandbox", args)
-        self.assertNotIn("--sandbox", args)
-        self.assertEqual(args[args.index("--model") + 1], "custom/codex-model")
+            options = thread_options(folder, "full-access", "custom/codex-model")
+        self.assertEqual(options["sandbox"], "danger-full-access")
+        self.assertEqual(options["approvalPolicy"], "never")
+        self.assertEqual(options["model"], "custom/codex-model")
 
-    def test_model_id_cannot_be_a_cli_option(self):
+    def test_model_id_is_validated(self):
         with tempfile.TemporaryDirectory() as folder:
             with self.assertRaises(ValueError):
-                build_arguments(folder, model="--dangerously-bypass-approvals-and-sandbox")
+                thread_options(folder, "read-only", "--invalid")
 
     def test_model_catalog_filters_hidden_invalid_and_duplicate_entries(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -37,30 +37,22 @@ class TestDesktopProtocol(unittest.TestCase):
         self.assertIn(("ru", "Russian"), LANGUAGES)
         self.assertEqual(LANGUAGES[0][0], "auto")
 
-    def test_prompt_uses_stdin_and_selected_sandbox(self):
-        with tempfile.TemporaryDirectory() as folder:
-            args = build_arguments(folder, "high", "workspace-write")
-        self.assertEqual(args[-1], "-")
-        self.assertIn("workspace-write", args)
-        self.assertIn("model_reasoning_effort=high", args)
-        self.assertIn('approval_policy="never"', args)
-        self.assertNotIn("--ask-for-approval", args)
-        self.assertNotIn("--dangerously-bypass-approvals-and-sandbox", args)
-
-    def test_resume_keeps_explicit_session_and_default_effort(self):
-        with tempfile.TemporaryDirectory() as folder:
-            args = build_arguments(folder, "default", thread_id="session-123")
-        self.assertEqual(args[-3:], ["resume", "session-123", "-"])
-        self.assertFalse(any("model_reasoning_effort" in arg for arg in args))
+    def test_prompt_is_structured_data_and_reasoning_is_explicit(self):
+        prompt = "--permissions & literal input"
+        value = turn_options("session-123", prompt, "high")
+        self.assertEqual(value["threadId"], "session-123")
+        self.assertEqual(value["input"], [{"type":"text", "text":prompt}])
+        self.assertEqual(value["effort"], "high")
+        self.assertNotIn("effort", turn_options("session", prompt, "default"))
 
     def test_rejects_unrecognized_permissions_and_missing_folder(self):
         with tempfile.TemporaryDirectory() as folder:
             with self.assertRaises(ValueError):
-                build_arguments(folder, access="danger-full-access")
+                thread_options(folder, "unrecognized")
             with self.assertRaises(ValueError):
-                build_arguments(folder, effort="ultra")
+                turn_options("thread", "hello", "ultra")
             with self.assertRaises(ValueError):
-                build_arguments(str(Path(folder) / "missing"))
+                thread_options(str(Path(folder) / "missing"), "read-only")
 
     def test_windows_npm_launch_avoids_shell_interpolation(self):
         with tempfile.TemporaryDirectory(prefix="jarvis & space ") as folder:
@@ -69,9 +61,9 @@ class TestDesktopProtocol(unittest.TestCase):
             script.parent.mkdir(parents=True)
             script.write_text("// fixture")
             with mock.patch("jarvis_gui.core.shutil.which", return_value="node.exe"):
-                program, args = launch_command(str(root / "codex.cmd"), ["exec", "-"], windows=True)
+                program, args = launch_command(str(root / "codex.cmd"), ["app-server", "--stdio"], windows=True)
             self.assertEqual(program, "node.exe")
-            self.assertEqual(args, [str(script), "exec", "-"])
+            self.assertEqual(args, [str(script), "app-server", "--stdio"])
             self.assertNotIn("cmd.exe", args)
 
     def test_windows_missing_npm_entry_has_actionable_error(self):
@@ -79,21 +71,6 @@ class TestDesktopProtocol(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Reinstall"):
                 launch_command(str(Path(folder) / "codex.cmd"), [], windows=True)
 
-    def test_thread_and_completed_answer(self):
-        event = parse_event(json.dumps({"type": "thread.started", "thread_id": "abc"}))
-        self.assertEqual((event.kind, event.text), ("thread", "abc"))
-        event = parse_event(json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": "Done"}}))
-        self.assertEqual((event.kind, event.text), ("answer", "Done"))
-
-    def test_mcp_activity_and_failed_turn(self):
-        event = parse_event(json.dumps({"type": "item.started", "item": {"type": "mcp_tool_call", "server": "jarvis-x11", "tool": "windows"}}))
-        self.assertIn("jarvis-x11 / windows", event.text)
-        event = parse_event(json.dumps({"type": "turn.failed", "error": {"message": "Login required"}}))
-        self.assertEqual((event.kind, event.text), ("error", "Login required"))
-
-    def test_noise_and_non_object_records_are_ignored(self):
-        for line in ("not json", "[]", "null", '{"type":"item.started","item":null}'):
-            self.assertIsNone(parse_event(line))
 
 
 if __name__ == "__main__":

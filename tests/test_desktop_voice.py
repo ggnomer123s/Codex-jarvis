@@ -95,5 +95,70 @@ class TestDesktopVoice(unittest.TestCase):
         model.assert_not_called()
 
 
+class TestPersistentVoice(unittest.TestCase):
+    def worker(self, cancel=False):
+        events = []
+        holder = {}
+
+        class Stream:
+            def __init__(self, **kwargs):
+                self.callback = kwargs['callback']
+
+            def __enter__(self):
+                self.callback(b'\0' * 32000, 16000, None, None)
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        numpy = types.SimpleNamespace(frombuffer=lambda *a, **kw: AudioArray(), int16=int,
+                                      float32=float, sqrt=lambda n: .1, mean=lambda a: .01)
+        sd = types.SimpleNamespace(RawInputStream=Stream, query_devices=lambda: [{'name':'Test microphone','max_input_channels':1}])
+        engine = mock.Mock()
+        engine.transcribe.return_value = ([types.SimpleNamespace(text='review me')], None)
+        factory = mock.Mock(return_value=engine)
+
+        def output(kind, **values):
+            events.append({'type':kind, **values})
+            if kind == 'level':
+                holder['worker'].stop.set()
+                if cancel:
+                    holder['worker'].cancelled.set()
+
+        with mock.patch.dict(sys.modules, {'numpy':numpy,'sounddevice':sd}):
+            worker = voice.VoiceWorker('base', model_factory=factory, output=output)
+        holder['worker'] = worker
+        return worker, factory, events
+
+    def test_one_model_serves_two_recordings_and_keeps_russian(self):
+        worker, factory, events = self.worker()
+        for recording_id in ('recording-1','recording-2'):
+            worker.command({'command':'record','id':recording_id,'language':'ru','beam':1})
+            worker.thread.join(2)
+            self.assertFalse(worker.thread.is_alive())
+        factory.assert_called_once()
+        self.assertEqual(factory.return_value.transcribe.call_count, 2)
+        self.assertEqual(factory.return_value.transcribe.call_args.kwargs['language'], 'ru')
+        self.assertEqual(factory.return_value.transcribe.call_args.kwargs['beam_size'], 1)
+        self.assertEqual([e['id'] for e in events if e['type']=='transcript'], ['recording-1','recording-2'])
+        self.assertEqual(worker.devices()[0]['id'], '0')
+
+    def test_cancelled_recording_does_not_produce_transcript(self):
+        worker, factory, events = self.worker(cancel=True)
+        worker.command({'command':'record','id':'abandoned','language':'ru'})
+        worker.thread.join(2)
+        self.assertFalse(any(e['type']=='transcript' for e in events))
+        factory.return_value.transcribe.assert_not_called()
+        self.assertEqual(events[-1]['type'], 'idle')
+
+    def test_stop_for_old_recording_cannot_stop_a_new_recording(self):
+        worker, _, _ = self.worker()
+        worker.recording_id = 'current'
+        worker.command({'command':'stop','id':'old'})
+        self.assertFalse(worker.stop.is_set())
+        worker.command({'command':'stop','id':'current'})
+        self.assertTrue(worker.stop.is_set())
+
+
 if __name__ == "__main__":
     unittest.main()

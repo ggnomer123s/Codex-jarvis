@@ -1,18 +1,36 @@
-"""Dependency-free CLI protocol helpers, shared by the UI and its tests."""
+"""Dependency-free Codex discovery, safe launch and app-server parameters."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-import json
 import os
 from pathlib import Path
 import shutil
 from .preferences import valid_model_id
 
 
-@dataclass(frozen=True)
-class Event:
-    kind: str
-    text: str = ""
+def thread_options(folder: str, access: str, model: str = "") -> dict:
+    """Validated app-server options; access cannot be supplied by model output."""
+    if not Path(folder).is_dir():
+        raise ValueError("Choose an existing workspace folder.")
+    if access not in ("read-only", "workspace-write", "full-access"):
+        raise ValueError("Unknown workspace access mode.")
+    if not valid_model_id(model):
+        raise ValueError("Enter a valid Codex model ID, or select Codex default.")
+    options = {"cwd": str(Path(folder).resolve()), "approvalPolicy": "never",
+               "sandbox": "danger-full-access" if access == "full-access" else access}
+    if model:
+        options["model"] = model
+    return options
+
+
+def turn_options(thread_id: str, prompt: str, effort: str, model: str = "") -> dict:
+    if effort not in ("low", "default", "high") or not valid_model_id(model):
+        raise ValueError("Invalid model or reasoning setting.")
+    result = {"threadId": thread_id, "input": [{"type": "text", "text": prompt}]}
+    if effort != "default":
+        result["effort"] = effort
+    if model:
+        result["model"] = model
+    return result
 
 
 def find_codex() -> str | None:
@@ -31,70 +49,3 @@ def launch_command(executable: str, arguments: list[str], *, windows: bool | Non
             raise ValueError("Could not locate Node and the Codex npm entry point. Reinstall @openai/codex or put codex.exe on PATH.")
         return node, [str(script), *arguments]
     return executable, arguments
-
-
-def build_arguments(folder: str, effort: str = "low", access: str = "read-only",
-                    thread_id: str = "", model: str = "") -> list[str]:
-    if not Path(folder).is_dir():
-        raise ValueError("Choose an existing workspace folder.")
-    if effort not in ("low", "default", "high"):
-        raise ValueError("Unknown reasoning mode.")
-    if access not in ("read-only", "workspace-write", "full-access"):
-        raise ValueError("Unknown workspace access mode.")
-    if not valid_model_id(model):
-        raise ValueError("Enter a valid Codex model ID, or select Codex default.")
-    # Prompt is sent through stdin, never interpreted as a command-line option.
-    # exec is noninteractive; explicitly keep approvals at never so operations
-    # outside the selected sandbox fail instead of waiting for an invisible UI.
-    args = ["exec", "--json", "--skip-git-repo-check", "-C", str(Path(folder).resolve())]
-    if access == "full-access":
-        args += ["--dangerously-bypass-approvals-and-sandbox"]
-    else:
-        args += ["--sandbox", access, "--config", "approval_policy=\"never\""]
-    if model:
-        args += ["--model", model]
-    if effort != "default":
-        args += ["--config", f"model_reasoning_effort={effort}"]
-    if thread_id:
-        args += ["resume", thread_id]
-    return args + ["-"]
-
-
-def parse_event(line: str) -> Event | None:
-    try:
-        data = json.loads(line)
-    except (ValueError, TypeError):
-        return None
-    if not isinstance(data, dict):
-        return None
-    kind = data.get("type", "")
-    if kind == "thread.started":
-        return Event("thread", str(data.get("thread_id", "")))
-    if kind in ("error", "turn.failed"):
-        error = data.get("error", data.get("message", "Codex request failed."))
-        if isinstance(error, dict):
-            error = error.get("message", "Codex request failed.")
-        return Event("error", str(error))
-    if kind == "turn.completed":
-        return Event("complete")
-    if kind == "turn.started":
-        return Event("activity", "Understanding your request")
-    item = data.get("item")
-    if not isinstance(item, dict):
-        return None
-    item_kind = item.get("type")
-    if item_kind == "agent_message" and kind == "item.completed":
-        return Event("answer", str(item.get("text", "")))
-    if kind in ("item.started", "item.updated"):
-        if item_kind == "command_execution":
-            return Event("activity", "Running: " + str(item.get("command", ""))[:180])
-        if item_kind == "mcp_tool_call":
-            return Event("activity", "Using " + str(item.get("server", "MCP")) +
-                         " / " + str(item.get("tool", "tool")))
-        if item_kind == "web_search":
-            return Event("activity", "Searching the web")
-        if item_kind == "file_change":
-            return Event("activity", "Updating workspace files")
-        if item_kind == "reasoning":
-            return Event("activity", "Planning the next step")
-    return None

@@ -14,15 +14,19 @@ ApplicationWindow {
     property bool voiceActive: bridge.voiceState !== "idle"
     property bool locked: bridge.busy || voiceActive || bridge.fullProfile.busy
     property bool compact: width < 1250
+    property string liveTranscript: ""
 
     Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel() } }
     Shortcut { sequence: "Ctrl+N"; enabled: !window.locked; onActivated: bridge.newSession() }
     Connections {
         target: bridge
         function onTranscriptReady(text) {
+            window.liveTranscript = ""
             composer.text = composer.text ? composer.text + "\n" + text : text
             composer.forceActiveFocus()
         }
+        function onTranscriptPreview(text) { window.liveTranscript = text }
+        function onChanged() { if (bridge.voiceState === "starting") window.liveTranscript = "" }
         function onMessagesChanged() { scrollDelay.restart() }
     }
     Timer { id: scrollDelay; interval: 50; onTriggered: conversation.positionViewAtEnd() }
@@ -72,6 +76,7 @@ ApplicationWindow {
                     }
                 }
                 HudButton { Layout.fillWidth: true; text: "New conversation"; glyph: "+"; enabled: !window.locked; onClicked: bridge.newSession() }
+                HudButton { Layout.fillWidth: true; text: "Resume previous"; enabled: bridge.canResume; onClicked: bridge.resumePrevious() }
                 HudButton { Layout.fillWidth: true; text: "Workspace"; glyph: "⌑"; enabled: !window.locked; onClicked: bridge.chooseFolder() }
                 HudButton { Layout.fillWidth: true; text: "Preferences"; glyph: "⚙"; enabled: !bridge.busy && !window.voiceActive; onClicked: preferences.open() }
                 Item { Layout.fillHeight: true }
@@ -85,7 +90,7 @@ ApplicationWindow {
                     }
                 }
                 Text { Layout.topMargin: 14; text: "BUILT FOR YOUR DESKTOP"; color: "#536c7d"; font.pixelSize: 8; font.letterSpacing: 1.2 }
-                Text { Layout.bottomMargin: 8; text: "Powered by Codex CLI"; color: "#8ca3b2"; font.pixelSize: 11 }
+                Text { Layout.bottomMargin: 8; text: "Codex app-server"; color: "#8ca3b2"; font.pixelSize: 11 }
             }
         }
 
@@ -119,7 +124,7 @@ ApplicationWindow {
                         width: 128; height: 30; radius: 15; color: "#10251f"; border.color: "#254c3e"
                         Row { anchors.centerIn: parent; spacing: 8
                             Rectangle { width: 6; height: 6; radius: 3; anchors.verticalCenter: parent.verticalCenter; color: bridge.codexAvailable ? "#7af0ad" : "#f0b57a" }
-                            Text { text: bridge.codexAvailable ? "CLI DETECTED" : "CLI MISSING"; color: "#a3c8b7"; font.pixelSize: 9; font.letterSpacing: 1 }
+                            Text { text: bridge.serverReady ? "CONNECTED" : (bridge.codexAvailable ? "READY TO CONNECT" : "CLI MISSING"); color: "#a3c8b7"; font.pixelSize: 8; font.letterSpacing: 0.5 }
                         }
                     }
                 }
@@ -152,7 +157,8 @@ ApplicationWindow {
                         Layout.minimumHeight: 220
                         active: bridge.busy || window.voiceActive || bridge.fullProfile.busy
                         listening: bridge.voiceState === "recording"
-                        level: bridge.audioLevel
+                        targetLevel: bridge.audioLevel
+                        stage: bridge.stage
                         animate: window.visibility !== Window.Minimized
                     }
                     RowLayout {
@@ -168,6 +174,12 @@ ApplicationWindow {
                         Text { text: bridge.effort.toUpperCase() + " REASONING"; color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
                         Rectangle { width: 1; height: 10; color: "#2a4752" }
                         Text { text: "LOCAL VOICE / " + bridge.language.toUpperCase() + " / " + (bridge.voiceModels.indexOf(bridge.voiceModel) >= 0 ? bridge.voiceModel.toUpperCase() : "CUSTOM"); color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
+                    }
+                    Text {
+                        Layout.alignment: Qt.AlignHCenter; Layout.maximumWidth: window.compact ? 310 : 420
+                        visible: window.voiceActive && window.liveTranscript.length > 0
+                        text: window.liveTranscript; color: "#b6e8df"; font.pixelSize: 11
+                        maximumLineCount: 2; elide: Text.ElideRight; wrapMode: Text.WordWrap
                     }
                     Item { Layout.fillHeight: true; Layout.minimumHeight: 14 }
                     RowLayout {
@@ -225,7 +237,7 @@ ApplicationWindow {
                                 }
                                 Text {
                                     Layout.fillWidth: true
-                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? "Transcribing locally..." : "Voice stays local until you send")
+                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? "Transcribing locally..." : (bridge.voiceReady ? "Local voice model ready" : "Voice stays local until you send"))
                                     color: "#7897a7"; font.pixelSize: 9; elide: Text.ElideRight
                                 }
                                 HudButton {
@@ -280,35 +292,40 @@ ApplicationWindow {
                             ListView {
                                 id: conversation; objectName: "conversation"
                                 anchors.fill: parent; clip: true; spacing: 16
-                                model: bridge.messages
+                                model: bridge.messageModel
                                 ScrollBar.vertical: ScrollBar {}
                                 delegate: Rectangle {
-                                    required property var modelData
+                                    required property string messageRole
+                                    required property string messageText
                                     width: conversation.width - 8
                                     height: messageColumn.implicitHeight + 28
                                     radius: 12
-                                    color: modelData.role === "user" ? "#142c36" : (modelData.role === "error" ? "#2b1d26" : "#101f2a")
-                                    border.color: modelData.role === "error" ? "#633d46" : "#243b47"
+                                    color: messageRole === "user" ? "#142c36" : (messageRole === "error" ? "#2b1d26" : "#101f2a")
+                                    border.color: messageRole === "error" ? "#633d46" : "#243b47"
                                     Column {
                                         id: messageColumn
                                         width: parent.width - 28; x: 14; y: 14; spacing: 10
                                         Text {
-                                            text: modelData.role === "user" ? "YOU" : (modelData.role === "assistant" ? "JARVIS" : (modelData.role === "error" ? "ATTENTION" : "SESSION"))
-                                            color: modelData.role === "error" ? "#fca5a5" : "#68cec7"
+                                            text: messageRole === "user" ? "YOU" : (messageRole === "assistant" ? "JARVIS" : (messageRole === "error" ? "ATTENTION" : "SESSION"))
+                                            color: messageRole === "error" ? "#fca5a5" : "#68cec7"
                                             font.pixelSize: 9; font.letterSpacing: 1.7
                                         }
                                         TextEdit {
                                             width: parent.width
-                                            text: modelData.text; color: "#cbdde5"; font.pixelSize: 12
+                                            text: messageText; color: "#cbdde5"; font.pixelSize: 12
                                             readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
                                             textFormat: TextEdit.PlainText
-                                            Accessible.name: modelData.role + " message"
+                                            Accessible.name: messageRole + " message"
                                         }
                                     }
                                 }
                             }
                         }
                         Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
+                        Text {
+                            Layout.fillWidth: true; text: bridge.metricsSummary; color: "#84aeb8"
+                            font.pixelSize: 9; wrapMode: Text.WordWrap
+                        }
                         RowLayout {
                             Layout.fillWidth: true
                             Text { text: "●"; color: "#48bcad"; font.pixelSize: 9 }
@@ -337,6 +354,12 @@ ApplicationWindow {
             languageChoice.currentIndex = languageChoice.indexOfValue(bridge.language)
             voiceModelChoice.currentIndex = bridge.voiceModels.indexOf(bridge.voiceModel)
             voiceModelChoice.editText = bridge.voiceModel
+            adaptiveChoice.checked = bridge.autoReasoning
+            deviceChoice.currentIndex = ["cpu", "cuda"].indexOf(bridge.voiceDevice)
+            beamChoice.currentIndex = [1, 3, 5].indexOf(bridge.voiceBeam)
+            previewChoice.checked = bridge.voicePreview
+            micChoice.currentIndex = micChoice.indexOfValue(bridge.microphone)
+            workflowEditor.text = bridge.workflowsText
         }
         contentItem: ColumnLayout {
             spacing: 14
@@ -348,11 +371,11 @@ ApplicationWindow {
                 property int currentIndex: 0
                 Layout.fillWidth: true; spacing: 8
                 Repeater {
-                    model: ["Intelligence", "Voice", "Access"]
+                    model: ["Intelligence", "Voice", "Access", "Runtime", "Automation"]
                     HudButton {
                         required property string modelData
                         required property int index
-                        Layout.fillWidth: true; text: modelData; implicitHeight: 36
+                        Layout.fillWidth: true; text: modelData; implicitHeight: 36; font.pixelSize: 10
                         primary: preferenceTabs.currentIndex === index
                         onClicked: preferenceTabs.currentIndex = index
                     }
@@ -366,7 +389,7 @@ ApplicationWindow {
                     Text { text: "Codex model"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox { id: modelChoice; objectName: "modelChoice"; Layout.fillWidth: true; editable: true; model: bridge.models; enabled: !window.locked }
                     RowLayout {
-                        Text { Layout.fillWidth: true; text: "From the local Codex catalog. You can also enter a model ID."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Text { Layout.fillWidth: true; text: "Live app-server catalog when connected; local cache before connection."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         HudButton { text: "Refresh"; implicitHeight: 30; enabled: !window.locked; onClicked: bridge.refreshModels() }
                     }
                     Text { text: "Reasoning"; color: "#8eadbd"; font.pixelSize: 12 }
@@ -374,10 +397,17 @@ ApplicationWindow {
                         id: effortChoice; Layout.fillWidth: true; enabled: !window.locked
                         model: ["Fast - low reasoning", "Normal - Codex default", "Deep - high reasoning"]
                     }
+                    CheckBox {
+                        id: adaptiveChoice; text: "Adapt reasoning to task difficulty"; enabled: !window.locked
+                        contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
+                    }
                     Text { Layout.fillWidth: true; text: "Model availability depends on your Codex account and provider. Normal uses the configured reasoning default. Changing model starts a fresh conversation."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     Item { Layout.fillHeight: true }
                 }
-                ColumnLayout {
+                ScrollView {
+                    clip: true; contentWidth: availableWidth
+                    ColumnLayout {
+                    width: parent.width
                     spacing: 14
                     Text { text: "Speech language"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox {
@@ -388,11 +418,19 @@ ApplicationWindow {
                     Text { text: "Local Whisper model"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox { id: voiceModelChoice; Layout.fillWidth: true; editable: true; model: bridge.voiceModels; enabled: !window.locked }
                     Text { Layout.fillWidth: true; text: "tiny: smaller and faster. base: balanced. small / medium: larger models for more demanding speech. You can enter a local multilingual model folder for offline use."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
-                    Rectangle {
-                        Layout.fillWidth: true; height: 90; radius: 12; color: "#0d2629"; border.color: "#275451"
-                        Text { anchors.fill: parent; anchors.margins: 16; text: "LOCAL FIRST\nAudio stays in memory on this computer. Review the transcript before sending it to Codex."; color: "#8fc5c0"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    RowLayout {
+                        HudComboBox { id: deviceChoice; Layout.fillWidth: true; model: ["CPU / int8", "NVIDIA CUDA / int8-fp16"]; enabled: !window.locked }
+                        HudComboBox { id: beamChoice; Layout.fillWidth: true; model: ["Beam 1 / fast", "Beam 3 / balanced", "Beam 5 / thorough"]; enabled: !window.locked }
                     }
-                    Item { Layout.fillHeight: true }
+                    Text { text: "Microphone"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox { id: micChoice; Layout.fillWidth: true; model: bridge.microphones; textRole: "label"; valueRole: "id"; enabled: !window.locked }
+                    CheckBox {
+                        id: previewChoice; text: "Show provisional text while recording"; enabled: !window.locked
+                        contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
+                    }
+                    Text { Layout.fillWidth: true; text: "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Audio stays in memory; review before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    HudButton { text: bridge.voiceReady ? "Voice model ready" : "Prepare saved model / list microphones"; enabled: !window.locked && bridge.voiceAvailable; onClicked: bridge.warmVoice() }
+                    }
                 }
                 ScrollView {
                     clip: true
@@ -440,6 +478,33 @@ ApplicationWindow {
                         }
                     }
                 }
+                ColumnLayout {
+                    spacing: 12
+                    Text { Layout.fillWidth: true; text: "Task timings and connection state"; color: "#bde5de"; font.pixelSize: 14 }
+                    ScrollView {
+                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true
+                        TextArea { text: bridge.runtimeDetails; readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap; color: "#bad4dc"; font.pixelSize: 12; background: Rectangle { color: "#0a1720"; radius: 8 } }
+                    }
+                    Text { Layout.fillWidth: true; text: "Timings exclude task content. Connected does not prove model login or desktop input permission. Resume restores conversation context and does not replay actions."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                    RowLayout {
+                        HudButton { text: "Export timings"; onClicked: bridge.exportMetrics() }
+                        HudButton { text: "Resume previous"; enabled: bridge.canResume; onClicked: bridge.resumePrevious() }
+                    }
+                }
+                ColumnLayout {
+                    spacing: 12
+                    Text { Layout.fillWidth: true; text: "Exact commands, verified desktop steps"; color: "#bde5de"; font.pixelSize: 14 }
+                    Text { Layout.fillWidth: true; text: "Add a JSON array of named workflows with exact aliases and 1–5 steps. Each step calls your configured desktop MCP and checks its result. See docs/runtime.md for examples."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                    ScrollView {
+                        Layout.fillWidth: true; Layout.fillHeight: true; clip: true
+                        TextArea {
+                            id: workflowEditor; objectName: "workflowEditor"; text: "[]"; selectByMouse: true
+                            enabled: !window.locked; wrapMode: TextEdit.Wrap; color: "#bad4dc"; font.pixelSize: 11; font.family: "monospace"
+                            background: Rectangle { color: "#0a1720"; radius: 8 }
+                        }
+                    }
+                    Text { Layout.fillWidth: true; text: "Save only workflows you reviewed. The executor stops on changed preconditions, refusal or failed verification. It does not bypass MCP guards or retry actions automatically."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                }
             }
             HudButton {
                 Layout.fillWidth: true; primary: true; text: "Save preferences"
@@ -447,7 +512,8 @@ ApplicationWindow {
                 onClicked: {
                     let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
                     let access = bridge.fullAccess ? "full-access" : ["read-only", "workspace-write"][accessChoice.currentIndex]
-                    if (bridge.savePreferences(["low", "default", "high"][effortChoice.currentIndex], access, model, languageChoice.currentValue, voiceModelChoice.editText)) preferences.close()
+                    if (bridge.saveAllPreferences(["low", "default", "high"][effortChoice.currentIndex], access, model, languageChoice.currentValue, voiceModelChoice.editText,
+                        workflowEditor.text, adaptiveChoice.checked, ["cpu", "cuda"][deviceChoice.currentIndex], [1, 3, 5][beamChoice.currentIndex], previewChoice.checked, micChoice.currentValue || "")) preferences.close()
                 }
             }
             Text { Layout.fillWidth: true; visible: bridge.preferencesError.length > 0; text: bridge.preferencesError; color: "#f5a4a4"; font.pixelSize: 11; wrapMode: Text.WordWrap }
