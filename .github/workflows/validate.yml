@@ -38,6 +38,7 @@ jobs:
 
   desktop-ui:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -55,7 +56,7 @@ jobs:
       - name: Install locked desktop dependencies
         run: uv sync --project gui --frozen
       - name: Test process bridge and actual QML window
-        run: uv run --project gui --frozen python -m unittest discover -s gui/tests -v
+        run: uv run --project gui --frozen python scripts/check_desktop_ui.py
       - name: Test protocol and simulated audio
         run: python -m unittest discover -s tests -p "test_desktop_*.py" -v
       - name: Load desktop window
