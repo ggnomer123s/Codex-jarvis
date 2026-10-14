@@ -38,9 +38,15 @@ bash scripts/install-gui-linux.sh
 ```
 
 Keep the checkout at its current path: the menu entry points to it. Re-run the
-installer if you move it. It installs only current-user menu/launcher files and
-preserves unrelated files with the same names. Remove those two generated files
+installer if you move it. It installs current-user launchers, menu entries and
+the separate Full Access profile. Unmanaged launchers/menu entries with the same
+names are refused. Remove the two generated GUI launcher/menu files
 to uninstall the menu entry; existing CLI JARVIS configuration is unaffected.
+
+The GUI installer also prepares the separate Full Access profile automatically.
+Codex CLI and uv/uvx must be installed. Full Access starts off and is enabled
+using one checkbox in Preferences. Preparation does not start an unsandboxed
+Codex session. The separate profile retains its own login state.
 
 Qt requires a graphical X11 or Wayland session and its native platform libraries.
 Install missing runtime libraries using your distribution's package manager.
@@ -76,6 +82,11 @@ the shortcut. No Administrator session or global execution-policy changes are
 required. The npm `codex.cmd` installation is launched through its Node entry
 point, avoiding shell interpolation of paths or requests.
 
+The Windows GUI installer prepares the separate Full Access profile in a child
+PowerShell process before creating the shortcut. Run it from a normal,
+non-elevated PowerShell. For copy-ready commands that work from any directory,
+including `C:\Users\Cosmo`, see [Windows installation](install-desktop.md#windows-11).
+
 ## Use the app
 
 1. Choose **Workspace**. This is the working directory for Codex requests.
@@ -105,16 +116,16 @@ interactive CLI for tasks needing those approvals.
 
 ## Full Access from the GUI
 
-1. Open **Preferences > Access** and select **Full Access - separate profile**.
-2. Check the acknowledgement and type `ENABLE FULL ACCESS`.
-3. Click **Prepare and enable Full Access** (or **Enable Full Access** if installed).
-   The app invokes the existing full-profile installer after this explicit action.
-   Missing desktop prerequisites are reported in the profile log.
-4. Use **Sign in to full profile** if this profile has no authentication. The
+1. Install/update through the GUI installer, which prepares the included profile.
+2. Open **Preferences > Access** and check **Enable Full Access**. No typed
+   acknowledgement or extra confirmation button is required.
+3. Use **Sign in to full profile** if this profile has no authentication. The
    device sign-in URL and code appear in the panel; **Open sign-in page** opens
    the official device page in your browser. Credentials are never copied from
    the normal profile.
-5. Click **Save preferences**. An amber Full Access indicator remains visible.
+4. An amber Full Access indicator remains visible. Uncheck the box to return to
+   the retained normal workspace access mode. Save preferences applies any
+   model, reasoning or voice edits made in the other tabs.
 
 Full Access runs `codex exec --dangerously-bypass-approvals-and-sandbox` as the
 current user, with the same separate `CODEX_HOME` used by `jarvis-full`. It can
@@ -122,13 +133,17 @@ change user-accessible files and run commands without Codex's sandbox or command
 approvals. It does not grant root/Administrator access, bypass OS authentication
 or override upstream MCP guards. Elevated execution is refused.
 
-**Disable Full Access** restores the retained normal access setting. Switching
+Unchecking **Enable Full Access** restores the retained normal access setting. Switching
 profiles clears the current conversation so thread IDs cannot cross profiles.
 Full Access is enabled only for the current window and returns to normal mode
 after restart. Profile preparation and login are cancellable. Cancelling setup
 does not remove files already installed. Automatic preparation requires the
-source checkout; packaged-wheel users can prepare the profile using the
+source checkout. On older installations without a prepared profile, checking
+the box prepares it automatically before activation; missing prerequisites are
+reported in the profile log. Packaged-wheel users can prepare the profile using the
 [existing Full Access installers](full-access.md).
+
+![Full Access checkbox](images/jarvis-access-settings.png)
 
 MCP mouse/keyboard permissions are independent of the shell sandbox and are
 inherited from your existing setup. The UI does not claim that CLI detection

@@ -4,26 +4,33 @@ An optional advanced setup for complex development, media-editing and desktop wo
 
 ## Installation
 
-The desktop app can prepare and enable this same profile through
-**Preferences > Access > Full Access**, after typing `ENABLE FULL ACCESS`.
+The GUI installer prepares this same profile automatically. In the desktop app,
+check **Preferences > Access > Enable Full Access** to enable it; no typed
+acknowledgement is needed. Uncheck the box to return to normal access.
 It includes a separate device-login panel and a visible active-mode indicator.
 The mode is scoped to the current window and returns to normal after restart.
 See [Desktop app Full Access](desktop-app.md#full-access-from-the-gui).
-The installers accept an explicit acknowledgement argument for this GUI flow;
+The installers accept an explicit acknowledgement argument for GUI installation;
 ordinary terminal installation still prompts interactively by default.
+
+The GUI installer already includes profile preparation; use the
+[installation commands](install-desktop.md) first. For manual CLI setup, the
+examples below assume that checkout exists at `Codex-jarvis-gui` in your user
+directory. They use explicit paths so the current directory does not matter.
 
 On Linux, after completing the normal prerequisites:
 
 ```bash
-git pull --ff-only
-bash scripts/install-full-linux.sh
+git -C "$HOME/Codex-jarvis-gui" pull --ff-only
+bash "$HOME/Codex-jarvis-gui/scripts/install-full-linux.sh"
 ```
 
 On Windows 11, in a non-elevated PowerShell window:
 
 ```powershell
 git pull --ff-only
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1
+$repoPath = Join-Path $env:USERPROFILE 'Codex-jarvis-gui'
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'scripts\install-full-windows.ps1')
 ```
 
 Read the installer output before accepting its one-time confirmation. After installation, sign in once and choose a reasoning profile:

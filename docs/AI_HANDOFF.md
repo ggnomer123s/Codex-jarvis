@@ -31,6 +31,17 @@ reasoning selection and Doctor/checkpoints remain proposals. Tests simulate
 processes/audio; actual Full Access installation/login and microphone/model
 execution still need validation on a target machine.
 
+**Installation/checkbox update — 2026-10-14:** GUI installers now prepare the
+included Full Access profile automatically; the GUI enables/disables it with a
+single checkbox and no typed acknowledgement. The profile remains separate and
+off by default, with independent login and per-window activation. On Windows,
+preparation runs in a child PowerShell to retain the parent's normal environment.
+The copy-ready installation instructions use explicit checkout paths and
+clone/update selection so they work from a user directory, not just a Git root.
+Linux installer integration is tested from an unrelated directory containing
+spaces with isolated fixture tools; native Windows installation still needs
+target-machine validation. This update supersedes the earlier GUI text-entry flow.
+
 > **Start here if you are another AI or a developer continuing this project.** Read this file, `README.md`, and the specific source files you intend to edit. This handoff is a snapshot, not permission to invent past accomplishments or disregard newer code, the user's current request, tests, or security boundaries. **The repository source is authoritative if the handoff becomes stale.**
 
 ## 1. Mission and actual product
@@ -217,7 +228,7 @@ git pull --ff-only
 bash scripts/install-linux.sh
 ```
 
-Full Access is **separate**, requires a typed acknowledgement and independent `jarvis-full login`:
+Manual CLI Full Access installation is **separate**, requires a typed acknowledgement and independent `jarvis-full login`. The GUI installer prepares this profile automatically and its checkbox controls activation:
 
 ```bash
 bash scripts/install-full-linux.sh

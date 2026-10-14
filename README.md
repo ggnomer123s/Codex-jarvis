@@ -6,7 +6,7 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 
 A native desktop interface is now available: an animated cyan JARVIS core,
 Codex chat with continuing conversation context, task cancellation, model/workspace
-and reasoning settings, an explicit separate Full Access mode, and local
+and reasoning settings, an included separate Full Access profile with a checkbox, and local
 push-to-talk transcription with 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
 
@@ -41,11 +41,16 @@ Copy-ready commands, including dependencies, Codex login and menu installation:
 
 If you already cloned `Codex-jarvis-gui`, use the [update commands](docs/install-desktop.md#update-an-existing-gui-installation).
 
+The GUI installers prepare Full Access automatically. Enable it with the
+**Preferences > Access > Enable Full Access** checkbox; text entry is not required.
+For Windows, the [installation instructions](docs/install-desktop.md#windows-11)
+use an explicit checkout path and work from your user directory as well.
+
 > Not an official OpenAI product. Desktop automation has significant privacy and security implications. Desktop MCPs are independent upstream projects and capabilities vary by display server and compositor.
 
 ## Start here: project handoff for another AI
 
-**Continuation status — 2026-10-13.** This README is the project's public entry point. A much more detailed, source-checked maintainer handoff is maintained at **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**. If you are an AI coding agent taking over JARVIS, read **both files**, then fetch the latest source, tests and GitHub Actions output before making changes. The code always takes precedence over any dated summary.
+**Continuation status — 2026-10-14.** This README is the project's public entry point. A much more detailed, source-checked maintainer handoff is maintained at **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**. If you are an AI coding agent taking over JARVIS, read **both files**, then fetch the latest source, tests and GitHub Actions output before making changes. The code always takes precedence over any dated summary.
 
 ### What we are building
 
@@ -79,7 +84,7 @@ Observed result / user-facing report
 | Area | Implemented source and behavior |
 |---|---|
 | Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
-| Native desktop frontend | `gui/`; Qt Quick interface, model selection, Codex chat/resume, explicit separate Full Access setup/device login, 15 local voice language presets including Russian, Linux/Windows launchers and menu shortcuts |
+| Native desktop frontend | `gui/`; Qt Quick interface, model selection, Codex chat/resume, included Full Access profile with a checkbox and separate device login, 15 local voice language presets including Russian, Linux/Windows launchers and menu shortcuts |
 | Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
 | Separate Full Access | `scripts/install-full-linux.sh`, `scripts/install-full-windows.ps1`, `scripts/jarvis-full-launcher.*`; independent `CODEX_HOME`, login and `fast|normal|deep` presets |
 | GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |
@@ -229,7 +234,7 @@ Advanced operators can install a **separate**, opt-in Codex profile with its own
 - Linux: `bash scripts/install-full-linux.sh`
 - Windows 11: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1`
 
-They require a one-time typed warning acknowledgement. After installation, use `jarvis-full login` to sign in to the separate Codex home, then `jarvis-full fast`, `jarvis-full normal`, or `jarvis-full deep`. The equivalents `jarvis full fast|normal|deep` also work. Normal inherits the full profile's configured reasoning; fast is `low` and deep is `high`. The launcher starts directly in interactive Codex without injecting a startup task. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
+Manual CLI installation asks for a typed warning acknowledgement. The GUI installers prepare the profile automatically, and the desktop app enables it with a checkbox. After installation, use `jarvis-full login` or the GUI's separate sign-in panel, then `jarvis-full fast`, `jarvis-full normal`, or `jarvis-full deep`. The equivalents `jarvis full fast|normal|deep` also work. Normal inherits the full profile's configured reasoning; fast is `low` and deep is `high`. The launcher starts directly in interactive Codex without injecting a startup task. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
 
 ## Intent-driven desktop automation and selecting regions
 

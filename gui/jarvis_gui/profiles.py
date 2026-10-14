@@ -53,15 +53,15 @@ class FullProfile(QObject):
         if self.loginUrl:
             QDesktopServices.openUrl(QUrl(self.loginUrl))
 
-    def install(self, acknowledgement):
-        if self._busy or acknowledgement != FULL_ACKNOWLEDGEMENT:
+    def install(self):
+        if self._busy:
             return
         root = Path(__file__).resolve().parents[2]
         script = root / "scripts" / ("install-full-windows.ps1" if os.name == "nt" else "install-full-linux.sh")
         if not script.is_file():
             self.error.emit("Full Access setup requires the source checkout. Install jarvis-full using docs/full-access.md, then reopen the app.")
             return
-        args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Acknowledgement", acknowledgement] if os.name == "nt" else [str(script), "--acknowledgement", acknowledgement]
+        args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Acknowledgement", FULL_ACKNOWLEDGEMENT] if os.name == "nt" else [str(script), "--acknowledgement", FULL_ACKNOWLEDGEMENT]
         self._start("install", "powershell.exe" if os.name == "nt" else "bash", args)
 
     @Slot()

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QFileDialog
 
 from .core import build_arguments, find_codex, launch_command, parse_event
 from .voice import dependencies_available
-from .preferences import (LANGUAGES, VOICE_MODELS, FULL_ACKNOWLEDGEMENT, cached_models,
+from .preferences import (LANGUAGES, VOICE_MODELS, cached_models,
                           elevated, valid_model_id, valid_voice_model)
 from .profiles import FullProfile
 
@@ -111,6 +111,11 @@ class Backend(QObject):
     @Property(str, notify=changed)
     def access(self):
         return self._access
+
+    @Property(str, notify=changed)
+    def normalAccess(self):
+        saved = str(self.settings.value("access", "read-only"))
+        return saved if saved in ("read-only", "workspace-write") else "read-only"
 
     @Property(bool, notify=changed)
     def fullAccess(self):
@@ -363,19 +368,20 @@ class Backend(QObject):
         self._models = cached_models(self.profile.home if self.fullAccess else self._normal_home)
         self.changed.emit()
 
-    @Slot(str, result=bool)
-    def enableFullAccess(self, acknowledgement):
+    @Slot(bool, result=bool)
+    def setFullAccess(self, enabled):
         if self._locked():
             return False
-        if acknowledgement != FULL_ACKNOWLEDGEMENT:
-            return self._settings_error("Type ENABLE FULL ACCESS to enable the separate profile.")
+        if not enabled:
+            self.disableFullAccess()
+            return True
         if elevated():
             return self._settings_error("Run JARVIS as a normal user before enabling Full Access.")
         self._preferences_error = ""
         if self.profile.ready:
             self._activate_full()
         else:
-            self.profile.install(acknowledgement)
+            self.profile.install()
         return self.fullAccess or self.profile.busy
 
     def _activate_full(self):

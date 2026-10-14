@@ -16,11 +16,15 @@ installation recipes, not evidence of hardware testing on every distribution.
 
 ```bash
 sudo pacman -Syu --needed git uv python nodejs npm portaudio mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
 "$HOME/.local/bin/codex" login
-git clone --branch main https://github.com/ggnomer123s/Codex-jarvis.git "$HOME/Codex-jarvis-gui"
-bash "$HOME/Codex-jarvis-gui/scripts/install-gui-linux.sh"
-"$HOME/.local/bin/jarvis-gui"
+repo_dir="$HOME/Codex-jarvis-gui"
+if [ -e "$repo_dir/.git" ]; then
+  git -C "$repo_dir" pull --ff-only
+else
+  git clone --branch main https://github.com/ggnomer123s/Codex-jarvis.git "$repo_dir"
+fi && bash "$repo_dir/scripts/install-gui-linux.sh" && "$HOME/.local/bin/jarvis-gui"
 ```
 
 ## Ubuntu, Debian, Linux Mint, Pop!_OS
@@ -65,12 +69,18 @@ bash "$HOME/Codex-jarvis-gui/scripts/install-gui-linux.sh"
 
 The curl command uses uv's official HTTPS installer. uv installs the locked
 Python/Qt/voice dependencies without requiring a matching system Python version.
-The Linux installers create `~/.local/bin/jarvis-gui` and a JARVIS application
-menu entry. Keep the cloned directory in place.
+The Linux installers create `~/.local/bin/jarvis-gui`, a JARVIS application
+menu entry and the included separate Full Access profile. It starts off; enable
+it later with the checkbox in Preferences > Access. Keep the cloned directory in place.
 
 ## Windows 11
 
-Install prerequisites:
+If your prompt looks like `C:\Users\Cosmo>`, you are in Command Prompt (CMD).
+Run `powershell` first to enter a normal PowerShell session. The blocks below
+use PowerShell syntax and work from your user directory; do not run them in an
+Administrator window.
+
+Install prerequisites (skip packages already installed):
 
 ```powershell
 winget install -e --id Git.Git --source winget
@@ -84,13 +94,33 @@ commands are on PATH. Then:
 ```powershell
 npm.cmd install --global @openai/codex
 codex.cmd login
-git clone --branch main https://github.com/ggnomer123s/Codex-jarvis.git "$env:USERPROFILE\Codex-jarvis-gui"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-jarvis-gui\scripts\install-gui-windows.ps1"
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-jarvis-gui\scripts\jarvis-gui-windows.ps1"
+$repoPath = Join-Path $env:USERPROFILE 'Codex-jarvis-gui'
+if (Test-Path -LiteralPath (Join-Path $repoPath '.git')) {
+    git -C $repoPath pull --ff-only
+} else {
+    git clone --branch main https://github.com/ggnomer123s/Codex-jarvis.git $repoPath
+}
+if ($LASTEXITCODE -ne 0) { throw 'Git clone/update failed; installation stopped.' }
+$installerPath = Join-Path $repoPath 'scripts\install-gui-windows.ps1'
+if (-not (Test-Path -LiteralPath $installerPath)) { throw 'GUI installer is missing from this checkout.' }
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installerPath
+if ($LASTEXITCODE -ne 0) { throw 'GUI installation failed; inspect the error above.' }
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'scripts\jarvis-gui-windows.ps1')
 ```
 
 JARVIS also appears in the current user's Start menu. Keep the cloned directory
-in place. Microphone access can be enabled in Windows Privacy settings.
+in place. Full Access is prepared during this installation and is enabled using
+the GUI checkbox, without typing a confirmation phrase. Use the separate profile's
+sign-in button once if needed. Microphone access can be enabled in Windows Privacy settings.
+
+### Why the previous commands failed
+
+`git pull --ff-only` works inside a Git checkout, not directly in `C:\Users\Cosmo`.
+Use `git -C "$repoPath" pull --ff-only` as above. Likewise,
+`.\scripts\install-full-windows.ps1` is relative to the current directory. Its
+absolute path would be inside the checkout, but the new GUI installer prepares
+the full profile itself, so a separate invocation is unnecessary. Installing a
+newer PowerShell does not fix a missing checkout or a relative path.
 
 ## Update an existing GUI installation
 
@@ -115,7 +145,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-
 
 ## Desktop automation and first voice use
 
-These commands install the frontend. For mouse/keyboard control, use the existing
+These commands install the frontend and prepare the separate Full Access profile.
+Its installer registers the applicable full-profile desktop MCP. For normal-mode
+mouse/keyboard control, use the existing
 [Linux backend setup](linux.md) or [Windows backend setup](windows11.md) to
 configure the appropriate MCP in the normal Codex profile. Existing MCP settings
 are retained. GUI input permissions remain dependent on that backend.

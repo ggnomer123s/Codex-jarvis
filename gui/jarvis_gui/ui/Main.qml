@@ -331,13 +331,12 @@ ApplicationWindow {
         Overlay.modal: Rectangle { color: "#b0081018" }
         onOpened: {
             effortChoice.currentIndex = ["low", "default", "high"].indexOf(bridge.effort)
-            accessChoice.currentIndex = ["read-only", "workspace-write", "full-access"].indexOf(bridge.access)
+            accessChoice.currentIndex = ["read-only", "workspace-write"].indexOf(bridge.normalAccess)
             modelChoice.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
             modelChoice.editText = bridge.model || "Codex default"
             languageChoice.currentIndex = languageChoice.indexOfValue(bridge.language)
             voiceModelChoice.currentIndex = bridge.voiceModels.indexOf(bridge.voiceModel)
             voiceModelChoice.editText = bridge.voiceModel
-            acknowledgement.clear(); riskAccepted.checked = false
         }
         contentItem: ColumnLayout {
             spacing: 14
@@ -400,46 +399,38 @@ ApplicationWindow {
                     contentWidth: availableWidth
                     ColumnLayout {
                         width: parent.width; spacing: 12
-                        Text { text: "System access"; color: "#8eadbd"; font.pixelSize: 12 }
+                        Text { text: "Normal workspace access"; color: "#8eadbd"; font.pixelSize: 12 }
                         HudComboBox {
-                            id: accessChoice; objectName: "accessChoice"; Layout.fillWidth: true; enabled: !window.locked
-                            model: ["Observe only", "Allow workspace edits", "Full Access - separate profile"]
+                            id: accessChoice; objectName: "accessChoice"; Layout.fillWidth: true; enabled: !window.locked && !bridge.fullAccess
+                            model: ["Observe only", "Allow workspace edits"]
                         }
-                        Text { Layout.fillWidth: true; visible: accessChoice.currentIndex !== 2; text: "Workspace edits allow changes in the selected folder. Desktop MCP permissions come from your existing profile. Commands needing additional approval fail in the normal GUI modes."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
-                        Text { Layout.fillWidth: true; visible: accessChoice.currentIndex === 2; text: "Full Access lets Codex change your user files and run commands without its sandbox or command approvals. It uses a separate profile and login. Root / Administrator privileges and OS authentication are unchanged."; color: "#dfb987"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Text { Layout.fillWidth: true; text: "Workspace edits allow changes in the selected folder. Desktop MCP permissions come from your existing profile. Commands needing additional approval fail in the normal GUI modes."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: "#34515b" }
                         CheckBox {
-                            id: riskAccepted; objectName: "fullRiskAccepted"; visible: accessChoice.currentIndex === 2 && !bridge.fullAccess
-                            text: "I want to enable Full Access for this window"
+                            id: fullAccessToggle; objectName: "fullAccessToggle"
+                            text: "Enable Full Access"
+                            checked: bridge.fullAccess
                             enabled: !window.locked
-                            contentItem: Text { text: riskAccepted.text; color: "#c1d5dc"; font.pixelSize: 11; leftPadding: riskAccepted.indicator.width + 8; verticalAlignment: Text.AlignVCenter }
+                            hoverEnabled: true
+                            onClicked: bridge.setFullAccess(checked)
+                            indicator: Rectangle {
+                                width: 24; height: 24; radius: 6
+                                x: fullAccessToggle.leftPadding; y: (fullAccessToggle.height - height) / 2
+                                color: fullAccessToggle.checked ? "#f1bd7b" : "#10232d"
+                                border.color: fullAccessToggle.checked || fullAccessToggle.hovered ? "#d4a369" : "#41606a"
+                                Text { anchors.centerIn: parent; text: fullAccessToggle.checked ? "✓" : ""; color: "#11202a"; font.pixelSize: 17 }
+                            }
+                            contentItem: Text { text: fullAccessToggle.text; color: "#f3c38d"; font.pixelSize: 13; leftPadding: fullAccessToggle.indicator.width + 10; verticalAlignment: Text.AlignVCenter }
                         }
-                        TextField {
-                            id: acknowledgement; objectName: "fullAcknowledgement"
-                            Layout.fillWidth: true; implicitHeight: 42
-                            visible: accessChoice.currentIndex === 2 && !bridge.fullAccess
-                            placeholderText: "Type ENABLE FULL ACCESS"; placeholderTextColor: "#6e8798"
-                            color: "#e3edf0"; selectByMouse: true; enabled: !window.locked
-                            background: Rectangle { radius: 9; color: "#0a1720"; border.color: "#745536" }
-                        }
-                        HudButton {
-                            Layout.fillWidth: true; visible: accessChoice.currentIndex === 2 && !bridge.fullAccess
-                            text: bridge.fullProfile.ready ? "Enable Full Access" : "Prepare and enable Full Access"
-                            objectName: "fullAccessButton"
-                            danger: true; enabled: !window.locked && riskAccepted.checked && acknowledgement.text === "ENABLE FULL ACCESS"
-                            onClicked: bridge.enableFullAccess(acknowledgement.text)
-                        }
+                        Text { Layout.fillWidth: true; text: bridge.fullProfile.ready ? "Full Access profile is included and ready." : (bridge.fullProfile.busy ? "Preparing the Full Access profile..." : "The profile will be prepared when you enable the checkbox."); color: "#84b9b0"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Text { Layout.fillWidth: true; text: "Allows Codex to change your user files and run commands without its sandbox or command approvals. Uses a separate profile and login. Root / Administrator privileges and OS authentication are unchanged."; color: "#dfb987"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                         Text { visible: bridge.fullAccess; text: "FULL ACCESS IS ACTIVE FOR THIS WINDOW"; color: "#f4c185"; font.pixelSize: 10; font.letterSpacing: 1 }
-                        HudButton {
-                            Layout.fillWidth: true; visible: bridge.fullAccess; text: "Disable Full Access"; enabled: !window.locked
-                            onClicked: { bridge.disableFullAccess(); accessChoice.currentIndex = bridge.access === "read-only" ? 0 : 1 }
-                        }
                         RowLayout {
-                            visible: accessChoice.currentIndex === 2
                             HudButton { text: "Sign in to full profile"; enabled: bridge.fullProfile.ready && !window.locked; onClicked: bridge.fullProfile.login() }
                             HudButton { text: "Open sign-in page"; visible: bridge.fullProfile.loginUrl.length > 0; onClicked: bridge.fullProfile.openLoginPage() }
                             HudButton { text: "Cancel"; visible: bridge.fullProfile.busy; danger: true; onClicked: bridge.fullProfile.cancel() }
                         }
-                        Text { Layout.fillWidth: true; visible: accessChoice.currentIndex === 2; text: "Sign in once if this separate profile has no login. Follow the device link and code below. Full Access returns to your normal mode when you reopen JARVIS."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Text { Layout.fillWidth: true; text: "Sign in once if this separate profile has no login. Follow the device link and code below. Full Access returns to your normal mode when you reopen JARVIS."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                         TextArea {
                             Layout.fillWidth: true; Layout.preferredHeight: 115
                             visible: bridge.fullProfile.output.length > 0
@@ -452,10 +443,11 @@ ApplicationWindow {
             }
             HudButton {
                 Layout.fillWidth: true; primary: true; text: "Save preferences"
-                enabled: !window.locked && (accessChoice.currentIndex !== 2 || bridge.fullAccess)
+                enabled: !window.locked
                 onClicked: {
                     let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
-                    if (bridge.savePreferences(["low", "default", "high"][effortChoice.currentIndex], ["read-only", "workspace-write", "full-access"][accessChoice.currentIndex], model, languageChoice.currentValue, voiceModelChoice.editText)) preferences.close()
+                    let access = bridge.fullAccess ? "full-access" : ["read-only", "workspace-write"][accessChoice.currentIndex]
+                    if (bridge.savePreferences(["low", "default", "high"][effortChoice.currentIndex], access, model, languageChoice.currentValue, voiceModelChoice.editText)) preferences.close()
                 }
             }
             Text { Layout.fillWidth: true; visible: bridge.preferencesError.length > 0; text: bridge.preferencesError; color: "#f5a4a4"; font.pixelSize: 11; wrapMode: Text.WordWrap }

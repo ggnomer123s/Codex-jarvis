@@ -145,10 +145,10 @@ print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':
 """)
         self.prepare_profile(backend)
         backend._thread_id = "normal-context"
-        self.assertFalse(backend.enableFullAccess("yes"))
+        self.assertTrue(backend.setFullAccess(False))
         self.assertFalse(backend.fullAccess)
         with mock.patch("jarvis_gui.backend.elevated", return_value=False):
-            self.assertTrue(backend.enableFullAccess("ENABLE FULL ACCESS"))
+            self.assertTrue(backend.setFullAccess(True))
             self.assertEqual(backend._thread_id, "")
             backend.send("test")
             self.wait(lambda: not backend.busy)
@@ -156,7 +156,7 @@ print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':
         result = json.loads(backend.messages[-1]["text"])
         self.assertEqual(result["home"], str(backend.profile.home))
         self.assertIn("--dangerously-bypass-approvals-and-sandbox", result["args"])
-        backend.disableFullAccess()
+        backend.setFullAccess(False)
         self.assertFalse(backend.fullAccess)
         backend.send("normal")
         self.wait(lambda: not backend.busy)
@@ -176,7 +176,7 @@ print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':
         backend = self.backend("pass")
         self.prepare_profile(backend)
         with mock.patch("jarvis_gui.backend.elevated", return_value=True):
-            self.assertFalse(backend.enableFullAccess("ENABLE FULL ACCESS"))
+            self.assertFalse(backend.setFullAccess(True))
         self.assertFalse(backend.fullAccess)
 
     def test_model_and_voice_preferences_persist_and_reset_model_context(self):
@@ -216,6 +216,24 @@ print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':
         backend.profile.cancel()
         self.wait(lambda: not backend.profile.busy)
         self.assertFalse(backend.fullAccess)
+
+    def test_checkbox_prepares_a_legacy_missing_profile_without_text_input(self):
+        backend = self.backend("pass")
+        with mock.patch("jarvis_gui.backend.elevated", return_value=False), mock.patch.object(backend.profile, "install") as install:
+            backend.setFullAccess(True)
+        install.assert_called_once_with()
+        self.assertFalse(backend.fullAccess)
+
+    def test_unchecking_restores_retained_normal_workspace_access(self):
+        backend = self.backend("pass")
+        self.prepare_profile(backend)
+        backend.configure("low", "workspace-write")
+        with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+            backend.setFullAccess(True)
+        self.assertTrue(backend.fullAccess)
+        self.assertEqual(backend.normalAccess, "workspace-write")
+        backend.setFullAccess(False)
+        self.assertEqual(backend.access, "workspace-write")
 
 
 if __name__ == "__main__":

@@ -2,8 +2,10 @@
 # JARVIS-CODEX MANAGED - install a menu entry for this checkout's GUI
 set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-for tool in uv python3; do command -v "$tool" >/dev/null || { echo "Missing $tool" >&2; exit 1; }; done
+for tool in uv uvx python3 codex; do command -v "$tool" >/dev/null || { echo "Missing $tool; see docs/install-desktop.md." >&2; exit 1; }; done
 uv sync --project "$ROOT/gui" --frozen --extra voice
+echo 'Preparing the included Full Access profile. Enable it later with the GUI checkbox.'
+bash "$ROOT/scripts/install-full-linux.sh" --acknowledgement 'ENABLE FULL ACCESS'
 python3 - "$ROOT" <<'PY'
 from pathlib import Path
 import shlex
@@ -22,5 +24,5 @@ launcher.chmod(0o755)
 def desktop_quote(text):
     return '"' + text.replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$').replace('%', '%%') + '"'
 desktop.write_text('[Desktop Entry]\n# JARVIS-CODEX MANAGED\nType=Application\nName=JARVIS\nComment=Personal intelligence powered by Codex\nExec=' + desktop_quote(str(launcher)) + '\nIcon=' + str(root / 'gui/jarvis_gui/ui/icon.svg') + '\nTerminal=false\nCategories=Utility;Development;\nStartupWMClass=JARVIS\n')
-print('Installed JARVIS in your application menu. Keep this checkout in place.')
+print('Installed JARVIS in your application menu. Full Access is prepared and initially off. Keep this checkout in place.')
 PY

@@ -4,6 +4,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl
 from PySide6.QtQml import QQmlApplicationEngine
@@ -25,7 +26,11 @@ class TestWindow(unittest.TestCase):
             script.write_text("import json,sys; text=sys.stdin.read(); print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':'Received: '+text}}))")
             settings = QSettings(str(root / "settings.ini"), QSettings.Format.IniFormat)
             settings.setValue("folder", folder)
-            backend = Backend(settings, codex_command=[sys.executable, str(script)])
+            full_home = root / "full-profile"
+            full_home.mkdir()
+            (full_home / "AGENTS.md").write_text("Test full profile")
+            (full_home / "backend.txt").write_text("none")
+            backend = Backend(settings, codex_command=[sys.executable, str(script)], full_home=full_home)
             engine = QQmlApplicationEngine()
             warnings = []
             engine.warnings.connect(lambda items: warnings.extend(str(item) for item in items))
@@ -61,17 +66,22 @@ class TestWindow(unittest.TestCase):
                     tabs.setProperty("currentIndex", index)
                     QTest.qWait(50)
                 tabs.setProperty("currentIndex", 2)
-                access = window.findChild(QObject, "accessChoice")
-                access.setProperty("currentIndex", 2)
                 QTest.qWait(50)
-                full_button = window.findChild(QObject, "fullAccessButton")
-                self.assertFalse(full_button.property("enabled"))
-                window.findChild(QObject, "fullRiskAccepted").setProperty("checked", True)
-                window.findChild(QObject, "fullAcknowledgement").setProperty("text", "ENABLE FULL ACCESS")
-                APP.processEvents()
-                self.assertTrue(full_button.property("enabled"))
-                # Verify the form without running an installer on the test host.
+                toggle = window.findChild(QObject, "fullAccessToggle")
+                self.assertTrue(toggle.property("enabled"))
+                self.assertIsNone(window.findChild(QObject, "fullAcknowledgement"))
                 self.assertFalse(backend.fullAccess)
+                with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+                    toggle.setProperty("checked", True)
+                    self.assertTrue(QMetaObject.invokeMethod(toggle, "clicked"))
+                    APP.processEvents()
+                self.assertTrue(backend.fullAccess)
+                self.assertTrue(toggle.property("checked"))
+                toggle.setProperty("checked", False)
+                self.assertTrue(QMetaObject.invokeMethod(toggle, "clicked"))
+                APP.processEvents()
+                self.assertFalse(backend.fullAccess)
+                self.assertFalse(toggle.property("checked"))
                 self.assertTrue(QMetaObject.invokeMethod(popup, "close"))
                 window.setWidth(1060)
                 window.setHeight(760)
