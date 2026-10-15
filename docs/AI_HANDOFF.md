@@ -9,6 +9,11 @@ runtime/voice states drive the art; profile preparation maps to connecting.
 Animations pause while minimized and freeze when stopped. `Main.qml` scales
 the core with window height so the input remains visible in short windows.
 See [the state guide and preview](desktop-app.md#animated-activity-core).
+The implementation is `7cd7a76`; [run 38700213462](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38700213462)
+passed static/root checks and both desktop OS jobs. Locally, all 13 state inputs,
+audio smoothing and pause/resume were rendered in the real QML window; composer
+and Send bounds were checked at 1060x760, 1440x760 and 1440x900. No new live
+microphone or desktop-automation validation is implied.
 
 The user declined the remaining unimplemented proposals from the earlier
 roadmap. Those older sections are historical ideas, not approved work to add.

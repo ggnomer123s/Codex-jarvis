@@ -28,8 +28,15 @@ the source of commit timestamps.
 - Verification: rendered all 13 runtime/voice state inputs without QML warnings;
   checked audio attack/release, active motion, minimized pause/resume, stopped
   freeze and profile-preparation mapping. Checked compact/short layouts for
-  fully visible composer and Send controls. The existing actual-window test
-  passed; CI results will be recorded after publication.
+  fully visible composer and Send controls at 1060x760, 1440x760 and 1440x900.
+  The existing actual-window test, documentation links/language and whitespace
+  checks passed locally.
+- Published implementation as [7cd7a76](https://github.com/ggnomer123s/Codex-jarvis/commit/7cd7a76).
+  [CI run 38700213462](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38700213462)
+  passed static/root checks and both Ubuntu/Windows desktop jobs, including
+  process/QML tests, protocol/simulated audio and window smoke tests. The
+  result-only report/handoff update uses `[skip ci]`. This is rendering and
+  automated-test coverage, not a new real-microphone or live-desktop test.
 
 ## 2026-10-15 — Fresh Linux and Windows CI passed
 
