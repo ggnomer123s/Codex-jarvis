@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 from pathlib import Path
 import sys
 import uuid
 
 from PySide6.QtCore import QObject, Property, QProcess, QProcessEnvironment, QSettings, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QGuiApplication
 from PySide6.QtWidgets import QFileDialog
 
 from .app_server import AppServer, terminate_tree
@@ -21,11 +22,18 @@ from .runtime import Checkpoints, Profiler
 from .workflows import WorkflowRunner, match_workflow, validate_workflows
 from .wake_control import WakeControl
 from .access import codex_home, access_file, read_access, write_access
+from .history import History
+from .attachments import inspect_file, validate_files, MAX_FILES
 
 
 class Backend(QObject):
     changed = Signal()
     conversationFontSizeChanged = Signal()
+    layoutChanged = Signal()
+    historyChanged = Signal()
+    attachmentsChanged = Signal()
+    noticeChanged = Signal()
+    draftRequested = Signal(str)
     messagesChanged = Signal()
     transcriptReady = Signal(str)
     transcriptPreview = Signal(str)
@@ -38,6 +46,18 @@ class Backend(QObject):
         except (TypeError, ValueError):
             font_size = 14
         self._conversation_font_size = max(12, min(28, font_size))
+        self._chat_only = str(self.settings.value('chatOnly', 'false')).lower() == 'true'
+        self._show_core = str(self.settings.value('showCore', 'true')).lower() == 'true'
+        try:
+            self._chat_width = max(420, min(1000, int(self.settings.value('chatWidth', 600))))
+        except (ValueError, TypeError):
+            self._chat_width = 600
+        self._attachments = []
+        self._turn_attachments = []
+        self._conversation_id = str(uuid.uuid4())
+        self._history_query = ''
+        self._conversation_title = 'New conversation'
+        self._notice = ''
         self._start_hidden = start_hidden
         self._tray_available = tray_available
         self.wake_control = WakeControl(self.settings, self)
@@ -146,6 +166,21 @@ class Backend(QObject):
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
         self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle"))
+        self._notice_timer = QTimer(self)
+        self._notice_timer.setSingleShot(True)
+        self._notice_timer.timeout.connect(lambda: self._show_notice(''))
+        self._history_timer = QTimer(self)
+        self._history_timer.setSingleShot(True)
+        self._history_timer.setInterval(750)
+        self._history_timer.timeout.connect(self._save_history)
+        self.history = None
+        history_path = Path(settings.fileName()).with_suffix('.history.sqlite3') if settings is not None else access_file().parent / 'conversations.sqlite3'
+        try:
+            self.history = History(history_path, self._normal_home)
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            self._show_notice('Local history unavailable: ' + str(exc))
+        self.messagesChanged.connect(self._queue_history)
+
 
     @Property("QVariantList", notify=messagesChanged)
     def messages(self):
@@ -162,6 +197,274 @@ class Backend(QObject):
             self._conversation_font_size = size
             self.settings.setValue("conversationFontSize", size)
             self.conversationFontSizeChanged.emit()
+
+    @Property(bool, notify=layoutChanged)
+    def chatOnly(self):
+        return self._chat_only
+
+    @Property(bool, notify=layoutChanged)
+    def showCore(self):
+        return self._show_core
+
+    @Property(int, notify=layoutChanged)
+    def chatWidth(self):
+        return self._chat_width
+
+    @Slot(bool)
+    def setChatOnly(self, value):
+        self._chat_only = value
+        self.settings.setValue('chatOnly', value)
+        self.layoutChanged.emit()
+
+    @Slot(bool)
+    def setShowCore(self, value):
+        self._show_core = value
+        self.settings.setValue('showCore', value)
+        self.layoutChanged.emit()
+
+    @Slot(int)
+    def setChatWidth(self, value):
+        self._chat_width = max(420, min(1000, value))
+        self.settings.setValue('chatWidth', self._chat_width)
+
+    @Property(str, notify=noticeChanged)
+    def notice(self):
+        return self._notice
+
+    def _show_notice(self, text):
+        self._notice = text
+        self.noticeChanged.emit()
+        if text:
+            self._notice_timer.start(6000)
+
+    @Slot(str)
+    def copyText(self, text):
+        QGuiApplication.clipboard().setText(text)
+        self._show_notice('Copied to clipboard')
+
+    @Slot(str)
+    def openLink(self, value):
+        url = QUrl(value)
+        if url.isValid() and url.scheme().lower() in ('http', 'https'):
+            QDesktopServices.openUrl(url)
+
+    @Property('QVariantList', notify=attachmentsChanged)
+    def attachments(self):
+        return self._attachments
+
+    @Slot('QVariantList', result=bool)
+    def addAttachments(self, urls):
+        if self._locked():
+            return False
+        try:
+            added = []
+            paths = {x['path'] for x in self._attachments}
+            for url in urls:
+                item = inspect_file(url)
+                if item['path'] not in paths:
+                    paths.add(item['path'])
+                    added.append(item)
+            if len(self._attachments) + len(added) > MAX_FILES:
+                raise ValueError('Attach up to 10 files per request.')
+        except (OSError, ValueError) as exc:
+            self._show_notice('Could not attach file: ' + str(exc))
+            return False
+        self._attachments.extend(added)
+        self.attachmentsChanged.emit()
+        return True
+
+    @Slot()
+    def chooseAttachments(self):
+        if not self._locked():
+            paths, _ = QFileDialog.getOpenFileNames(None, 'Attach local files', self._folder)
+            self.addAttachments(paths)
+
+    @Slot()
+    def pasteImage(self):
+        if self._locked():
+            return
+        image = QGuiApplication.clipboard().image()
+        if image.isNull():
+            self._show_notice('No image in clipboard. Copy a screenshot first.')
+            return
+        if len(self._attachments) >= MAX_FILES or image.width()*image.height() > 20_000_000:
+            self._show_notice('Image too large or attachment limit reached.')
+            return
+        try:
+            folder = (self.history.path.parent if self.history else self._access_path.parent) / 'attachments'
+            folder.mkdir(parents=True, exist_ok=True, mode=0o700)
+            path = folder / ('screenshot-' + str(uuid.uuid4()) + '.png')
+            if not image.save(str(path), 'PNG'):
+                raise ValueError('Could not save clipboard image.')
+            path.chmod(0o600)
+            if not self.addAttachments([str(path)]):
+                path.unlink(missing_ok=True)
+            else:
+                self._attachments[-1]['clipboard'] = True
+        except (OSError, ValueError) as exc:
+            self._show_notice('Could not paste image: ' + str(exc))
+
+    @Slot(int)
+    def removeAttachment(self, index):
+        if not self._locked() and 0 <= index < len(self._attachments):
+            removed = self._attachments.pop(index)
+            self._clean_clipboard_images([removed])
+            self.attachmentsChanged.emit()
+
+    def _clean_clipboard_images(self, files):
+        folder = (self.history.path.parent if self.history else self._access_path.parent) / 'attachments'
+        for item in files:
+            if not item.get('clipboard') or any(x['path'] == item['path'] for x in self._attachments):
+                continue
+            path = Path(item['path'])
+            try:
+                if path.parent == folder and path.name.startswith('screenshot-') and self.history and not self.history.references(str(path)):
+                    path.unlink(missing_ok=True)
+            except (OSError, sqlite3.Error):
+                pass  # Retain a cache file if its history reference cannot be checked.
+
+    @Slot(int)
+    def editMessage(self, index):
+        if self._locked() or not 0 <= index < len(self._messages):
+            return
+        item = self._messages[index]
+        if item['role'] != 'user':
+            return
+        notice = 'Edit the draft, then Send as a new request. Earlier actions remain.'
+        try:
+            attached = validate_files(item.get('attachments', []))
+        except (OSError, ValueError, KeyError) as exc:
+            notice = 'Reattach unavailable files before sending: ' + str(exc)
+            attached = []
+        pending, self._attachments = self._attachments, attached
+        self._clean_clipboard_images(pending)
+        self.attachmentsChanged.emit()
+        self.draftRequested.emit(item['text'])
+        self._show_notice(notice)
+
+    def _queue_history(self):
+        if self.history and not self._history_timer.isActive():
+            self._history_timer.start()
+
+    def _save_history(self):
+        self._history_timer.stop()
+        if not self.history:
+            return
+        try:
+            self.history.save(self._conversation_id, self._folder, self._model, self._access,
+                              self._thread_id, 'running' if self._busy else self._stage, self._messages)
+            self.historyChanged.emit()
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            self._show_notice('Could not save local history: ' + str(exc))
+
+    @Property(str, notify=historyChanged)
+    def conversationTitle(self):
+        return self._conversation_title
+
+    @Property('QVariantList', notify=historyChanged)
+    def historyEntries(self):
+        if not self.history:
+            return []
+        try:
+            return self.history.list(self._history_query)
+        except sqlite3.Error:
+            return []
+
+    @Slot(str)
+    def searchHistory(self, text):
+        self._history_query = text[:200]
+        self.historyChanged.emit()
+
+    @Slot(str, bool)
+    def pinConversation(self, key, pinned):
+        if self.history:
+            try:
+                self.history.update(key, pinned=pinned)
+                self.historyChanged.emit()
+            except sqlite3.Error as exc:
+                self._show_notice('Could not pin conversation: ' + str(exc))
+
+    @Slot(str, str)
+    def renameConversation(self, key, title):
+        if self.history and title.strip():
+            try:
+                self.history.update(key, title=title)
+                if key == self._conversation_id:
+                    self._conversation_title = title.strip()[:120]
+                self.historyChanged.emit()
+            except sqlite3.Error as exc:
+                self._show_notice('Could not rename conversation: ' + str(exc))
+
+    @Slot(str)
+    def deleteConversation(self, key):
+        if self.history and not self._locked():
+            try:
+                try:
+                    previous = self.history.load(key)
+                except ValueError:
+                    previous = None
+                self.history.delete(key)
+                if key == self._conversation_id:
+                    self._conversation_id = ''
+                    self._reset_context()
+                self._clean_clipboard_images([file for message in (previous or {}).get('messages', []) for file in message.get('attachments', [])])
+                self.historyChanged.emit()
+            except (ValueError, sqlite3.Error) as exc:
+                self._show_notice('Could not delete conversation: ' + str(exc))
+
+    @Slot(str, result=bool)
+    def openConversation(self, key):
+        if not self.history or self._locked():
+            return False
+        try:
+            value = self.history.load(key)
+            if not value:
+                raise ValueError('Conversation no longer exists.')
+            if value['access'] != self._access:
+                raise ValueError('Choose the same access mode in Preferences before continuing this conversation.')
+            thread_options(value['folder'], self._access, value['model'])
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            self._show_notice('Could not open conversation: ' + str(exc))
+            return False
+        self._reset_context()
+        self._conversation_id = value['id']
+        self._conversation_title = value['title']
+        self._folder, self._model = value['folder'], value['model']
+        self.settings.setValue('folder', self._folder)
+        self.settings.setValue('model', self._model)
+        self._thread_id, self._thread_loaded = value['thread'], False
+        for message in value['messages']:
+            self.chat.append(message['role'], message['text'], message.get('attachments'))
+        pending, self._attachments = self._attachments, []
+        self._clean_clipboard_images(pending)
+        self.attachmentsChanged.emit()
+        self.messagesChanged.emit()
+        self._activity = 'Conversation restored. Send a message to continue.'
+        if not self._thread_id:
+            self._show_notice('Local transcript restored; the next request starts a new Codex session.')
+        self.historyChanged.emit()
+        self.changed.emit()
+        return True
+
+    @Property('QVariantMap', notify=changed)
+    def taskStatus(self):
+        labels = {'connecting':'Connecting', 'planning':'Thinking', 'acting':'Using tools',
+                  'verifying':'Checking results', 'complete':'Completed', 'failed':'Failed',
+                  'stopping':'Stopping', 'stopped':'Stopped', 'idle':'Ready'}
+        title = labels.get(self._stage, 'Working')
+        if self._busy and self._activity == 'Writing the answer':
+            title = 'Writing reply'
+        if self._voice_state != 'idle':
+            title = 'Voice: ' + self._voice_state
+        detail = self._activity
+        if self._stage == 'failed':
+            detail = next((x['text'] for x in reversed(self._messages) if x['role']=='error'), detail)
+        current = self.profiler.current
+        last = self.profiler.history[-1] if self.profiler.history else None
+        seconds = (self.profiler.clock() - self.profiler._started) if current else ((last or {}).get('durationMs',0)/1000)
+        return {'title':title, 'detail':detail[:500], 'elapsed':f'{int(seconds)//60}:{int(seconds)%60:02d}' if self._voice_state == 'idle' and self._stage != 'idle' else '',
+                'busy':self._busy, 'state':self._stage}
+
 
     @Property(QObject, constant=True)
     def wake(self):
@@ -351,8 +654,11 @@ class Backend(QObject):
         home = self._normal_home
         return Checkpoints.key(home, Path(self._folder), self._access, self._model)
 
-    def _message(self, role, text):
-        self.chat.append(role, text)
+    def _message(self, role, text, attachments=None):
+        self.chat.append(role, text, attachments)
+        if role == 'user' and self._conversation_title == 'New conversation':
+            self._conversation_title = text.strip().split('\n')[0][:100]
+            self.historyChanged.emit()
         self.messagesChanged.emit()
 
     def _codex_launch(self, args):
@@ -479,16 +785,16 @@ class Backend(QObject):
         self._activity = "Connecting to Codex app-server"
         self.changed.emit()
 
-    @Slot(str)
+    @Slot(str, result=bool)
     def send(self, prompt):
         prompt = prompt.strip()
-        if not prompt or self._locked():
-            return
+        if (not prompt and not self._attachments) or self._locked():
+            return False
         if len(prompt) > 200000:
             self._message("error", "Request is too long.")
             return
-        if self._local_command(prompt):
-            return
+        if not self._attachments and self._local_command(prompt):
+            return True
         try:
             thread_options(self._folder, self._access, self._model)
             if self.fullAccess and elevated():
@@ -498,14 +804,24 @@ class Backend(QObject):
         except ValueError as exc:
             self._message("error", str(exc))
             return
-        workflow = match_workflow(self._workflows, prompt)
+        try:
+            attached = validate_files(self._attachments)
+        except (OSError, ValueError, KeyError) as exc:
+            self._show_notice('Could not send attachment: ' + str(exc))
+            return False
+        prompt = prompt or 'Please inspect the attached files.'
+        workflow = None if attached else match_workflow(self._workflows, prompt)
+        self._turn_attachments = attached
         self._begin("workflow" if workflow else "codex")
-        self._message("user", prompt)
+        self._message("user", prompt, attached)
+        self._attachments = []
+        self.attachmentsChanged.emit()
         if workflow:
             action = lambda: self.runner.start(workflow, self._thread_id)
         else:
             action = lambda: self._start_turn(prompt)
         self._ensure_server(lambda: self._ensure_thread(action))
+        return True
 
     def _chosen_effort(self, prompt):
         effort = self._effort
@@ -538,7 +854,7 @@ class Backend(QObject):
                 self._turn_id = turn_id
                 if self._cancelled:
                     self._interrupt()
-        self.server.request("turn/start", turn_options(self._thread_id, prompt, self._chosen_effort(prompt), self._model), self._guard(started), 60000)
+        self.server.request("turn/start", turn_options(self._thread_id, prompt, self._chosen_effort(prompt), self._model, self._turn_attachments), self._guard(started), 60000)
         self.changed.emit()
 
     def _notification(self, method, params):
@@ -567,6 +883,7 @@ class Backend(QObject):
             item_id, delta = params.get("itemId"), params.get("delta")
             if isinstance(item_id, str) and isinstance(delta, str):
                 self.profiler.mark("firstText")
+                self._activity = "Writing the answer"
                 self._pending_text[item_id] = self._pending_text.get(item_id, "") + delta
                 if not self._stream_timer.isActive():
                     self._stream_timer.start()
@@ -641,6 +958,7 @@ class Backend(QObject):
         else:
             self._stage, self._activity = "complete", "Ready when you are"
             self._needs_deep = False
+        self._save_history()
         self.changed.emit()
 
     def _server_failed(self, text):
@@ -717,6 +1035,11 @@ class Backend(QObject):
         self._finish("interrupted" if self._cancelled else "failed", "Codex connection stopped.")
 
     def _reset_context(self):
+        self._save_history()
+        self._conversation_id = str(uuid.uuid4())
+        self._turn_attachments = []
+        self._conversation_title = 'New conversation'
+        self.historyChanged.emit()
         self._epoch += 1
         self._task_id = ""
         self._server_waiters = []
@@ -1038,11 +1361,18 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self._history_timer.stop()
         self.wake_control.shutdown()
         self.profile.shutdown()
         if self._busy:
             self._cancelled = True
             self._force_stop()
+        self._save_history()
+        pending, self._attachments = self._attachments, []
+        self._clean_clipboard_images(pending)
+        if self.history:
+            self.history.close()
+            self.history = None
         self._epoch += 1
         self.server.close()
         self._voice_cancelled = True

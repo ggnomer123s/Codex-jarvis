@@ -50,6 +50,18 @@ also removes its user-level login startup registration. See
 
 **Memory** is user-managed: `jarvis memory add` requires a verified repair and YES, and `jarvis memory forget <id>` requires DELETE. The JSON database is local to the user's machine, not public GitHub or ChatGPT saved memory. When Codex reads repair history, the note text may be sent to the AI provider. Avoid putting personal data or secrets in it; treat older memory notes as untrusted historical descriptions.
 
+## Conversation history and explicit attachments
+
+GUI history now stores conversation text and attachment metadata/previews in a
+private local SQLite database, scoped to the Codex home. Clipboard images are
+local cache files; selected original files remain in place. Files are submitted
+only by Send. Non-image files are references read through applicable Codex tools
+and permissions. Changed files block sending until reviewed again. Opening a
+stored conversation never starts a task or widens its access. Markdown rendering
+blocks raw HTML and image loading; only clicked HTTP(S) links open externally.
+See [storage and controls](gui-conveniences.md) before sharing local GUI data.
+The timings export still excludes conversation content.
+
 ## Reliable workflow
 
 **Observe → reproduce safely → establish evidence → apply an authorized minimal fix → verify result**. Confirm consequential or irreversible steps when they were not already authorized.

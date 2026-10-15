@@ -162,7 +162,10 @@ scoped to canonical workspace, Codex home, access and model. **Resume previous**
 explicitly restores the conversation and displays recent text history. It does
 not re-run a prompt or replay any desktop actions. A missing/inaccessible thread
 is reported; it does not silently create an unrelated thread. Conversation text
-is not copied into GUI settings; Codex retains its own history. Arbitrary task
+is not copied into QSettings. It now also persists in the separate local SQLite
+[conversation history](gui-conveniences.md#history-and-privacy); Codex retains its
+own session history. Opening a history entry displays text locally and the next
+Send resumes its thread with matching access. Arbitrary task
 replay, editor rollback and automatic workflow continuation are not implemented.
 
 ## Measurements and limits

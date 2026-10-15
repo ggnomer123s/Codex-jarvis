@@ -2,6 +2,13 @@
 
 JARVIS can send **keyboard shortcuts**, but the correct method depends on the graphical session and the application. This is especially important with multi-monitor and multi-workspace desktops.
 
+## JARVIS window shortcuts
+
+Ctrl+N starts a new conversation; Ctrl+H opens history; Ctrl+Shift+F toggles full
+chat; Ctrl+O attaches files; Ctrl+Shift+V pastes a clipboard image. Enter sends
+and Shift+Enter inserts a newline. Escape stops active work or closes a popup.
+These control JARVIS itself. See [conversation controls](gui-conveniences.md).
+
 ## Hyprland: two different kinds of shortcuts
 
 | Shortcut type | Example | Correct Hypruse tool |

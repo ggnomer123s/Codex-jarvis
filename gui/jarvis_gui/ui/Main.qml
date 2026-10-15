@@ -14,8 +14,9 @@ ApplicationWindow {
     property bool voiceActive: bridge.voiceState !== "idle"
     property bool locked: bridge.busy || voiceActive || bridge.fullProfile.busy
     property bool compact: width < 1250
-    property real coreSize: Math.min(compact ? 310 : 360, Math.max(220, height - 520))
+    property real coreSize: Math.min(compact ? 280 : 360, Math.max(220, height - 440), Math.max(220, corePanel.width - 30))
     property string liveTranscript: ""
+    property bool followConversation: true
     function syncComposerControls() {
         if (!inlineModel.activeFocus && !inlineModel.contentItem.activeFocus) inlineModel.editText = bridge.model || "Codex default"
         inlineEffort.currentIndex = Math.max(0, inlineEffort.indexOfValue(bridge.effort))
@@ -30,6 +31,10 @@ ApplicationWindow {
     }
 
     Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel() } }
+    Shortcut { sequence: "Ctrl+Shift+F"; onActivated: bridge.setChatOnly(!bridge.chatOnly) }
+    Shortcut { sequence: "Ctrl+H"; onActivated: historyPopup.open() }
+    Shortcut { sequence: "Ctrl+O"; enabled: !window.locked; onActivated: bridge.chooseAttachments() }
+    Shortcut { sequence: "Ctrl+Shift+V"; enabled: !window.locked; onActivated: bridge.pasteImage() }
     Shortcut { sequence: "Ctrl+N"; enabled: !window.locked; onActivated: bridge.newSession() }
     Connections {
         target: bridge
@@ -43,7 +48,8 @@ ApplicationWindow {
             if (bridge.voiceState === "starting") window.liveTranscript = ""
             Qt.callLater(window.syncComposerControls)
         }
-        function onMessagesChanged() { scrollDelay.restart() }
+        function onMessagesChanged() { if (window.followConversation) scrollDelay.restart() }
+        function onDraftRequested(text) { composer.text = text; composer.forceActiveFocus() }
     }
     Timer { id: scrollDelay; interval: 50; onTriggered: conversation.positionViewAtEnd() }
     Connections {
@@ -69,6 +75,7 @@ ApplicationWindow {
         spacing: 0
 
         Rectangle {
+            visible: !bridge.chatOnly
             Layout.preferredWidth: window.compact ? 182 : 224
             Layout.fillHeight: true
             color: "#0b131b"
@@ -96,6 +103,8 @@ ApplicationWindow {
                     }
                 }
                 HudButton { Layout.fillWidth: true; text: "New conversation"; glyph: "+"; enabled: !window.locked; onClicked: bridge.newSession() }
+                HudButton { Layout.fillWidth: true; text: "History"; objectName: "historyButton"; onClicked: historyPopup.open() }
+                HudButton { Layout.fillWidth: true; objectName: "coreVisibilityButton"; text: bridge.showCore ? "Hide core" : "Show core"; onClicked: bridge.setShowCore(!bridge.showCore) }
                 HudButton { Layout.fillWidth: true; text: "Resume previous"; enabled: bridge.canResume; onClicked: bridge.resumePrevious() }
                 HudButton { Layout.fillWidth: true; text: "Workspace"; glyph: "⌑"; enabled: !window.locked; onClicked: bridge.chooseFolder() }
                 HudButton { Layout.fillWidth: true; text: "Preferences"; glyph: "⚙"; enabled: !bridge.busy && !window.voiceActive; onClicked: preferences.open() }
@@ -129,11 +138,14 @@ ApplicationWindow {
                 RowLayout {
                     anchors.fill: parent; anchors.leftMargin: 30; anchors.rightMargin: 30
                     Column {
+                        visible: !window.compact
                         spacing: 5
                         Text { text: "Command center"; color: "#dcebf0"; font.pixelSize: 16; font.weight: Font.DemiBold }
                         Text { text: "A little less friction. A little more possibility."; color: "#6d8798"; font.pixelSize: 11 }
                     }
                     Item { Layout.fillWidth: true }
+                    HudButton { text: "History"; implicitHeight: 30; font.pixelSize: 11; onClicked: historyPopup.open() }
+                    HudButton { objectName: "chatOnlyButton"; text: bridge.chatOnly ? "Command center" : "Full chat"; implicitHeight: 30; font.pixelSize: 11; onClicked: bridge.setChatOnly(!bridge.chatOnly) }
                     HudButton {
                         implicitHeight: 30; Layout.maximumWidth: window.compact ? 140 : 200
                         text: bridge.model || "Codex default"; font.pixelSize: 10
@@ -156,12 +168,19 @@ ApplicationWindow {
                 }
             }
 
-            RowLayout {
+            SplitView {
+                id: panelSplit; objectName: "panelSplit"
                 Layout.fillWidth: true; Layout.fillHeight: true
-                spacing: 0
+                orientation: Qt.Horizontal
+                onResizingChanged: if (!resizing) bridge.setChatWidth(Math.round(chatPane.width))
+                handle: Rectangle {
+                    implicitWidth: 8; color: SplitHandle.hovered || SplitHandle.pressed ? "#275b60" : "#10212c"
+                    Rectangle { anchors.centerIn: parent; width: 2; height: 36; radius: 1; color: "#4c8d91" }
+                }
                 ColumnLayout {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    Layout.leftMargin: window.compact ? 20 : 34; Layout.rightMargin: window.compact ? 20 : 34
+                    id: corePanel; objectName: "corePanel"
+                    visible: bridge.showCore && !bridge.chatOnly
+                    SplitView.fillWidth: true; SplitView.minimumWidth: 310
                     spacing: 0
                     Text {
                         Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 34
@@ -169,7 +188,7 @@ ApplicationWindow {
                     }
                     Text {
                         Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 12
-                        text: "At your command."; color: "#e2f4f5"; font.pixelSize: window.compact ? 31 : 40; font.weight: Font.Light
+                        text: "At your command."; color: "#e2f4f5"; font.pixelSize: corePanel.width < 440 ? 27 : 36; font.weight: Font.Light
                     }
                     Text {
                         Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 10
@@ -185,13 +204,13 @@ ApplicationWindow {
                         listening: bridge.voiceState === "recording"
                         targetLevel: bridge.audioLevel
                         stage: bridge.fullProfile.busy ? "connecting" : bridge.stage
-                        animate: window.visibility !== Window.Minimized
+                        animate: corePanel.visible && window.visibility !== Window.Minimized
                     }
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter; spacing: 8
                         Rectangle { width: 5; height: 5; radius: 3; color: "#43e8da" }
                         Text {
-                            Layout.maximumWidth: window.compact ? 310 : 400
+                            Layout.maximumWidth: Math.max(200, corePanel.width - 30)
                             text: bridge.fullProfile.busy ? "Preparing profile / waiting for sign-in" : bridge.activity; color: "#89b9be"; font.pixelSize: 11; elide: Text.ElideRight
                         }
                     }
@@ -202,7 +221,7 @@ ApplicationWindow {
                         Text { text: "LOCAL VOICE / " + bridge.language.toUpperCase() + " / " + (bridge.voiceModels.indexOf(bridge.voiceModel) >= 0 ? bridge.voiceModel.toUpperCase() : "CUSTOM"); color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
                     }
                     Text {
-                        Layout.alignment: Qt.AlignHCenter; Layout.maximumWidth: window.compact ? 310 : 420
+                        Layout.alignment: Qt.AlignHCenter; Layout.maximumWidth: Math.max(200, corePanel.width - 30)
                         visible: window.voiceActive && window.liveTranscript.length > 0
                         text: window.liveTranscript; color: "#b6e8df"; font.pixelSize: 11
                         maximumLineCount: 2; elide: Text.ElideRight; wrapMode: Text.WordWrap
@@ -221,105 +240,18 @@ ApplicationWindow {
                             }
                         }
                     }
-                    Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: 154
-                        radius: 16; color: "#111f29"; border.color: composer.activeFocus ? "#40867f" : "#2a404c"
-                        ColumnLayout {
-                            anchors.fill: parent; anchors.margins: 14; spacing: 8
-                            ScrollView {
-                                Layout.fillWidth: true; Layout.fillHeight: true; clip: true
-                                TextArea {
-                                    id: composer
-                                    objectName: "composer"
-                                    placeholderText: "Ask JARVIS anything, or use your voice..."
-                                    placeholderTextColor: "#688291"
-                                    color: "#e0f1f4"; font.pixelSize: 13
-                                    wrapMode: TextEdit.Wrap; selectByMouse: true
-                                    background: null; padding: 2
-                                    enabled: !bridge.busy
-                                    Accessible.name: "Message to JARVIS"
-                                    Keys.onPressed: function(event) {
-                                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier) && !window.locked) {
-                                            sendButton.clicked(); event.accepted = true
-                                        }
-                                    }
-                                }
-                            }
-                            RowLayout {
-                                Layout.fillWidth: true; spacing: 8
-                                HudButton {
-                                    id: micButton; objectName: "microphoneButton"
-                                    implicitWidth: 44; text: ""
-                                    primary: bridge.voiceState === "recording"
-                                    enabled: !bridge.busy && !bridge.fullProfile.busy && bridge.voiceState !== "transcribing"
-                                    Accessible.name: bridge.voiceState === "recording" ? "Finish voice recording" : "Start voice recording"
-                                    onClicked: bridge.toggleVoice()
-                                    ToolTip.visible: hovered
-                                    ToolTip.text: bridge.voiceAvailable ? "Click to record. Click again to transcribe." : "Install the voice extra to enable your microphone."
-                                    Image {
-                                        anchors.centerIn: parent; width: 21; height: 21
-                                        source: bridge.voiceState === "recording" ? "microphone-active.svg" : "microphone.svg"
-                                    }
-                                }
-                                HudComboBox {
-                                    id: inlineModel; objectName: "inlineModel"
-                                    Layout.preferredWidth: window.compact ? 140 : 190
-                                    implicitHeight: 34; font.pixelSize: 10
-                                    model: bridge.models; editable: true; enabled: !window.locked
-                                    Accessible.name: "Codex model"
-                                    Component.onCompleted: editText = bridge.model || "Codex default"
-                                    onActivated: bridge.selectModel(currentText)
-                                    onAccepted: bridge.selectModel(editText)
-                                    ToolTip.visible: hovered; ToolTip.text: bridge.model || "Codex default"
-                                }
-                                HudComboBox {
-                                    id: inlineEffort; objectName: "inlineEffort"
-                                    Layout.preferredWidth: window.compact ? 105 : 135
-                                    implicitHeight: 34; font.pixelSize: 10
-                                    model: bridge.reasoningOptions; textRole: "label"; valueRole: "code"
-                                    enabled: !window.locked
-                                    currentIndex: Math.max(0, indexOfValue(bridge.effort))
-                                    Component.onCompleted: Qt.callLater(window.syncComposerControls)
-                                    onModelChanged: Qt.callLater(window.syncComposerControls)
-                                    Accessible.name: "Reasoning level"
-                                    onActivated: bridge.selectReasoning(currentValue)
-                                    ToolTip.visible: hovered; ToolTip.text: "Reasoning level; availability depends on the model"
-                                }
-                                Text {
-                                    Layout.fillWidth: true; Layout.minimumWidth: 0
-                                    visible: !window.compact
-                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? "Transcribing locally..." : (bridge.voiceReady ? "Local voice model ready" : "Voice stays local until you send"))
-                                    color: "#7897a7"; font.pixelSize: 9; elide: Text.ElideRight
-                                }
-                                HudButton {
-                                    visible: window.locked; text: "Stop"; danger: true
-                                    onClicked: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else bridge.fullProfile.cancel() }
-                                }
-                                HudButton {
-                                    id: sendButton; objectName: "sendButton"
-                                    primary: true; text: "Send"; glyph: "↗"
-                                    enabled: !window.locked && composer.text.trim().length > 0 && bridge.codexAvailable
-                                    onClicked: {
-                                        if (composer.text.trim().length > 0 && !window.locked && bridge.codexAvailable) {
-                                            bridge.send(composer.text); composer.clear()
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Text {
-                        Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 11; Layout.bottomMargin: 20
-                        text: "ENTER TO SEND   /   SHIFT + ENTER FOR A NEW LINE"; color: "#536f7e"; font.pixelSize: 8; font.letterSpacing: 1
-                    }
+
                 }
 
                 Rectangle {
-                    Layout.preferredWidth: window.compact ? 326 : 374; Layout.fillHeight: true
+                    id: chatPane; objectName: "chatPane"
+                    SplitView.preferredWidth: bridge.chatWidth
+                    SplitView.minimumWidth: 420
+                    SplitView.fillWidth: !corePanel.visible
                     color: "#0b151e"
                     Rectangle { width: 1; height: parent.height; color: "#1b2c36" }
                     ColumnLayout {
-                        anchors.fill: parent; anchors.margins: 22; spacing: 14
+                        anchors.fill: parent; anchors.margins: 16; spacing: 10
                         RowLayout {
                             Layout.fillWidth: true; Layout.topMargin: 9; spacing: 6
                             Text { text: "CONVERSATION"; color: "#a5bfcc"; font.pixelSize: 10; font.letterSpacing: 2 }
@@ -346,6 +278,7 @@ ApplicationWindow {
                                 ToolTip.visible: hovered; ToolTip.text: "Larger conversation text"
                             }
                         }
+                        Text { Layout.fillWidth: true; text: bridge.conversationTitle; color: "#7ca2b2"; font.pixelSize: 11; elide: Text.ElideRight }
                         Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
                         Item {
                             Layout.fillWidth: true; Layout.fillHeight: true
@@ -364,49 +297,159 @@ ApplicationWindow {
                                 id: conversation; objectName: "conversation"
                                 anchors.fill: parent; clip: true; spacing: 16
                                 model: bridge.messageModel
-                                ScrollBar.vertical: ScrollBar {}
-                                delegate: Rectangle {
-                                    required property string messageRole
-                                    required property string messageText
-                                    width: conversation.width - 8
-                                    height: messageColumn.implicitHeight + 28
-                                    radius: 12
-                                    color: messageRole === "user" ? "#142c36" : (messageRole === "error" ? "#2b1d26" : "#101f2a")
-                                    border.color: messageRole === "error" ? "#633d46" : "#243b47"
-                                    Column {
-                                        id: messageColumn
-                                        width: parent.width - 28; x: 14; y: 14; spacing: 10
-                                        Text {
-                                            text: messageRole === "user" ? "YOU" : (messageRole === "assistant" ? "JARVIS" : (messageRole === "error" ? "ATTENTION" : "SESSION"))
-                                            color: messageRole === "error" ? "#fca5a5" : "#68cec7"
-                                            font.pixelSize: 9; font.letterSpacing: 1.7
+                                onHeightChanged: if (window.followConversation) scrollDelay.restart()
+                                onWidthChanged: if (window.followConversation) scrollDelay.restart()
+                                onMovementStarted: window.followConversation = false
+                                onMovementEnded: window.followConversation = atYEnd
+                                ScrollBar.vertical: ScrollBar { onPressedChanged: window.followConversation = pressed ? false : conversation.atYEnd }
+                                delegate: MessageCard {
+                                    width: conversation.width - 12
+                                    locked: window.locked
+                                    onPreviewRequested: function(attachment) { attachmentPreview.show(attachment) }
+                                }
+                            }
+                        }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            BusyIndicator { running: bridge.busy || window.voiceActive; visible: running; implicitWidth: 24; implicitHeight: 24 }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 4
+                                Text { text: bridge.taskStatus.title + (bridge.taskStatus.elapsed ? "  ·  " + bridge.taskStatus.elapsed : ""); color: bridge.taskStatus.state === "failed" ? "#ff9baf" : "#8ae0d1"; font.pixelSize: 12 }
+                                Text { Layout.fillWidth: true; text: bridge.taskStatus.detail; color: "#89a8b7"; font.pixelSize: 10; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
+                            }
+                            HudButton {
+                                visible: window.locked; text: "Stop"; danger: true; implicitHeight: 30; font.pixelSize: 11
+                                onClicked: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else bridge.fullProfile.cancel() }
+                            }
+                            HudButton { visible: !window.followConversation; text: "Latest ↓"; implicitHeight: 28; font.pixelSize: 10; onClicked: { window.followConversation = true; conversation.positionViewAtEnd() } }
+                        }
+                        Text { Layout.fillWidth: true; visible: bridge.notice.length > 0; text: bridge.notice; color: "#efc389"; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.preferredHeight: bridge.attachments.length > 0 ? 232 : 174
+                        radius: 16; color: "#111f29"; border.color: composer.activeFocus ? "#40867f" : "#2a404c"
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.margins: 14; spacing: 8
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 8
+                                HudButton { text: "Attach files"; objectName: "attachFilesButton"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.chooseAttachments() }
+                                HudButton { text: "Paste image"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.pasteImage() }
+                                Text { Layout.fillWidth: true; text: "Drop files here"; color: "#668d9b"; font.pixelSize: 10; elide: Text.ElideRight }
+                            }
+                            ScrollView {
+                                visible: bridge.attachments.length > 0
+                                Layout.fillWidth: true; Layout.preferredHeight: 66; clip: true
+                                contentWidth: attachmentRow.implicitWidth; contentHeight: 58
+                                Row {
+                                    id: attachmentRow; spacing: 8
+                                    Repeater {
+                                        model: bridge.attachments
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            required property int index
+                                            width: 190; height: 55; radius: 8; color: "#172f3a"; border.color: "#31515e"
+                                            RowLayout {
+                                                anchors.fill: parent; anchors.margins: 5
+                                                Image { visible: modelData.kind === "image"; source: visible ? modelData.url : ""; sourceSize.width: 44; sourceSize.height: 44; Layout.preferredWidth: 38; Layout.preferredHeight: 38; fillMode: Image.PreserveAspectFit }
+                                                HudButton { Layout.fillWidth: true; text: modelData.name; implicitHeight: 40; font.pixelSize: 10; onClicked: attachmentPreview.show(modelData) }
+                                                HudButton { text: "×"; implicitWidth: 25; implicitHeight: 28; enabled: !window.locked; Accessible.name: "Remove attachment"; onClicked: bridge.removeAttachment(index) }
+                                            }
                                         }
-                                        TextEdit {
-                                            objectName: "conversationMessageBody"
-                                            width: parent.width
-                                            text: messageText; color: "#cbdde5"; font.pixelSize: bridge.conversationFontSize
-                                            readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
-                                            textFormat: TextEdit.PlainText
-                                            Accessible.name: messageRole + " message"
+                                    }
+                                }
+                            }
+                            ScrollView {
+                                Layout.fillWidth: true; Layout.fillHeight: true; clip: true
+                                TextArea {
+                                    id: composer
+                                    objectName: "composer"
+                                    placeholderText: "Ask JARVIS anything, or use your voice..."
+                                    placeholderTextColor: "#688291"
+                                    color: "#e0f1f4"; font.pixelSize: 13
+                                    wrapMode: TextEdit.Wrap; selectByMouse: true
+                                    background: null; padding: 2
+                                    enabled: !bridge.busy
+                                    Accessible.name: "Message to JARVIS"
+                                    Keys.onPressed: function(event) {
+                                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !(event.modifiers & Qt.ShiftModifier) && !window.locked) {
+                                            sendButton.clicked(); event.accepted = true
+                                        }
+                                    }
+                                }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 8
+                                HudButton {
+                                    id: micButton; objectName: "microphoneButton"
+                                    implicitWidth: 34; implicitHeight: 34; text: ""
+                                    primary: bridge.voiceState === "recording"
+                                    enabled: !bridge.busy && !bridge.fullProfile.busy && bridge.voiceState !== "transcribing"
+                                    Accessible.name: bridge.voiceState === "recording" ? "Finish voice recording" : "Start voice recording"
+                                    onClicked: bridge.toggleVoice()
+                                    ToolTip.visible: hovered
+                                    ToolTip.text: bridge.voiceAvailable ? "Click to record. Click again to transcribe." : "Install the voice extra to enable your microphone."
+                                    Image {
+                                        anchors.centerIn: parent; width: 21; height: 21
+                                        source: bridge.voiceState === "recording" ? "microphone-active.svg" : "microphone.svg"
+                                    }
+                                }
+                                HudComboBox {
+                                    id: inlineModel; objectName: "inlineModel"
+                                    Layout.preferredWidth: Math.min(180, Math.max(100, chatPane.width * 0.24))
+                                    implicitHeight: 34; font.pixelSize: 10
+                                    model: bridge.models; editable: true; enabled: !window.locked
+                                    Accessible.name: "Codex model"
+                                    Component.onCompleted: editText = bridge.model || "Codex default"
+                                    onActivated: bridge.selectModel(currentText)
+                                    onAccepted: bridge.selectModel(editText)
+                                    ToolTip.visible: hovered; ToolTip.text: bridge.model || "Codex default"
+                                }
+                                HudComboBox {
+                                    id: inlineEffort; objectName: "inlineEffort"
+                                    Layout.preferredWidth: 96
+                                    implicitHeight: 34; font.pixelSize: 10
+                                    model: bridge.reasoningOptions; textRole: "label"; valueRole: "code"
+                                    enabled: !window.locked
+                                    currentIndex: Math.max(0, indexOfValue(bridge.effort))
+                                    Component.onCompleted: Qt.callLater(window.syncComposerControls)
+                                    onModelChanged: Qt.callLater(window.syncComposerControls)
+                                    Accessible.name: "Reasoning level"
+                                    onActivated: bridge.selectReasoning(currentValue)
+                                    ToolTip.visible: hovered; ToolTip.text: "Reasoning level; availability depends on the model"
+                                }
+                                Text {
+                                    Layout.fillWidth: true; Layout.minimumWidth: 0
+                                    visible: chatPane.width > 700
+                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? "Transcribing locally..." : (bridge.voiceReady ? "Local voice model ready" : "Voice stays local until you send"))
+                                    color: "#7897a7"; font.pixelSize: 9; elide: Text.ElideRight
+                                }
+                                HudButton {
+                                    id: sendButton; objectName: "sendButton"
+                                    primary: true; text: "Send"; implicitWidth: 66; implicitHeight: 34; font.pixelSize: 11
+                                    enabled: !window.locked && (composer.text.trim().length > 0 || bridge.attachments.length > 0) && bridge.codexAvailable
+                                    onClicked: {
+                                        if ((composer.text.trim().length > 0 || bridge.attachments.length > 0) && !window.locked && bridge.codexAvailable) {
+                                            if (bridge.send(composer.text)) { composer.clear(); window.followConversation = true; scrollDelay.restart() }
                                         }
                                     }
                                 }
                             }
                         }
-                        Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
-                        Text {
-                            Layout.fillWidth: true; text: bridge.metricsSummary; color: "#84aeb8"
-                            font.pixelSize: 9; wrapMode: Text.WordWrap
-                        }
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Text { text: "●"; color: "#48bcad"; font.pixelSize: 9 }
-                            Text { text: "LOCAL VOICE · CODEX INTELLIGENCE"; color: "#587889"; font.pixelSize: 8; font.letterSpacing: 0.7 }
-                        }
+                    }
+
                     }
                 }
             }
         }
+    }
+
+    HistoryPopup { id: historyPopup }
+    AttachmentPreview { id: attachmentPreview }
+    DropArea {
+        anchors.fill: parent
+        onEntered: function(drag) { drag.accepted = drag.hasUrls && !window.locked }
+        onDropped: function(drop) { if (drop.hasUrls && bridge.addAttachments(drop.urls)) drop.acceptProposedAction() }
+        Rectangle { anchors.fill: parent; visible: parent.containsDrag; color: "#201ad4c5"; border.color: "#60ead9"; border.width: 3 }
     }
 
     Popup {

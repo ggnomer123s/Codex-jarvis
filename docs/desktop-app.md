@@ -9,6 +9,11 @@ not a signed standalone EXE, AppImage, DEB or RPM release.
 
 ![JARVIS desktop command center](images/jarvis-desktop.png)
 
+The conversation pane now has a draggable divider, full-chat mode, Markdown,
+code/message copying, reviewed file/image attachments, searchable pinned local
+history and an activity/time/error card. See [GUI controls](gui-conveniences.md)
+for usage, shortcuts and storage behavior.
+
 ## Conversation text size
 
 Use **A- / A+** beside **CONVERSATION** at the top of the right-hand panel to
@@ -254,10 +259,11 @@ model requests and compositor-specific GUI actions require checks on the target
 machine. Do not interpret simulated test results as those checks.
 
 The app stores workspace, model, reasoning, normal access and voice preferences in user settings.
-Conversation text stays in app memory; Codex maintains its own session history
-under its existing configuration. GUI settings retain bounded, profile/workspace/
-model-scoped thread pointers and status for explicit resume, without copying
-conversation text. Quitting the app stops its workers, including idle processes.
+Conversation text and attachment metadata now also persist in the private local
+SQLite [conversation history](gui-conveniences.md#history-and-privacy). Codex
+maintains its own session history. GUI settings separately retain bounded,
+profile/workspace/model-scoped thread pointers and status for explicit resume.
+Quitting the app stops its workers, including idle processes.
 With voice activation enabled, the window close button keeps the app listening
 in the tray/minimized; use Quit or disable voice activation to stop it.
 `JARVIS_GUI_CODEX` can point to an alternative Codex executable for development;

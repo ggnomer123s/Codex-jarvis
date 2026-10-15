@@ -9,7 +9,7 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 A native desktop interface is now available: an original animated woven-light core,
 streaming Codex app-server chat with continuing conversation context, task cancellation, model/workspace
 and reasoning settings, Full Access on by default with a saved settings checkbox, and local
-local push-to-talk transcription with a warm model and 15 language presets including Russian. Voice text is
+push-to-talk transcription with a warm model and 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
 
 The GUI now keeps an owned **Codex app-server** connection between messages,
@@ -19,6 +19,12 @@ checkpoints. **Preferences > Runtime / Automation** exposes the new controls.
 See [runtime guide](docs/runtime.md) and the [source review of other Jarvis,
 Codex and OpenCode projects](docs/related-projects.md). Codex app-server is the
 GUI's only model transport; there is no OpenCode runtime or exec fallback.
+
+**Conversation tools:** resize the chat pane, hide the core or switch to full
+chat, read Markdown and copy code, edit requests into the draft, preview dragged
+files/clipboard screenshots, and search/pin/rename local conversations. A status
+card shows the current activity, elapsed time and errors. See the
+[GUI controls and history guide](docs/gui-conveniences.md).
 
 **Optional voice activation:** enable **Preferences > Wake** to listen locally
 for Jarvis or its Russian name and restore the app from the background. Includes
@@ -106,7 +112,7 @@ Observed result / user-facing report
 | Area | Implemented source and behavior |
 |---|---|
 | Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
-| Native desktop frontend | `gui/`; streaming app-server chat, live model selection, scoped conversation resume, Full Access checkbox/profile, warm multilingual voice, checked workflows and timings |
+| Native desktop frontend | `gui/`; streaming app-server chat, live model selection, scoped conversation resume, Full Access checkbox, Markdown/code copy, reviewed attachments, searchable local history, warm multilingual voice, workflows and timings |
 | Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
 | Shared profile and access | One `CODEX_HOME` / login / MCP configuration; Full Access defaults on, with a saved GUI/CLI access setting and compatibility `jarvis-full` aliases |
 | GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |

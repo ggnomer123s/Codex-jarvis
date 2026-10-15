@@ -1,6 +1,7 @@
 """Dependency-free Codex discovery, safe launch and app-server parameters."""
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 import shutil
@@ -22,10 +23,18 @@ def thread_options(folder: str, access: str, model: str = "") -> dict:
     return options
 
 
-def turn_options(thread_id: str, prompt: str, effort: str, model: str = "") -> dict:
+def turn_options(thread_id: str, prompt: str, effort: str, model: str = "", attachments=None) -> dict:
     if effort not in REASONING or not valid_model_id(model):
         raise ValueError("Invalid model or reasoning setting.")
     result = {"threadId": thread_id, "input": [{"type": "text", "text": prompt}]}
+    if attachments:
+        for item in attachments:
+            if item['kind'] == 'image':
+                result['input'].append({'type': 'localImage', 'path': item['path']})
+            else:
+                # Structured mentions are app/plugin targets, not file uploads.
+                reference = json.dumps({'name': item['name'], 'path': item['path']}, ensure_ascii=False)
+                result['input'].append({'type': 'text', 'text': 'User-selected local file reference (read with available tools and current permissions):\n' + reference})
     if effort != "default":
         result["effort"] = effort
     if model:

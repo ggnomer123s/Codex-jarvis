@@ -10,6 +10,53 @@ the source of commit timestamps.
 
 
 
+
+## 2026-10-15 — Conversation workspace conveniences (GUI 0.5.0)
+
+- Added a draggable core/chat splitter, saved pane width, Hide/Show core and a
+  saved Full chat mode that hides both artwork and sidebar. Moved the single
+  composer below the conversation so input/model/reasoning/voice stay reachable
+  in every layout. Hidden artwork animation pauses. Scrolling away from the end
+  stops automatic following; Latest restores it.
+- Added `presentation.py` and `MessageCard.qml`: Markdown headings, lists, tables,
+  emphasis/web links, fenced code/language labels and Copy code. Raw HTML/image
+  loading and non-HTTP(S) links are inert. Message Copy preserves source text;
+  Edit & resend restores a request to the draft and requires manual Send as a
+  new turn. Existing messages/actions are not rewritten or replayed.
+- Added local file picking, drag/drop, clipboard screenshot paste, removable
+  attachment chips and `AttachmentPreview.qml`. Images use app-server localImage;
+  other files use explicit name/path text references with Codex tool permissions.
+  Preview supports bounded image/UTF-8 content, including split multibyte text.
+  Limits are 10 regular local files, 20 MB each, 20 megapixels per image.
+  Changed/missing files reject Send while preserving the draft/selection.
+- Added `history.py`, local SQLite storage and `HistoryPopup.qml`: searchable
+  titles/message contents (Unicode case folding), pin/unpin, rename, explicit
+  deletion and conversation reopening. Saves are debounced and flushed at task
+  completion/context changes/exit. Current Codex-home scope is retained; opening
+  never widens access or starts a request. Next Send resumes the saved thread.
+  A transcript without a thread explains that its next request starts a new one.
+- History stores local message/attachment metadata and private clipboard-image
+  copies separately from QSettings checkpoints, repair memory and content-free
+  timing exports. Original files remain untouched; unused owned clipboard images
+  are cleaned after reference checks. History errors are surfaced without losing
+  the active conversation; individual transcript limit is 8 MB, list limit is
+  100 matching entries without automatic history deletion.
+- Added a visible activity/error card with request elapsed time, live phase,
+  tool/connection details and Stop. Added Ctrl+H, Ctrl+Shift+F, Ctrl+O and
+  Ctrl+Shift+V; retained existing new/send/voice/settings/access behavior.
+- Updated README, desktop/runtime/security/shortcut guides, handoff and UI
+  screenshots; added `docs/gui-conveniences.md`. Updated app/lock/client version
+  to 0.5.0 without new dependencies. Claude Code and API backends remain deferred.
+- Verification: 66 root tests discovered (65 passed, one Windows-native probe
+  skipped locally), plus 48 passing Qt tests. New durable-history/scoping/search
+  and real-process attachment/resume/clipboard/rendering cases, actual-window
+  divider drag/full-chat/code-copy/file-drop/history controls, and full/compact
+  rendered previews passed. App smoke, Python syntax and frozen lock passed.
+  Input tags were checked against the installed Codex-generated JSON schema
+  and upstream UserInput definitions (structured mentions target apps/plugins);
+  no authenticated model/image/PDF request or real desktop/microphone task ran.
+  Fresh CI results will be recorded after publication.
+
 ## 2026-10-15 — Adjustable conversation text size (GUI 0.4.1)
 
 - Added A- / A+ buttons and a size indicator beside CONVERSATION in the right

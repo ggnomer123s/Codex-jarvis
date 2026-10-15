@@ -6,7 +6,8 @@ import time
 import unittest
 from unittest import mock
 
-from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl, Q_ARG, QPointF
+from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl, Q_ARG, QPointF, QPoint, Qt, QMimeData
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
@@ -143,6 +144,61 @@ class TestWindow(unittest.TestCase):
                     position = control.mapToScene(QPointF(0, 0))
                     self.assertLessEqual(position.x() + control.width(), window.width())
                     self.assertLessEqual(position.y() + control.height(), window.height())
+                pane = window.findChild(QObject, "chatPane")
+                core = window.findChild(QObject, "corePanel")
+                old_width = pane.width()
+                handle = pane.mapToScene(QPointF(0, 0))
+                drag_start = QPoint(round(handle.x()) - 4, 300)
+                QTest.mousePress(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, drag_start)
+                QTest.mouseMove(window, drag_start + QPoint(90, 0), 40)
+                QTest.mouseRelease(window, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, drag_start + QPoint(90, 0))
+                QTest.qWait(80)
+                self.assertLess(pane.width(), old_width)
+                self.assertEqual(backend.chatWidth, round(pane.width()))
+                full_chat = window.findChild(QObject, "chatOnlyButton")
+                self.assertTrue(QMetaObject.invokeMethod(full_chat, "clicked"))
+                QTest.qWait(50)
+                self.assertTrue(backend.chatOnly)
+                self.assertFalse(core.property("visible"))
+                self.assertAlmostEqual(pane.width(), window.width(), delta=2)
+                self.assertTrue(composer.property("visible"))
+                self.assertTrue(QMetaObject.invokeMethod(full_chat, "clicked"))
+                self.assertTrue(QMetaObject.invokeMethod(window.findChild(QObject, "coreVisibilityButton"), "clicked"))
+                QTest.qWait(50)
+                self.assertFalse(core.property("visible"))
+                self.assertFalse(backend.showCore)
+                self.assertEqual(composer.property("text"), "Keep this draft")
+                backend._message("assistant", "# Result\n\n- **Verified**\n\n```python\nprint('ready')\n```\n")
+                QTest.qWait(100)
+                items = [window.findChild(QObject, "conversation").property("contentItem")]
+                copy_code = None
+                while items:
+                    item = items.pop()
+                    items.extend(item.childItems())
+                    if item.objectName() == "copyCodeButton" and item.property("visible"):
+                        copy_code = item
+                self.assertIsNotNone(copy_code)
+                self.assertTrue(QMetaObject.invokeMethod(copy_code, "clicked"))
+                self.assertEqual(APP.clipboard().text(), "print('ready')\n")
+                attached_file = root / "drop fixture.txt"
+                attached_file.write_text("Review before sending", encoding="utf-8")
+                before_drop_pid = backend.process.processId()
+                mime = QMimeData()
+                mime.setUrls([QUrl.fromLocalFile(str(attached_file))])
+                enter = QDragEnterEvent(QPointF(500, 400), Qt.DropAction.CopyAction, mime, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+                APP.sendEvent(window, enter)
+                drop = QDropEvent(QPointF(500, 400), Qt.DropAction.CopyAction, mime, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier)
+                APP.sendEvent(window, drop)
+                APP.processEvents()
+                self.assertEqual(len(backend.attachments), 1)
+                self.assertEqual(backend.attachments[0]['name'], 'drop fixture.txt')
+                self.assertEqual(backend.process.processId(), before_drop_pid)
+                backend.removeAttachment(0)
+                history_popup = window.findChild(QObject, "historyPopup")
+                self.assertTrue(QMetaObject.invokeMethod(history_popup, "open"))
+                QTest.qWait(80)
+                self.assertTrue(history_popup.property("opened"))
+                self.assertTrue(QMetaObject.invokeMethod(history_popup, "close"))
                 self.assertEqual(warnings, [])
             finally:
                 backend.shutdown()

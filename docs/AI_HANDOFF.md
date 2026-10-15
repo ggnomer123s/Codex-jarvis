@@ -1,6 +1,23 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-15; see the newest entry for current behavior._
 
+**Conversation workspace update — 2026-10-15 (GUI 0.5.0):** the user explicitly
+approved all six proposed GUI conveniences and deferred other model providers.
+Main.qml now has a saved SplitView layout/full-chat/core visibility and one
+composer below the chat. MessageCard/presentation render inert Markdown and
+copyable code; message editing restores a draft for a new manually sent turn.
+Attachments support reviewed local files, image previews, clipboard captures,
+change detection and native app-server localImage/text inputs. History uses
+a private local SQLite database, Unicode search, titles/pins/deletion and local
+transcript reopening with scoped next-Send thread resume. This supersedes older
+claims that the GUI retains no conversation text: QSettings checkpoints and
+metrics remain content-free, but the separate history stores message text and
+attachment metadata. Status now exposes phase/time/error/Stop. Existing shared
+Codex home, default/saved access, app-server-only transport and wake/voice remain.
+See [GUI controls/storage](gui-conveniences.md) and the newest
+[change-report entry](../changes.md) for behavior, tests and limits. Local checks
+passed 65 root tests (one native Windows skip) and 48 Qt tests; CI is pending.
+
 **Conversation readability update — 2026-10-15 (GUI 0.4.1):** A- / A+ controls
 in the right panel header change all message text between 12 and 28 px (default
 14), including existing and streamed messages. Backend `conversationFontSize`
