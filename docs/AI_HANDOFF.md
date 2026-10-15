@@ -16,7 +16,10 @@ attachment metadata. Status now exposes phase/time/error/Stop. Existing shared
 Codex home, default/saved access, app-server-only transport and wake/voice remain.
 See [GUI controls/storage](gui-conveniences.md) and the newest
 [change-report entry](../changes.md) for behavior, tests and limits. Local checks
-passed 65 root tests (one native Windows skip) and 48 Qt tests; CI is pending.
+passed 65 root tests (one native Windows skip) and 48 Qt tests. Initial CI
+passed static/root and Ubuntu but found Windows clipboard-cache removal did not
+match a noncanonical settings path to the resolved attachment path. Cleanup now
+resolves both parents, with a noncanonical-path regression; follow-up CI pending.
 
 **Conversation readability update — 2026-10-15 (GUI 0.4.1):** A- / A+ controls
 in the right panel header change all message text between 12 and 28 px (default

@@ -102,6 +102,11 @@ class TestConveniences(unittest.TestCase):
 
     def test_clipboard_image_is_previewed_and_not_submitted(self):
         backend=self.backend()
+        # QSettings may retain a noncanonical spelling, including Windows short
+        # paths, while attachment inspection resolves the selected file path.
+        alias=self.root/'alias'
+        alias.mkdir()
+        backend.history.path=alias/'..'/backend.history.path.name
         image=QImage(8,8,QImage.Format.Format_ARGB32);image.fill(0xff445566)
         QGuiApplication.clipboard().setImage(image)
         backend.pasteImage()

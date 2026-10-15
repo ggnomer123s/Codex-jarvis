@@ -56,6 +56,13 @@ the source of commit timestamps.
   and upstream UserInput definitions (structured mentions target apps/plugins);
   no authenticated model/image/PDF request or real desktop/microphone task ran.
   Fresh CI results will be recorded after publication.
+- Initial [CI run 38746821392](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38746821392)
+  passed static/root and Ubuntu desktop checks, but Windows found that an
+  unsubmitted clipboard-image cache file was retained after removal. Attachment
+  inspection canonicalizes paths while settings can retain another spelling.
+  Cleanup now resolves both parent paths before checking ownership; the
+  clipboard regression also exercises a noncanonical parent spelling. All five
+  targeted convenience tests pass locally; checking the follow-up CI result.
 
 ## 2026-10-15 — Adjustable conversation text size (GUI 0.4.1)
 

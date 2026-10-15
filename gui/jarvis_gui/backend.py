@@ -312,13 +312,13 @@ class Backend(QObject):
             self.attachmentsChanged.emit()
 
     def _clean_clipboard_images(self, files):
-        folder = (self.history.path.parent if self.history else self._access_path.parent) / 'attachments'
+        folder = ((self.history.path.parent if self.history else self._access_path.parent) / 'attachments').resolve()
         for item in files:
             if not item.get('clipboard') or any(x['path'] == item['path'] for x in self._attachments):
                 continue
             path = Path(item['path'])
             try:
-                if path.parent == folder and path.name.startswith('screenshot-') and self.history and not self.history.references(str(path)):
+                if path.parent.resolve() == folder and path.name.startswith('screenshot-') and self.history and not self.history.references(str(path)):
                     path.unlink(missing_ok=True)
             except (OSError, sqlite3.Error):
                 pass  # Retain a cache file if its history reference cannot be checked.
