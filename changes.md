@@ -41,6 +41,12 @@ the source of commit timestamps.
   after publication. Tests also cover Stop/Cancel before microphone handoff.
 - Scope: explicitly requested wake activation supersedes the earlier deferred
   wake proposal only. Other declined features and specialized bots are unchanged.
+- Initial [CI run 38703887487](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38703887487)
+  for `9cbc1d4` passed static/root checks and Ubuntu desktop, but Windows desktop
+  failed. The public annotation truncated the traceback. Updated
+  `scripts/check_desktop_ui.py` to include the child exit code, enable Python
+  fault traces and keep the final error within the public annotation limit;
+  investigating before claiming Windows success.
 
 ## 2026-10-15 — Activity-reactive artwork replaces the central J
 
