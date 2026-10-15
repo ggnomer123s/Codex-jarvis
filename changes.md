@@ -25,8 +25,13 @@ the source of commit timestamps.
 - Local verification: all 43 Qt tests passed, including actual-window font
   changes during an active request and restart persistence. Actual application
   smoke passed; inspected full and compact (1060x760) renders with 20 px sample
-  messages. Python syntax, frozen lock and whitespace checks passed. Fresh
-  automatic CI results will be recorded after publication.
+  messages. Python syntax, frozen lock, documentation links/language and
+  whitespace checks passed.
+- Final [CI run 38742059923](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38742059923)
+  for implementation `03ef8fe` passed static/root checks and both Ubuntu/Windows
+  desktop jobs. This report/handoff-only follow-up skips another CI run.
+  Preview messages were local fixtures; no authenticated task or real microphone
+  was used for this UI change.
 
 ## 2026-10-15 — One Codex account, default Full Access and composer controls
 

@@ -8,7 +8,10 @@ has its own notification and saved QSettings value; changing it does not reset
 runtime, thread or draft and is available while busy. The actual-window test
 checks controls, rendered message fonts, saved size and compact bounds. See
 [the desktop guide](desktop-app.md#conversation-text-size) and the newest
-[change-report entry](../changes.md) for verification.
+[change-report entry](../changes.md) for verification. All 43 local Qt tests
+passed; [CI run 38742059923](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38742059923)
+for `03ef8fe` passed static/root and both desktop OS jobs. The result-only
+follow-up skips CI.
 
 **Shared account/access update — 2026-10-15 (GUI 0.4.0):** the user's latest
 request supersedes all older separate-profile, second-login, acknowledgement
