@@ -1,6 +1,7 @@
 """Single GUI instance and same-user activation through local Qt IPC."""
 import hashlib
 from pathlib import Path
+import time
 
 from PySide6.QtCore import QObject, QLockFile, QStandardPaths, QTimer, Signal
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
@@ -25,8 +26,19 @@ class Instance(QObject):
             return False
         socket.write(b'activate\n' if activate else b'ping\n')
         socket.waitForBytesWritten(400)
+        # Windows named-pipe data can be lost when the writer disconnects before
+        # the owner reads it. Do not treat connection alone as delivery.
+        reply = bytearray()
+        deadline = time.monotonic() + 1.5
+        while b'\n' not in reply and len(reply) <= 64:
+            remaining = int((deadline - time.monotonic()) * 1000)
+            if remaining <= 0:
+                break
+            if not socket.bytesAvailable() and not socket.waitForReadyRead(remaining):
+                break
+            reply.extend(bytes(socket.readAll()))
         socket.disconnectFromServer()
-        return True
+        return bytes(reply) == b'ok\n'
 
     def claim(self, activate=True):
         if self.contact(activate):
@@ -51,8 +63,13 @@ class Instance(QObject):
                 if len(buffer) > 64:
                     socket.abort()
                 elif b'\n' in buffer:
-                    if bytes(buffer) == b'activate\n':
+                    message = bytes(buffer)
+                    buffer.clear()
+                    if message == b'activate\n':
                         self.activated.emit()
+                    if message in (b'activate\n', b'ping\n'):
+                        socket.write(b'ok\n')
+                        socket.flush()
                     socket.disconnectFromServer()
 
             socket.readyRead.connect(read)

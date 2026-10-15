@@ -47,6 +47,11 @@ the source of commit timestamps.
   `scripts/check_desktop_ui.py` to include the child exit code, enable Python
   fault traces and keep the final error within the public annotation limit;
   investigating before claiming Windows success.
+- Diagnostic [run 38704668136](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38704668136)
+  showed a failed activation assertion rather than a native crash. Updated
+  `activation.py` to wait for an explicit owner acknowledgement before closing
+  the local channel, and changed the IPC regression to launch a real second
+  process so the owner's event loop can accept the Windows named pipe.
 
 ## 2026-10-15 — Activity-reactive artwork replaces the central J
 

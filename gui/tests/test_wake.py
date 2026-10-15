@@ -7,7 +7,7 @@ import unittest
 import uuid
 from unittest import mock
 
-from PySide6.QtCore import QObject, QSettings, QUrl
+from PySide6.QtCore import QObject, QProcess, QSettings, QUrl
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
@@ -211,16 +211,33 @@ class TestInstance(unittest.TestCase):
     def test_second_launch_activates_owner_and_background_ping_does_not(self):
         name = 'jarvis-test-' + str(uuid.uuid4())
         owner = Instance(namespace=name)
-        other = Instance(namespace=name)
         self.addCleanup(owner.close)
         activations = []
         owner.activated.connect(lambda: activations.append(True))
         self.assertTrue(owner.claim())
-        self.assertFalse(other.claim())
-        QTest.qWait(80)
+        # A synchronous client in this same thread prevents the owner's event
+        # loop from accepting the Windows pipe. Exercise real cross-process IPC.
+        code = """import sys
+from PySide6.QtCore import QCoreApplication
+from jarvis_gui.activation import Instance
+app=QCoreApplication([])
+instance=Instance(namespace=sys.argv[1])
+print('owner' if instance.claim(activate=sys.argv[2]=='show') else 'contacted',flush=True)
+"""
+        def launch(mode):
+            process = QProcess()
+            process.start(sys.executable, ['-c', code, name, mode])
+            deadline = time.monotonic() + 8
+            while process.state() != QProcess.NotRunning and time.monotonic() < deadline:
+                QTest.qWait(10)
+            if process.state() != QProcess.NotRunning:
+                process.kill(); process.waitForFinished(1000)
+                self.fail('Second GUI process timed out')
+            self.assertEqual(process.exitCode(), 0, bytes(process.readAllStandardError()).decode(errors='replace'))
+            self.assertEqual(bytes(process.readAllStandardOutput()).strip(), b'contacted')
+        launch('show')
         self.assertEqual(activations, [True])
-        self.assertTrue(other.contact(activate=False))
-        QTest.qWait(80)
+        launch('background')
         self.assertEqual(activations, [True])
 
 
