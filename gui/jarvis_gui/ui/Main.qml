@@ -14,6 +14,7 @@ ApplicationWindow {
     property bool voiceActive: bridge.voiceState !== "idle"
     property bool locked: bridge.busy || voiceActive || bridge.fullProfile.busy
     property bool compact: width < 1250
+    property real coreSize: Math.min(compact ? 310 : 360, Math.max(220, height - 520))
     property string liveTranscript: ""
 
     Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel() } }
@@ -152,13 +153,13 @@ ApplicationWindow {
                     Item { Layout.fillHeight: true; Layout.minimumHeight: 8 }
                     Orb {
                         Layout.alignment: Qt.AlignHCenter
-                        Layout.preferredWidth: window.compact ? 310 : 360
-                        Layout.preferredHeight: window.compact ? 310 : 360
+                        Layout.preferredWidth: window.coreSize
+                        Layout.preferredHeight: window.coreSize
                         Layout.minimumHeight: 220
                         active: bridge.busy || window.voiceActive || bridge.fullProfile.busy
                         listening: bridge.voiceState === "recording"
                         targetLevel: bridge.audioLevel
-                        stage: bridge.stage
+                        stage: bridge.fullProfile.busy ? "connecting" : bridge.stage
                         animate: window.visibility !== Window.Minimized
                     }
                     RowLayout {

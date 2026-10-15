@@ -1,6 +1,22 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled against the `main` branch on 2026-10-12._
 
+**Activity artwork and scope update — 2026-10-15:** `Orb.qml` replaces the
+central J with an original generated `energy-core.png` and procedural Canvas
+filaments, particles, audio response and distinct effects for preparation,
+thinking, acting, verification, completion, failure and stop. The existing
+runtime/voice states drive the art; profile preparation maps to connecting.
+Animations pause while minimized and freeze when stopped. `Main.qml` scales
+the core with window height so the input remains visible in short windows.
+See [the state guide and preview](desktop-app.md#animated-activity-core).
+
+The user declined the remaining unimplemented proposals from the earlier
+roadmap. Those older sections are historical ideas, not approved work to add.
+Multiple specialized bots were discussed as a design option only; this update
+does not implement them. A potential design should preserve Codex app-server,
+separate role contexts and serialize shared desktop input. Keep that discussion
+separate from the implemented single-assistant artwork change.
+
 **Verification/reporting update — 2026-10-15:** existing
 [run 38629351827](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38629351827)
 for `8abce2e` completed successfully: static checks and both Ubuntu/Windows

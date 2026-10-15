@@ -9,6 +9,38 @@ not a signed standalone EXE, AppImage, DEB or RPM release.
 
 ![JARVIS desktop command center](images/jarvis-desktop.png)
 
+## Animated activity core
+
+The central J has been replaced with an original woven-light energy sculpture.
+Its bundled still artwork was generated for this project; Qt Canvas draws the
+moving filaments, particles, trails and state effects locally. It works with the
+software renderer and requires no new dependency or network request.
+
+![Activity-core animation with simulated runtime states](images/jarvis-core.gif)
+
+| Activity | Visual behavior |
+|---|---|
+| Ready | Slow turquoise breathing and drifting filaments |
+| Connecting, voice preparation, profile setup | Pale-blue rotating preparation arc |
+| Recording | Mint filaments expand and the center wave responds to microphone level |
+| Transcribing | Blue processing wave and traveling arc |
+| Planning | Violet orbital loops change inclination |
+| Acting | Faster blue particles with short orbital trails |
+| Verifying | Amber sweep across the core |
+| Complete | Three settling green waves followed by a calm halo |
+| Failed | Pink separated arcs and a slow attention pulse |
+| Stopping / stopped | Muted arcs; stopped motion freezes |
+
+Colors transition gently and every state also has a text label. The waveform is
+an amplitude visualization, not an audio oscilloscope. The verification sweep
+indicates the runtime stage, not an additional screen capture. The animation
+targets 20 updates/second in standby and about 30 while active, and pauses when
+the window is minimized. Core size adapts to window height to keep the composer
+and Send button visible at the supported minimum size.
+
+The preview cycles simulated runtime/audio states in the actual QML window.
+It demonstrates rendering rather than real microphone or desktop automation.
+
 For a fresh installation, use the [complete commands for your operating system](install-desktop.md).
 They cover Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11.
 

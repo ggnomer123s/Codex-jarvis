@@ -8,6 +8,29 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-15 — Activity-reactive artwork replaces the central J
+
+- Added original generated artwork in `gui/jarvis_gui/ui/energy-core.png`.
+  Rebuilt `Orb.qml` with woven filaments, orbital particles, breathing,
+  audio-level response and activity-specific motion instead of a central letter.
+- Mapped preparation, recording, transcription, planning, action, verification,
+  completion, failure and stop to distinct effects, colors and text labels.
+  Completion waves settle; stopped motion freezes. Animation targets 20 Hz in
+  standby / about 30 Hz while active and pauses when minimized. One Canvas and
+  the bundled PNG require no new runtime dependency or network call.
+- Updated `Main.qml` to show preparation during profile setup and size the core
+  according to window height, keeping input controls visible in short windows.
+- Updated README, the desktop guide and maintainer handoff; refreshed the public
+  screenshot and added an animated preview captured from simulated states in the
+  real QML window. Documented the state effects and actual visualization limits.
+- Recorded the scope decision: previous unimplemented roadmap proposals are
+  declined; specialized bots are a design discussion, not part of this change.
+- Verification: rendered all 13 runtime/voice state inputs without QML warnings;
+  checked audio attack/release, active motion, minimized pause/resume, stopped
+  freeze and profile-preparation mapping. Checked compact/short layouts for
+  fully visible composer and Send controls. The existing actual-window test
+  passed; CI results will be recorded after publication.
+
 ## 2026-10-15 — Fresh Linux and Windows CI passed
 
 - Requested a new full GitHub Actions run through a report-only push to `main`,

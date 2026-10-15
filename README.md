@@ -6,10 +6,10 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 
 ## JARVIS desktop app — Linux and Windows 11
 
-A native desktop interface is now available: an animated cyan JARVIS core,
+A native desktop interface is now available: an original animated woven-light core,
 streaming Codex app-server chat with continuing conversation context, task cancellation, model/workspace
 and reasoning settings, an included separate Full Access profile with a checkbox, and local
-warm local push-to-talk transcription with 15 language presets including Russian. Voice text is
+local push-to-talk transcription with a warm model and 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
 
 The GUI now keeps an owned **Codex app-server** connection between messages,
@@ -21,6 +21,10 @@ Codex and OpenCode projects](docs/related-projects.md). Codex app-server is the
 GUI's only model transport; there is no OpenCode runtime or exec fallback.
 
 ![JARVIS desktop app](docs/images/jarvis-desktop.png)
+
+The central letter has been replaced with an energy sculpture: filament orbits,
+audio-reactive motion, action trails and verification sweeps follow the actual
+runtime state. See the [animated preview and state guide](docs/desktop-app.md#animated-activity-core).
 
 ```bash
 # Linux, from this checkout
