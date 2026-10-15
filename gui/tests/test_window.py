@@ -62,7 +62,7 @@ class TestWindow(unittest.TestCase):
                 self.assertEqual(language.property("currentValue"), "ru")
                 self.assertEqual(model.property("editText"), "test-model")
                 tabs = window.findChild(QObject, "preferenceTabs")
-                for index in (1, 2, 3, 4, 0):
+                for index in (1, 2, 3, 4, 5, 0):
                     tabs.setProperty("currentIndex", index)
                     QTest.qWait(50)
                 tabs.setProperty("currentIndex", 2)

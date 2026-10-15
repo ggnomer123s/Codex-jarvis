@@ -7,7 +7,7 @@ ApplicationWindow {
     id: window
     width: 1440; height: 900
     minimumWidth: 1060; minimumHeight: 760
-    visible: true
+    visible: !bridge.startHidden
     title: "JARVIS - Personal intelligence"
     color: "#080e14"
     font.family: "Segoe UI"
@@ -16,6 +16,14 @@ ApplicationWindow {
     property bool compact: width < 1250
     property real coreSize: Math.min(compact ? 310 : 360, Math.max(220, height - 520))
     property string liveTranscript: ""
+
+    onClosing: function(close) {
+        if (bridge.wake.enabled) {
+            close.accepted = false
+            if (bridge.trayAvailable) window.hide()
+            else window.showMinimized()
+        }
+    }
 
     Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel() } }
     Shortcut { sequence: "Ctrl+N"; enabled: !window.locked; onActivated: bridge.newSession() }
@@ -31,6 +39,10 @@ ApplicationWindow {
         function onMessagesChanged() { scrollDelay.restart() }
     }
     Timer { id: scrollDelay; interval: 50; onTriggered: conversation.positionViewAtEnd() }
+    Connections {
+        target: bridge.wake
+        function onChanged() { wakeToggle.checked = bridge.wake.enabled }
+    }
 
     // Static drafting grid: the animated core is the only moving decoration.
     Canvas {
@@ -91,6 +103,12 @@ ApplicationWindow {
                     }
                 }
                 Text { Layout.topMargin: 14; text: "BUILT FOR YOUR DESKTOP"; color: "#536c7d"; font.pixelSize: 8; font.letterSpacing: 1.2 }
+                Text {
+                    Layout.fillWidth: true; visible: bridge.wake.enabled
+                    text: bridge.wake.state === "listening" ? "MIC ON / VOICE ACTIVATION" : "VOICE ACTIVATION / " + bridge.wake.state.toUpperCase()
+                    color: bridge.wake.state === "error" ? "#ff8ba9" : "#69dfce"
+                    font.pixelSize: 8; wrapMode: Text.WordWrap
+                }
                 Text { Layout.bottomMargin: 8; text: "Codex app-server"; color: "#8ca3b2"; font.pixelSize: 11 }
             }
         }
@@ -347,6 +365,10 @@ ApplicationWindow {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         background: Rectangle { radius: 18; color: "#111f2b"; border.color: "#345463" }
         Overlay.modal: Rectangle { color: "#b0081018" }
+        function applyWake() {
+            return bridge.wake.configure(wakeToggle.checked, wakeAutostart.checked, wakeModel.editText.trim(),
+                wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked)
+        }
         onOpened: {
             effortChoice.currentIndex = ["low", "default", "high"].indexOf(bridge.effort)
             accessChoice.currentIndex = ["read-only", "workspace-write"].indexOf(bridge.normalAccess)
@@ -361,6 +383,13 @@ ApplicationWindow {
             previewChoice.checked = bridge.voicePreview
             micChoice.currentIndex = micChoice.indexOfValue(bridge.microphone)
             workflowEditor.text = bridge.workflowsText
+            wakeToggle.checked = bridge.wake.enabled
+            wakeAutostart.checked = bridge.wake.autostart
+            wakeFuzzy.checked = bridge.wake.fuzzy
+            wakeModel.editText = bridge.wake.model
+            wakeLanguage.currentIndex = Math.max(0, wakeLanguage.indexOfValue(bridge.wake.language))
+            wakeMic.currentIndex = wakeMic.indexOfValue(bridge.wake.microphone)
+            if (wakeMic.currentIndex < 0) wakeMic.editText = bridge.wake.microphone
         }
         contentItem: ColumnLayout {
             spacing: 14
@@ -372,7 +401,7 @@ ApplicationWindow {
                 property int currentIndex: 0
                 Layout.fillWidth: true; spacing: 8
                 Repeater {
-                    model: ["Intelligence", "Voice", "Access", "Runtime", "Automation"]
+                    model: ["Intelligence", "Voice", "Access", "Runtime", "Automation", "Wake"]
                     HudButton {
                         required property string modelData
                         required property int index
@@ -506,11 +535,49 @@ ApplicationWindow {
                     }
                     Text { Layout.fillWidth: true; text: "Save only workflows you reviewed. The executor stops on changed preconditions, refusal or failed verification. It does not bypass MCP guards or retry actions automatically."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                 }
+                ScrollView {
+                    clip: true; contentWidth: availableWidth
+                    ColumnLayout {
+                        width: parent.width; spacing: 12
+                        Text { text: "Open JARVIS by voice"; color: "#bde5de"; font.pixelSize: 15 }
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Optional background listening keeps your microphone on. Speech is transcribed locally in memory; only the wake name opens the window. Nothing is sent as a task or saved as a transcript."
+                            color: "#8eafbb"; font.pixelSize: 11; wrapMode: Text.WordWrap
+                        }
+                        HudCheckBox {
+                            id: wakeToggle; objectName: "wakeToggle"; text: "Listen for Jarvis in the background"
+                            checked: bridge.wake.enabled; enabled: !window.voiceActive
+                            onClicked: { if (!preferences.applyWake()) checked = bridge.wake.enabled }
+                            contentItem: Text { text: parent.text; color: "#b8eee4"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
+                        }
+                        HudCheckBox {
+                            id: wakeAutostart; text: "Start listening when I sign in"
+                            contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
+                        }
+                        HudCheckBox {
+                            id: wakeFuzzy; text: "Recognize similar pronunciations of Jarvis"
+                            contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
+                        }
+                        Text { Layout.fillWidth: true; text: "Tolerant matching also handles Russian and small transcription errors. It can cause false activations. Turn it off for exact Jarvis / Russian-name matching. Repeated activations have an 8-second cooldown."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Text { text: "Wake language"; color: "#8eadbd"; font.pixelSize: 12 }
+                        HudComboBox { id: wakeLanguage; Layout.fillWidth: true; model: bridge.languageOptions; textRole: "label"; valueRole: "code" }
+                        Text { text: "Local wake model (CPU)"; color: "#8eadbd"; font.pixelSize: 12 }
+                        HudComboBox { id: wakeModel; Layout.fillWidth: true; editable: true; model: bridge.voiceModels }
+                        Text { Layout.fillWidth: true; text: "base balances speed and recognition; tiny uses fewer resources. First use downloads the model. Russian may work better with Russian selected explicitly."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Text { text: "Wake microphone / device ID"; color: "#8eadbd"; font.pixelSize: 12 }
+                        HudComboBox { id: wakeMic; Layout.fillWidth: true; editable: true; model: bridge.microphones; textRole: "label"; valueRole: "id" }
+                        Text { Layout.fillWidth: true; text: "List microphones with Prepare saved model in the Voice tab, or enter a device ID/name. Closing the window keeps listening in the tray (minimized when the tray is unavailable). Quit JARVIS stops it; disabling voice activation also removes its login startup entry."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Text { objectName: "wakeStatus"; Layout.fillWidth: true; text: bridge.wake.status; color: bridge.wake.state === "error" ? "#ff8ba9" : "#84dec9"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                        HudButton { text: "Quit JARVIS / stop listening"; onClicked: Qt.quit() }
+                    }
+                }
             }
             HudButton {
-                Layout.fillWidth: true; primary: true; text: "Save preferences"
+                Layout.fillWidth: true; primary: true; text: preferenceTabs.currentIndex === 5 ? "Apply voice activation" : "Save preferences"
                 enabled: !window.locked
                 onClicked: {
+                    if (preferenceTabs.currentIndex === 5) { if (preferences.applyWake()) preferences.close(); return }
                     let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
                     let access = bridge.fullAccess ? "full-access" : ["read-only", "workspace-write"][accessChoice.currentIndex]
                     if (bridge.saveAllPreferences(["low", "default", "high"][effortChoice.currentIndex], access, model, languageChoice.currentValue, voiceModelChoice.editText,

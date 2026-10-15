@@ -130,7 +130,8 @@ including `C:\Users\Cosmo`, see [Windows installation](install-desktop.md#window
 5. **New conversation** or Ctrl+N starts a fresh context. Changing the workspace
    or access mode also resets the context.
 
-Preferences has **Intelligence**, **Voice** and **Access** tabs. Intelligence
+Preferences has **Intelligence**, **Voice**, **Access**, **Runtime**,
+**Automation** and **Wake** tabs. Intelligence
 offers a live `model/list` picker when app-server is connected, the active
 profile's local `models_cache.json` before connection, an editable model ID, and
 a Refresh button. No credentials are read from that file.
@@ -186,6 +187,10 @@ inherited from your existing setup. The UI does not claim that CLI detection
 establishes login or desktop readiness: request errors are displayed in the chat.
 
 ## Voice input
+
+For optional continuous local listening that opens this window by name, see
+[voice activation](voice-activation.md). Enable it in **Preferences > Wake**;
+push-to-talk below remains the normal way to dictate a task.
 
 Click the microphone button, speak, then click it again. Recording stops after
 60 seconds at most. The ring responds to the microphone level. Local
@@ -245,7 +250,9 @@ The app stores workspace, model, reasoning, normal access and voice preferences 
 Conversation text stays in app memory; Codex maintains its own session history
 under its existing configuration. GUI settings retain bounded, profile/workspace/
 model-scoped thread pointers and status for explicit resume, without copying
-conversation text. Closing the app stops its workers, including idle processes.
+conversation text. Quitting the app stops its workers, including idle processes.
+With voice activation enabled, the window close button keeps the app listening
+in the tray/minimized; use Quit or disable voice activation to stop it.
 `JARVIS_GUI_CODEX` can point to an alternative Codex executable for development;
 it is a path, not a shell command.
 

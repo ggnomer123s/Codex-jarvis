@@ -1,6 +1,22 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled against the `main` branch on 2026-10-12._
 
+**Voice activation update — 2026-10-15:** the user explicitly requested
+continuous local transcription for English/Russian wake-name activation. This
+authorizes this feature beyond the earlier declined roadmap; other declined
+features and specialized bots remain outside scope. GUI 0.3.0 adds opt-in
+`wake.py` (bounded speech segmentation, CPU Whisper, tolerant/exact name matching,
+cooldown, pause generations), `wake_control.py` (owned process and acknowledged
+manual-mic handoff), `autostart.py` (XDG autostart / HKCU Run), and `activation.py`
+(same-user single-instance local IPC). `app.py` manages tray/background/restore;
+`Main.qml` has Wake settings and mic status. Ordinary transcripts/audio are
+transient RAM, not persisted or sent to Codex; wake opens the window only.
+Closing keeps opted-in listening in the tray/minimized, whereas Quit stops it.
+Disable stops capture even if startup cleanup fails. Normal mic pause retains
+the wake model; a stalled pause kills only that worker, then reloads after manual
+voice completes. See [voice-activation.md](voice-activation.md) for limits and
+target-machine checks; older "no wake listener" descriptions are superseded.
+
 **Activity artwork and scope update — 2026-10-15:** `Orb.qml` replaces the
 central J with an original generated `energy-core.png` and procedural Canvas
 filaments, particles, audio response and distinct effects for preparation,
@@ -354,7 +370,7 @@ target-machine coverage rather than treating the older proposal as unimplemented
 - Robust retry after interrupted MCP operations, a deterministic emergency stop, carefully scoped rollback/undo, and safer Full Access usability. Do not weaken user privacy or OS safeguards to make an error disappear.
 - Cross-platform accessibility coverage and visual grounding for apps that expose no tree.
 
-**Explicitly NOT implemented:** JARVIS Voice wake word, continuous video recording/understanding, hidden always-on monitoring, a universal Premiere integration, autonomous model switching inside a session, guaranteed replay/undo of arbitrary GUI actions.
+**Explicitly NOT implemented:** full-duplex spoken conversation, continuous video recording/understanding, hidden always-on monitoring, a universal Premiere integration, autonomous model switching inside a session, guaranteed replay/undo of arbitrary GUI actions.
 
 ## 10. Instructions for the next AI maintaining this repo
 

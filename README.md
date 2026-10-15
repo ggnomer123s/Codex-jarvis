@@ -20,6 +20,12 @@ See [runtime guide](docs/runtime.md) and the [source review of other Jarvis,
 Codex and OpenCode projects](docs/related-projects.md). Codex app-server is the
 GUI's only model transport; there is no OpenCode runtime or exec fallback.
 
+**Optional voice activation:** enable **Preferences > Wake** to listen locally
+for Jarvis or its Russian name and restore the app from the background. Includes
+tolerant matching, microphone/model/language settings and per-user login startup.
+The microphone stays on while enabled; ordinary transcripts are discarded and
+waking opens the window without submitting a task. See [voice activation](docs/voice-activation.md).
+
 ![JARVIS desktop app](docs/images/jarvis-desktop.png)
 
 The central letter has been replaced with an energy sculpture: filament orbits,
@@ -105,6 +111,7 @@ Observed result / user-facing report
 | Window permissions | `scripts/hypruse-access.sh`; optional `jarvis access all` or restricted/class-based Hypruse permissions, with explicit confirmation and config backup |
 | Native X11 desktop MCP | `scripts/x11_mcp.py`; screenshots, region crops, human-selected capture rectangle, focus-checked shortcuts, pointer click/drag/scroll and input opt-in |
 | Voice | `gui/jarvis_gui/voice.py` warm worker; `scripts/jarvis_voice.py` one-shot CLI; local faster-whisper, review before submission |
+| Voice activation | Optional `wake.py` background local transcription; English/Russian tolerant name matching restores the GUI, with tray controls and user-level sign-in startup |
 | Repair memory | `scripts/jarvis_memory.py`; local JSON of **explicitly confirmed** fixes, manual add/search/list/delete |
 | Diagnostics | `jarvis gui-check`; opt-in Linux systemd-user and Windows Application event watchers; read-only Codex analysis reports |
 | Maintenance | `scripts/sync_agents.py` refreshes only JARVIS's AGENTS block with backups; GitHub Actions checks Bash/PowerShell/Python/tests |
@@ -121,7 +128,7 @@ Observed result / user-facing report
 
 ### What is NOT implemented yet
 
-General **task replay/rollback**, **JARVIS Doctor auto-repair**, an **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and an always-listening voice assistant remain future work. The GUI now provides content-free task/voice timings, an optional local reasoning heuristic, connection/MCP diagnostics, checked short workflows and explicit conversation checkpoint resume. Conversation resume does not replay desktop actions. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); validation is mostly static/unit CI and simulated desktop-frontend tests, plus a Linux app-server handshake/config probe, not broad hardware-level testing.
+General **task replay/rollback**, **JARVIS Doctor auto-repair**, an **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and full-duplex spoken conversation remain unimplemented. Optional local background wake-name detection now opens the GUI without starting tasks. The GUI now provides content-free task/voice timings, an optional local reasoning heuristic, connection/MCP diagnostics, checked short workflows and explicit conversation checkpoint resume. Conversation resume does not replay desktop actions. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); validation is mostly static/unit CI and simulated desktop-frontend tests, plus a Linux app-server handshake/config probe, not broad hardware-level testing.
 
 ### Instructions for the next coding agent
 
@@ -201,7 +208,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-window
 
 ## Memory and voice input
 
-Both are opt-in and cross-platform. No always-on microphone or automatic memory capture.
+Both are opt-in and cross-platform. CLI voice uses push-to-talk. The GUI also
+offers a separate, explicitly enabled [background wake listener](docs/voice-activation.md).
+Repair memory is never populated automatically.
 
 ```sh
 jarvis voice                   # local push-to-talk Whisper transcription, confirm before sending

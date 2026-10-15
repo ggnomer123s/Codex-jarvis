@@ -34,5 +34,6 @@ resume and state/audio-driven orb effects. See [runtime behavior](runtime.md).
 
 The following remain distinct future projects: automatic execution/replay of
 arbitrary interrupted tasks, app-specific Premiere/DaVinci bridges, continuous
-screen understanding, wake words, spoken TTS answers and full-duplex speech.
+screen understanding, spoken TTS answers and full-duplex speech. Local wake-name
+activation was subsequently added; see [voice activation](voice-activation.md).
 None is necessary to keep the Codex app-server integration and local STT path.

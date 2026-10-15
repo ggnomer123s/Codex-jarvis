@@ -8,6 +8,40 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-15 — Optional local background voice activation
+
+- Added `wake.py`: continuous local CPU Whisper transcription in bounded
+  speech-gated phrases, English/Russian wake-name matching with optional known
+  variants/one-edit tolerance, an eight-second cooldown and pause generations.
+  Only wake/status events leave the worker; audio/ordinary transcripts remain
+  transient memory. An inference backlog is bounded and reported.
+- Added `wake_control.py`: opt-in settings, owned process, status/errors,
+  acknowledged stream closure before manual voice starts, stale-event rejection
+  and a bounded stop fallback for stalled pause. Disable stops listening even
+  if startup-entry removal fails.
+- Added `autostart.py`: owned XDG desktop entry on Linux and per-user HKCU Run
+  value on Windows, safely quoted environment paths and refusal to overwrite
+  unrelated registrations. Startup is registered only through user settings.
+- Added `activation.py`: same-user local IPC and an instance lock so a second
+  launch restores the existing GUI instead of opening a duplicate.
+- Updated `app.py` for `--background`, tray restore/disable/quit controls,
+  minimized fallback without tray support and wake-to-window activation.
+- Updated `backend.py`, `Main.qml` and new `HudCheckBox.qml` with Wake settings,
+  microphone status, background-close behavior and manual voice coordination.
+  Waking opens the window only; it never sends a model request or executes speech.
+- Added Windows launcher's `-Background` switch. Bumped GUI/lock version to 0.3.0
+  with no new dependencies. Added `docs/voice-activation.md` and updated README,
+  runtime, desktop, memory/voice, security, source-review and handoff guidance.
+- Added 11 stdlib/audio/model-fixture tests and 10 Qt process/IPC/lifecycle tests;
+  the production window test now visits the Wake tab. Local validation currently
+  passes 60 root and 44 Qt tests (104 total), with no real microphone/model
+  download or OS startup modification during tests. Inspected the actual Wake
+  settings screenshot. Python syntax, frozen lock, English docs/scripts, local
+  documentation links and whitespace checks passed. CI outcome will be recorded
+  after publication. Tests also cover Stop/Cancel before microphone handoff.
+- Scope: explicitly requested wake activation supersedes the earlier deferred
+  wake proposal only. Other declined features and specialized bots are unchanged.
+
 ## 2026-10-15 — Activity-reactive artwork replaces the central J
 
 - Added original generated artwork in `gui/jarvis_gui/ui/energy-core.png`.

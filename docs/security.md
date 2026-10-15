@@ -30,7 +30,19 @@ Reports, screenshots and event logs should **never be committed** to a public re
 
 ## Voice and local memory
 
-**Voice** is strictly push-to-talk. Audio is recorded in RAM and transcribed locally with faster-whisper; no audio recording is saved by the JARVIS voice script. First run downloads packages/model files. The **recognized transcript**, after an explicit YES, is sent to Codex for processing; do not dictate passwords or secrets. This is not continuous listening or a wake-word daemon.
+**CLI voice** uses push-to-talk. Audio is recorded in RAM and transcribed locally
+with faster-whisper; the voice script saves no audio. First use downloads
+packages/model files. After explicit YES, transcript text is sent to Codex.
+GUI push-to-talk instead places text in the composer for review and manual Send.
+
+**GUI voice activation** is a separate, off-by-default continuous microphone
+mode. It locally transcribes bounded phrases to recognize the English/Russian
+wake name and restore the window. Ordinary transcripts/audio stay in transient
+memory and are not sent to Codex or retained as history. Only wake/status events
+leave the worker. Waking grants no permissions and submits no task. The opted-in
+listener remains active after closing the window; Quit stops it and disabling
+also removes its user-level login startup registration. See
+[voice activation](voice-activation.md) for controls, matching and resource limits.
 
 **Memory** is user-managed: `jarvis memory add` requires a verified repair and YES, and `jarvis memory forget <id>` requires DELETE. The JSON database is local to the user's machine, not public GitHub or ChatGPT saved memory. When Codex reads repair history, the note text may be sent to the AI provider. Avoid putting personal data or secrets in it; treat older memory notes as untrusted historical descriptions.
 

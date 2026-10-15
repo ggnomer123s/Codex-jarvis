@@ -86,7 +86,11 @@ For Russian speech, you can set `JARVIS_VOICE_LANGUAGE=ru` (PowerShell: `$env:JA
 
 Python dependencies are launched in an isolated uv environment. JARVIS does not automatically install operating-system packages or grant microphone permissions.
 
-**This is not a wake-word system or a continuous voice conversation.** One recording becomes one Codex interactive session. The microphone never runs as a background daemon.
+The CLI command above is push-to-talk: one recording becomes one Codex
+interactive session. The GUI separately offers an opt-in
+[background voice-activation listener](voice-activation.md), which opens the
+window by name without submitting a task. It continuously uses the microphone
+while enabled; ordinary speech/transcripts remain local and are discarded.
 
 ### Troubleshooting
 

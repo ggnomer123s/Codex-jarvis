@@ -19,6 +19,7 @@ from .preferences import LANGUAGES, VOICE_MODELS, cached_models, elevated, valid
 from .profiles import FullProfile
 from .runtime import Checkpoints, Profiler
 from .workflows import WorkflowRunner, match_workflow, validate_workflows
+from .wake_control import WakeControl
 
 
 class Backend(QObject):
@@ -27,9 +28,12 @@ class Backend(QObject):
     transcriptReady = Signal(str)
     transcriptPreview = Signal(str)
 
-    def __init__(self, settings=None, *, codex_command=None, voice_command=None, full_home=None):
+    def __init__(self, settings=None, *, codex_command=None, voice_command=None, full_home=None, start_hidden=False, tray_available=False):
         super().__init__()
         self.settings = settings or QSettings("Jarvis", "Desktop")
+        self._start_hidden = start_hidden
+        self._tray_available = tray_available
+        self.wake_control = WakeControl(self.settings, self)
         saved = str(self.settings.value("folder", str(Path.home())))
         self._folder = saved if Path(saved).is_dir() else str(Path.home())
         self._effort = str(self.settings.value("effort", "low"))
@@ -136,10 +140,23 @@ class Backend(QObject):
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
         self.profile.prepared.connect(self._activate_full)
+        self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle"))
 
     @Property("QVariantList", notify=messagesChanged)
     def messages(self):
         return self._messages
+
+    @Property(QObject, constant=True)
+    def wake(self):
+        return self.wake_control
+
+    @Property(bool, constant=True)
+    def startHidden(self):
+        return self._start_hidden
+
+    @Property(bool, constant=True)
+    def trayAvailable(self):
+        return self._tray_available
 
     @Property(bool, notify=changed)
     def busy(self):
@@ -851,12 +868,21 @@ class Backend(QObject):
     def warmVoice(self):
         if self._locked() or not self.voiceAvailable:
             return
+        self._voice_cancelled = False
         self._voice_id = str(uuid.uuid4())
         self._voice_state, self._activity = "loading", "Preparing local voice model"
         self._start_voice()
         self.changed.emit()
 
     def _start_voice(self):
+        if self._voice_state == "idle" or self._voice_cancelled:
+            return
+        if self._voice_state == "transcribing" and self._voice_stop_requested:
+            self.cancelVoice()  # Stop arrived while waiting for the wake mic.
+            return
+        if self.wake_control.enabled and self.wake_control.process.state() != QProcess.NotRunning and self.wake_control.state != "paused":
+            self.wake_control.reserve_microphone(self._start_voice)
+            return
         self._voice_idle_timer.stop()
         if self.voice.state() == QProcess.ProcessState.Running and self._voice_ready:
             if self._voice_state == "starting":
@@ -985,6 +1011,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.wake_control.shutdown()
         self.profile.shutdown()
         if self._busy:
             self._cancelled = True

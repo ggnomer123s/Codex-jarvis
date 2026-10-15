@@ -32,7 +32,7 @@ have had effects. Completed actions are never claimed undone.
 
 ## Local voice
 
-The GUI's worker loads one multilingual faster-whisper model and handles repeated
+The GUI's push-to-talk worker loads one multilingual faster-whisper model and handles repeated
 JSON recording commands. It opens the microphone only for an explicit recording.
 The model unloads after five idle minutes, on model/device/options changes, or at
 shutdown. **Preferences > Voice > Prepare saved model / list microphones** can
@@ -56,6 +56,14 @@ Whisper decoding, continuous listening, wake-word detection or speech endpoint
 submission. It can cost additional CPU, may revise wording, and stays out of the
 composer until the final transcript is ready. Only the reviewed final text is
 submitted when the user presses Send. Recording IDs discard stale results.
+
+The separate, opt-in [background wake listener](voice-activation.md) continuously
+captures and locally transcribes bounded phrases while enabled. It restores the
+window on the English/Russian wake name, without sending speech to Codex. Its
+model, language, microphone, fuzzy matching and sign-in startup are configured in
+**Preferences > Wake**. Capture pauses before manual voice input and resumes
+afterward; stale inference is discarded. Closing the window keeps the opted-in
+listener in the tray/minimized. Quit stops workers; disable also removes startup.
 
 ## Fast commands
 
