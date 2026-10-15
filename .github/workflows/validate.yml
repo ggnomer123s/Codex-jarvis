@@ -58,7 +58,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
+          sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libpulse0
       - name: Install locked desktop dependencies
         run: uv sync --project gui --frozen
       - name: Test process bridge and actual QML window

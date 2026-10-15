@@ -3,11 +3,19 @@ import math
 import re
 import sys
 from PySide6.QtCore import QObject, Property, QTimer, Signal, Slot
-from PySide6.QtTextToSpeech import QTextToSpeech, QVoice
+try:
+    from PySide6.QtTextToSpeech import QTextToSpeech, QVoice
+except ImportError as exc:
+    # Missing Linux audio libraries must not prevent the text GUI from opening.
+    QTextToSpeech = QVoice = None
+    _IMPORT_ERROR = str(exc)
 from .speech_text import spoken_text
 
 
 def native_engine(parent):
+    if QTextToSpeech is None:
+        raise ValueError('Local speech runtime is unavailable: ' + _IMPORT_ERROR[:250] +
+                         '. Linux: install libpulse (libpulse0 on Debian/Ubuntu) and Speech Dispatcher; then restart JARVIS.')
     available = QTextToSpeech.availableEngines()
     preferred = ('winrt', 'sapi') if sys.platform == 'win32' else ('speechd', 'flite')
     for name in preferred:

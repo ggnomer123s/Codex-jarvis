@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import time
 import unittest
@@ -225,3 +226,29 @@ for line in sys.stdin:
         self.assertNotEqual(speech.state,'error',speech.status)
         speech.stop()
         self.wait(lambda:not speech.active)
+
+    def test_missing_native_library_keeps_text_gui_available(self):
+        script='''import builtins,tempfile
+from pathlib import Path
+from PySide6.QtCore import QSettings
+from PySide6.QtWidgets import QApplication
+app=QApplication([])
+original=builtins.__import__
+def without_speech(name,*args,**kwargs):
+ if name=='PySide6.QtTextToSpeech': raise ImportError('libpulse.so.0 is missing')
+ return original(name,*args,**kwargs)
+builtins.__import__=without_speech
+from jarvis_gui.backend import Backend
+with tempfile.TemporaryDirectory() as directory:
+ settings=QSettings(str(Path(directory)/'ui.ini'),QSettings.IniFormat)
+ backend=Backend(settings,codex_home_override=Path(directory)/'codex')
+ assert backend.speech.enabled
+ backend.speaker.read('A local voice test')
+ assert backend.speaker.state=='error'
+ assert 'libpulse' in backend.speaker.status
+ assert backend.process.processId()==0
+ backend.shutdown()
+print('Text backend works without the optional speech module.')
+'''
+        result=subprocess.run([sys.executable,'-c',script],capture_output=True,text=True,timeout=15)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)

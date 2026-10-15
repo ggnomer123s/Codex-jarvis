@@ -42,27 +42,29 @@ speaking through installed local voices does not require a TTS API key.
 
 ## Linux
 
-Install Speech Dispatcher, its speech output module and eSpeak NG. For CachyOS
+Install the libpulse client library, Speech Dispatcher, its speech output module
+and eSpeak NG. libpulse is needed by Qt even on a PipeWire desktop; it does not
+require replacing PipeWire or installing a PulseAudio server. For CachyOS
 and Arch derivatives:
 
 ```bash
-sudo pacman -S --needed speech-dispatcher espeak-ng
+sudo pacman -S --needed libpulse speech-dispatcher espeak-ng
 ```
 
 Debian/Ubuntu:
 
 ```bash
-sudo apt install speech-dispatcher espeak-ng libspeechd2
+sudo apt install libpulse0 speech-dispatcher espeak-ng libspeechd2
 ```
 
 Fedora:
 
 ```bash
-sudo dnf install speech-dispatcher speech-dispatcher-espeak-ng espeak-ng
+sudo dnf install pulseaudio-libs speech-dispatcher speech-dispatcher-espeak-ng espeak-ng
 ```
 
 On openSUSE, use the Speech Dispatcher/eSpeak NG packages and output module
-provided by your release. Check the distribution's module configuration if
+provided by your release, plus its libpulse client library. Check the distribution's module configuration if
 Russian is absent from the voice list. Restart JARVIS after installing packages.
 If provided, `spd-say -l ru "Speech test"` checks the system output independently.
 The GUI installer never invokes sudo or edits system speech configuration.

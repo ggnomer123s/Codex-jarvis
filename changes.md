@@ -40,14 +40,20 @@ the source of commit timestamps.
   desktop, runtime, wake, security and handoff docs. GUI/lock/client version is
   0.6.0; Qt speech is bundled, with no new Python dependency or cloud TTS key.
 - Verification: 68 root tests discovered (67 passed, one Windows-native probe
-  skipped locally), 59 passing Qt process/QML tests, and successful normal and
+  skipped locally), 60 passing Qt process/QML tests, and successful normal and
   Speech-settings smoke checks. English docs/scripts, relative Markdown links,
-  Python/Bash syntax and the frozen dependency lock passed. Tests cover native Qt API via its test plugin,
+  Python/Bash syntax and the frozen dependency lock passed. Tests cover native
+  Qt API via its test plugin,
   locale-specific voice discovery, errors/cancellation, final-only reading,
   real subprocess wake/manual-mic handoff, and production-window controls.
   This cloud has no usable system speech runtime/speakers; missing-engine UI
   was checked. Actual OS voice quality and physical audio remain target-machine
-  checks. Cross-platform GitHub CI results will be appended after publication.
+  checks. Initial [CI run 38779085859](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38779085859)
+  passed static/root but found Ubuntu lacked `libpulse.so.0`, required to import
+  QtTextToSpeech. Added libpulse client-library prerequisites to CI and recipes;
+  missing speech-module imports now become a visible speech error while the
+  text GUI stays usable. Added an isolated-process missing-library regression.
+  Final cross-platform CI results will be appended after the fix.
 
 ## 2026-10-15 — Conversation workspace conveniences (GUI 0.5.0)
 
