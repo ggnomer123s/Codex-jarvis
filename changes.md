@@ -44,8 +44,14 @@ the source of commit timestamps.
   compact control bounds, Bash/Python syntax, frozen lock, local document links,
   English docs/scripts and whitespace checks passed. New four-session installer
   tests use fake binaries and temporary homes; no authenticated user task,
-  microphone recording or real desktop input was executed. Windows results will
-  be recorded after the fresh automatic CI run.
+  microphone recording or real desktop input was executed.
+- Final CI [run 38740007768](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38740007768)
+  for implementation `0510971` passed all three jobs: static/root checks, Ubuntu
+  desktop and Windows desktop. Both desktop process/QML, protocol/audio and
+  actual-window smoke steps succeeded; the native Windows PowerShell 5 missing-MCP
+  regression also passed. This report/handoff-only follow-up skips another CI
+  run. Real target-machine microphone, portal and desktop permissions still need
+  verification on the user's system.
 
 ## 2026-10-15 — Optional local background voice activation
 

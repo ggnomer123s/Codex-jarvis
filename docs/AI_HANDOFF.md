@@ -19,7 +19,11 @@ The input composer has editable model and advertised reasoning selectors at
 bottom left; settings retain the same controls. Model changes reset the thread,
 reasoning changes retain it, and unsupported advertised effort is reset to the
 model default. See [full-access.md](full-access.md) and [changes.md](../changes.md).
-Verification for this update is recorded in the newest change-report entry.
+Local verification passed 62 root tests and 43 Qt tests, with one native Windows
+probe skipped locally. Final CI [run 38740007768](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38740007768)
+for `0510971` passed static/root, Ubuntu desktop and Windows desktop, including
+the Windows PowerShell 5 probe. The result-only follow-up skips CI; real
+microphone/desktop permissions remain target-machine checks.
 
 **Voice activation update — 2026-10-15:** the user explicitly requested
 continuous local transcription for English/Russian wake-name activation. This
