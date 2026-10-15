@@ -72,14 +72,13 @@ bash scripts/install-gui-linux.sh
 
 Keep the checkout at its current path: the menu entry points to it. Re-run the
 installer if you move it. It installs current-user launchers, menu entries and
-the separate Full Access profile. Unmanaged launchers/menu entries with the same
+the shared Codex desktop configuration. Unmanaged launchers/menu entries with the same
 names are refused. Remove the two generated GUI launcher/menu files
 to uninstall the menu entry; existing CLI JARVIS configuration is unaffected.
 
-The GUI installer also prepares the separate Full Access profile automatically.
-Codex CLI and uv/uvx must be installed. Full Access starts off and is enabled
-using one checkbox in Preferences. Preparation does not start an unsandboxed
-Codex session. The separate profile retains its own login state.
+The GUI installer updates the ordinary JARVIS backend and launchers in your
+current Codex profile. Existing sign-in and MCP settings are reused. Full Access
+is on by default; disable it in Preferences > Access for a saved sandbox mode.
 
 Qt requires a graphical X11 or Wayland session and its native platform libraries.
 Install missing runtime libraries using your distribution's package manager.
@@ -115,10 +114,10 @@ the shortcut. No Administrator session or global execution-policy changes are
 required. The npm `codex.cmd` installation is launched through its Node entry
 point, avoiding shell interpolation of paths or requests.
 
-The Windows GUI installer prepares the separate Full Access profile in a child
-PowerShell process before creating the shortcut. Run it from a normal,
-non-elevated PowerShell. For copy-ready commands that work from any directory,
-including `C:\Users\Cosmo`, see [Windows installation](install-desktop.md#windows-11).
+The Windows GUI installer calls the ordinary installer in a child PowerShell
+without changing `CODEX_HOME`. It handles a missing `windows-mcp` registration
+without letting expected native stderr abort PowerShell 5. Run from a normal,
+non-elevated PowerShell. See [installation commands](install-desktop.md#windows-11).
 
 ## Use the app
 
@@ -143,7 +142,8 @@ app-server thread/turn parameters.
 
 Preferences offer Fast (`low`), Normal (existing Codex default) and Deep (`high`)
 reasoning. Choose Normal if your configured model does not support low reasoning.
-Workspace access defaults to **Observe only** (`read-only`). **Allow workspace
+Workspace access defaults to **Full Access**. Disable it in the Access tab to use
+**Observe only** (`read-only`) or workspace edits. **Allow workspace
 edits** explicitly selects `workspace-write` for the chosen folder. This frontend
 uses an owned persistent `codex app-server --listen stdio://` connection;
 additional approvals are declined under `approvalPolicy="never"`. Use the regular
@@ -152,39 +152,36 @@ backend is used in the GUI.
 
 ## Full Access from the GUI
 
-1. Install/update through the GUI installer, which prepares the included profile.
-2. Open **Preferences > Access** and check **Enable Full Access**. No typed
-   acknowledgement or extra confirmation button is required.
-3. Use **Sign in to full profile** if this profile has no authentication. The
-   device sign-in URL and code appear in the panel; **Open sign-in page** opens
-   the official device page in your browser. Credentials are never copied from
-   the normal profile.
-4. An amber Full Access indicator remains visible. Uncheck the box to return to
-   the retained normal workspace access mode. Save preferences applies any
-   model, reasoning or voice edits made in the other tabs.
+Full Access is enabled by default. **Preferences > Access > Enable Full Access**
+can turn it off or on without an installer or a separate login. Turning it off
+selects the retained read-only/workspace-edit sandbox. Your choice survives
+restart and is shared with regular `jarvis` CLI launchers.
 
-Full Access sets app-server thread sandbox `danger-full-access` and approval
-policy `never` as the current user, with the same separate `CODEX_HOME` used by
-`jarvis-full`. Switching profiles closes the former owned app-server process. It can
-change user-accessible files and run commands without Codex's sandbox or command
-approvals. It does not grant root/Administrator access, bypass OS authentication
-or override upstream MCP guards. Elevated execution is refused.
+All modes use the current `CODEX_HOME` (default `~/.codex`), existing Codex login,
+model catalog, Skills and MCP configuration. **Sign in to Codex** is only needed
+when that account is not already authenticated. No authentication files are copied.
+Changing access closes the owned app-server and resets conversation context;
+the next connection uses the same home with the chosen sandbox. Access-scoped
+checkpoints cannot resume an unrestricted thread in a restricted mode.
 
-Unchecking **Enable Full Access** restores the retained normal access setting. Switching
-profiles clears the current conversation so thread IDs cannot cross profiles.
-Full Access is enabled only for the current window and returns to normal mode
-after restart. Profile preparation and login are cancellable. Cancelling setup
-does not remove files already installed. Automatic preparation requires the
-source checkout. On older installations without a prepared profile, checking
-the box prepares it automatically before activation; missing prerequisites are
-reported in the profile log. Packaged-wheel users can prepare the profile using the
-[existing Full Access installers](full-access.md).
+Full Access sets `danger-full-access` and `approvalPolicy=never`. It can change
+user-accessible files and execute commands without Codex command approvals.
+It does not elevate the OS account or bypass native/backend authentication.
+Existing MCP confinement/input settings are retained independently of the shell
+sandbox. Launch JARVIS as a normal user, not root/Administrator.
 
-![Full Access checkbox](images/jarvis-access-settings.png)
+![Full Access settings](images/jarvis-access-settings.png)
 
-MCP mouse/keyboard permissions are independent of the shell sandbox and are
-inherited from your existing setup. The UI does not claim that CLI detection
-establishes login or desktop readiness: request errors are displayed in the chat.
+## Composer model and reasoning controls
+
+The bottom left of the input box has an editable Codex model picker and a
+reasoning picker. They apply immediately and keep the unsent draft. Model changes
+start a fresh conversation; reasoning changes keep the conversation. Controls
+are disabled while a task/voice/sign-in is active. Live model metadata limits
+reasoning choices to supported values; before connection the standard choices
+are model default, low, medium, high and extra high. Availability still depends
+on the selected model/provider. Custom model IDs are accepted on Enter.
+The same controls remain in Preferences > Intelligence.
 
 ## Voice input
 

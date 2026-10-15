@@ -19,6 +19,7 @@ ComboBox {
         verticalAlignment: Text.AlignVCenter
         background: null
         onTextEdited: if (control.editable) control.editText = text
+        onAccepted: if (control.editable) control.accepted()
     }
     indicator: Text {
         x: control.width - 24; y: (control.height - height) / 2

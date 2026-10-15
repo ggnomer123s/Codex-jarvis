@@ -8,7 +8,7 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 
 A native desktop interface is now available: an original animated woven-light core,
 streaming Codex app-server chat with continuing conversation context, task cancellation, model/workspace
-and reasoning settings, an included separate Full Access profile with a checkbox, and local
+and reasoning settings, Full Access on by default with a saved settings checkbox, and local
 local push-to-talk transcription with a warm model and 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
 
@@ -61,8 +61,10 @@ Copy-ready commands, including dependencies, Codex login and menu installation:
 
 If you already cloned `Codex-jarvis-gui`, use the [update commands](docs/install-desktop.md#update-an-existing-gui-installation).
 
-The GUI installers prepare Full Access automatically. Enable it with the
-**Preferences > Access > Enable Full Access** checkbox; text entry is not required.
+GUI and CLI use your current Codex profile and existing sign-in. Full Access is
+on by default. Disable it in **Preferences > Access**; the saved setting also
+applies to the regular `jarvis` CLI. Model and reasoning pickers are at the
+bottom left of the composer.
 For Windows, the [installation instructions](docs/install-desktop.md#windows-11)
 use an explicit checkout path and work from your user directory as well.
 
@@ -106,21 +108,21 @@ Observed result / user-facing report
 | Linux and Windows installers | `scripts/install-linux.sh` and `scripts/install-windows.ps1`; detect/register appropriate desktop MCP, install user-facing launchers and Skills |
 | Native desktop frontend | `gui/`; streaming app-server chat, live model selection, scoped conversation resume, Full Access checkbox/profile, warm multilingual voice, checked workflows and timings |
 | Reasoning profiles | `jarvis` / `fast` = `low`; `normal` = configured default; `deep` = `high` |
-| Separate Full Access | `scripts/install-full-linux.sh`, `scripts/install-full-windows.ps1`, `scripts/jarvis-full-launcher.*`; independent `CODEX_HOME`, login and `fast|normal|deep` presets |
+| Shared profile and access | One `CODEX_HOME` / login / MCP configuration; Full Access defaults on, with a saved GUI/CLI access setting and compatibility `jarvis-full` aliases |
 | GUI intelligence | `skills/jarvis-desktop/SKILL.md` and `config/jarvis-agents.md`; **instruction-based** selection of actual GUI tools for visual tasks, semantic-first navigation, region capture, mouse drag selection and keyboard shortcuts |
 | Window permissions | `scripts/hypruse-access.sh`; optional `jarvis access all` or restricted/class-based Hypruse permissions, with explicit confirmation and config backup |
-| Native X11 desktop MCP | `scripts/x11_mcp.py`; screenshots, region crops, human-selected capture rectangle, focus-checked shortcuts, pointer click/drag/scroll and input opt-in |
+| Native X11 desktop MCP | `scripts/x11_mcp.py`; screenshots, region crops, human-selected capture rectangle, focus-checked shortcuts, pointer click/drag/scroll and configurable input |
 | Voice | `gui/jarvis_gui/voice.py` warm worker; `scripts/jarvis_voice.py` one-shot CLI; local faster-whisper, review before submission |
 | Voice activation | Optional `wake.py` background local transcription; English/Russian tolerant name matching restores the GUI, with tray controls and user-level sign-in startup |
 | Repair memory | `scripts/jarvis_memory.py`; local JSON of **explicitly confirmed** fixes, manual add/search/list/delete |
 | Diagnostics | `jarvis gui-check`; opt-in Linux systemd-user and Windows Application event watchers; read-only Codex analysis reports |
 | Maintenance | `scripts/sync_agents.py` refreshes only JARVIS's AGENTS block with backups; GitHub Actions checks Bash/PowerShell/Python/tests |
 
-**Security distinction:** Regular JARVIS uses a read-only Codex shell sandbox and normal approval flow, but GUI MCP input has separate permissions. Full Access deliberately disables Codex's shell sandbox/ordinary approvals under the **current user's account**, not root/Administrator. It is optional, has its own config and sign-in, and must never be silently enabled. Neither profile bypasses operating-system authentication, locked sessions or upstream MCP protections.
+**Access behavior:** JARVIS defaults to Full Access under the current user account. Disable it in Preferences > Access to use a shell sandbox; that choice persists across restarts and is shared with regular CLI launchers. All modes reuse `CODEX_HOME` or `~/.codex`. Full Access does not grant root/Administrator privileges or bypass OS authentication, locked sessions or MCP-specific guards.
 
 ### Important bugs already investigated
 
-- **Spotify/Firefox refused clicks** when Hypruse was configured with `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`. Visible windows and screenshots did not imply input permission. The explicit `jarvis access all` profile removes the filter; new regular installations remain restricted by default.
+- **Spotify/Firefox refused clicks** when Hypruse was configured with `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`. Visible windows and screenshots did not imply input permission. The explicit `jarvis access all` profile removes the filter; new registrations omit the confinement filter; existing registrations retain it.
 - **Red borders** came from upstream Hypruse `HYPRUSE_MARK=1`. New registrations and access profiles now set `HYPRUSE_MARK=0`; old runtime rules may require a user-approved `hyprctl reload`.
 - **Sluggish screenshot loops** led to a smaller GUI Skill preferring `desktop`, `ui`, `click_ui`, `sequence`, `wait_for`, targeted screenshot/zoom and meaningful final verification. This is a behavioral improvement, **not a measured performance benchmark**.
 - **X11 shortcut focus** and missing drag/region capture were addressed with focus checks, bounded screenshot regions, drag cleanup, regression tests and support for negative monitor coordinates.
@@ -133,7 +135,7 @@ General **task replay/rollback**, **JARVIS Doctor auto-repair**, an **applicatio
 ### Instructions for the next coding agent
 
 1. Read **[the full AI handoff](docs/AI_HANDOFF.md)** and the implementation files related to the requested change, not only this overview.
-2. Preserve the existing user setup and the separation between regular and Full Access; diagnose before altering working MCP registrations or OS settings.
+2. Preserve the existing user setup and shared Codex home; diagnose before altering working MCP registrations or OS settings.
 3. When a user asks to operate an application, use an authorized GUI MCP if it exists; when deterministic APIs are more reliable, use them. Verify actions rather than inventing outcomes.
 4. For code changes, update related tests/docs and check the latest GitHub Actions result. Do not mistake a green syntax/unit-test run for successful real-world visual automation.
 5. Update this README and the detailed handoff whenever architecture, supported commands, known problems or major milestones change. Record every change and its actual validation in [changes.md](changes.md).
@@ -180,7 +182,7 @@ Open a new terminal and run:
 jarvis
 ```
 
-For **native X11 only**, mouse/keyboard MCP actions are off by default. To opt in after reviewing the [security guide](docs/security.md):
+New **native X11** registrations enable desktop input by default. Existing registrations retain their configured permissions. The legacy input flag remains accepted:
 
 ```bash
 bash scripts/install-linux.sh --enable-gui-input
@@ -226,15 +228,15 @@ Confirmed-fix memory remains on **your own device**, not in this GitHub reposito
 
 ## Access to existing desktop applications (Hyprland)
 
-Hypruse's default `HYPRUSE_CONFINE=launched` refuses to control windows opened before the agent. You can **explicitly** allow Telegram and kitty without granting access to every window:
+An existing Hypruse registration with `HYPRUSE_CONFINE=launched` refuses to control windows opened before the agent. New installations omit this filter. You can **explicitly** allow Telegram and kitty without granting access to every window:
 
 ```bash
 bash scripts/hypruse-access.sh telegram
 ```
 
-The command shows current MCP settings, requires typing `APPLY`, backs up your Codex config and switches to `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`. Restart Codex afterwards. To restore the default, run `bash scripts/hypruse-access.sh restricted`.
+The command shows current MCP settings, requires typing `APPLY`, backs up your Codex config and switches to `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`. Restart Codex afterwards. To explicitly restrict control to agent-launched windows, run `bash scripts/hypruse-access.sh restricted`.
 
-This is intentionally **not enabled by default**: messaging and terminal windows can contain sensitive content. You can restrict access to a single app using `bash scripts/hypruse-access.sh allow org.telegram.desktop`. See the [Hypruse application access guide](docs/hypruse-access.md) for scope, rollback and safety details.
+These helpers deliberately replace the selected MCP registration after review; reinstalling alone preserves it. You can restrict access to a single app using `bash scripts/hypruse-access.sh allow org.telegram.desktop`. See the [Hypruse application access guide](docs/hypruse-access.md) for scope, rollback and safety details.
 
 ## Performance modes
 
@@ -245,19 +247,24 @@ jarvis           # Fast default
 jarvis fast      # Explicit fast mode
 jarvis normal    # Your normal Codex reasoning setting
 jarvis deep      # High reasoning for debugging, coding, long editing tasks
-jarvis full      # Optional, separately installed Full Access profile
+jarvis full      # Explicit Full Access using the same Codex profile
 ```
 
 Use `jarvis normal` if the selected model does not support low reasoning effort. Speed varies with model/MCP approvals, accessibility and application behavior. Read [Performance tuning](docs/performance.md).
 
-## Optional separate power-user profile
+## One Codex profile and access settings
 
-Advanced operators can install a **separate**, opt-in Codex profile with its own login and desktop MCP configuration. These installers do **not** alter normal `jarvis` permissions. Read the scripts carefully and do not run elevated:
+All installers, GUI and terminal launchers reuse `CODEX_HOME`, or `~/.codex`
+when it is unset. Sign in once with `codex login`; changing access never switches
+accounts or requires another login. Full Access is on by default. Turn it off in
+**Preferences > Access** for read-only or workspace-edit shell access; the saved
+setting also applies to `jarvis fast|normal|deep`. Existing MCP registrations and
+OS authentication remain authoritative.
 
-- Linux: `bash scripts/install-full-linux.sh`
-- Windows 11: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-full-windows.ps1`
-
-Manual CLI installation asks for a typed warning acknowledgement. The GUI installers prepare the profile automatically, and the desktop app enables it with a checkbox. After installation, use `jarvis-full login` or the GUI's separate sign-in panel, then `jarvis-full fast`, `jarvis-full normal`, or `jarvis-full deep`. The equivalents `jarvis full fast|normal|deep` also work. Normal inherits the full profile's configured reasoning; fast is `low` and deep is `high`. The launcher starts directly in interactive Codex without injecting a startup task. **This mode is not suitable for sensitive computers:** it disables the shell sandbox and normal approval prompts. OS authentication and privilege boundaries are unchanged. See [Full Access](docs/full-access.md).
+Old `install-full-*` entry points now delegate to the ordinary installer.
+`jarvis-full` / `jarvis full` explicitly request Full Access in the same profile.
+No private profile is created or migrated and credentials are not copied.
+See [Full Access and migration](docs/full-access.md).
 
 ## Intent-driven desktop automation and selecting regions
 
@@ -273,7 +280,7 @@ Read [GUI Operator](docs/gui-operator.md) for platform examples and the design c
 |---|---|
 | `jarvis` / `jarvis fast` | Start Codex with low reasoning effort; no automatic inspection task |
 | `jarvis normal` / `jarvis deep` | Model's configured default / high reasoning for complex tasks |
-| `jarvis-full fast` / `normal` / `deep` | Optional Full Access with low / configured default / high reasoning (separate opt-in) |
+| `jarvis-full fast` / `normal` / `deep` | Explicit Full Access with low / configured default / high reasoning in the shared profile |
 | `jarvis full fast` / `normal` / `deep` | Aliases to the same Full Access modes |
 | `jarvis access status` / `jarvis access all` | Hyprland-only: inspect or change Hypruse window permissions with confirmation |
 | `jarvis status` | Show configured GUI MCP and monitoring status |
@@ -292,7 +299,7 @@ Read [GUI Operator](docs/gui-operator.md) for platform examples and the design c
 - [High-accuracy GUI navigation: semantic controls, screenshots and zoom](docs/gui-navigation.md)
 - [Intent-driven GUI Operator and drag/region selection](docs/gui-operator.md)
 - [Keyboard shortcuts on Hyprland, Linux X11 and Windows](docs/shortcuts.md)
-- [Optional separate Full Access profile](docs/full-access.md)
+- [Shared profile and Full Access](docs/full-access.md)
 - [Performance tuning: fast mode and fewer model/tool round trips](docs/performance.md)
 - [Persistent app-server, warm voice, checked workflows and timings](docs/runtime.md)
 - [Other Jarvis/Codex/OpenCode projects: checked sources and design decisions](docs/related-projects.md)

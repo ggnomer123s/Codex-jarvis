@@ -68,7 +68,7 @@ Only after that succeeds:
 
 ## Other desktop environments
 
-**X11:** The bundled `jarvis-x11` backend uses `wmctrl` for window lists, `maim` for screenshots and `xdotool` for pointer/keyboard. It does **not** yet provide Hypruse-equivalent `ui` / `click_ui` semantics; input is disabled by default. Use per-window metadata and current screenshots, verify every input, and avoid fragile hardcoded coordinates.
+**X11:** The bundled `jarvis-x11` backend uses `wmctrl` for window lists, `maim` for screenshots and `xdotool` for pointer/keyboard. It does **not** yet provide Hypruse-equivalent `ui` / `click_ui` semantics; input is enabled for new registrations, while existing permissions are retained. Use per-window metadata and current screenshots, verify every input, and avoid fragile hardcoded coordinates.
 
 **GNOME, KDE Plasma and other Wayland:** The generic Wayland MCP is experimental. Ask for `describe_environment` to confirm whether screenshots and portal-mediated remote input are actually available. Compositor-specific extensions may offer better native accessibility on compatible versions; see the [MCP backend guide](mcp-and-skills.md).
 

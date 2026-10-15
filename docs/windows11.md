@@ -56,11 +56,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-window
 The `ExecutionPolicy Bypass` flag applies to this one **child PowerShell process**; it does not permanently change the machine's policy. Inspect the script before executing.
 
 The installer:
-1. Preserves an existing `windows-mcp` Codex registration. If none exists, it registers [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) using `uvx windows-mcp serve`, excluding the extra `PowerShell`, `Registry`, `Process`, `FileSystem` and `Clipboard` MCP tool categories.
+1. Preserves an existing `windows-mcp` Codex registration. If none exists, it registers [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) using `uvx windows-mcp serve` with its available tool surface. An expected missing-server response does not stop Windows PowerShell 5 installation.
 2. Installs `%USERPROFILE%\.local\bin\jarvis.cmd` and `jarvis.ps1`, adding the directory to the user PATH.
-3. Adds desktop safety instructions to `%USERPROFILE%\.codex\AGENTS.md`, backing up any previously existing instructions.
+3. Adds desktop safety instructions to `CODEX_HOME\AGENTS.md` (default `%USERPROFILE%\.codex\AGENTS.md`), backing up any previously existing instructions.
 4. Copies `skills/jarvis-desktop/SKILL.md` to `%USERPROFILE%\.agents\skills\jarvis-desktop`.
 5. Leaves background monitoring **disabled** by default.
+
+GUI and CLI reuse the same `CODEX_HOME` or `%USERPROFILE%\.codex`, existing
+login and MCP settings. No separate Full Access profile is created. Full Access
+defaults on; disable it in GUI Preferences > Access to save a sandbox mode for
+both the GUI and regular CLI. Old `install-full-windows.ps1` is a compatibility
+entry point for the same installer.
 
 **Close and reopen PowerShell**. Launch:
 
@@ -133,7 +139,7 @@ Managed/corporate PCs may prevent creation of user tasks; normal GUI assistance 
 - Do not run JARVIS as Administrator.
 - The shell's `read-only` sandbox **does not block all GUI actions** through MCP.
 - A screen capture may contain confidential material; hide private windows before the test.
-- Obtain human confirmation before state-changing input, upgrades, process termination or file edits.
+- Carry out authorized tasks; confirm consequential or irreversible actions that were not already authorized.
 - Avoid pasting Windows event logs into public GitHub issues without removing secrets.
 
 Further reading: [MCP & Skills](mcp-and-skills.md) · [Usage](usage.md) · [Security](security.md) · [Upstream Windows-MCP](https://github.com/CursorTouch/Windows-MCP).

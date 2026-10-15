@@ -2,9 +2,13 @@
 
 JARVIS connects a powerful AI agent to external GUI MCP servers. A screenshot may contain passwords, chats, notifications or personal documents. GUI input can modify the system even when Codex itself is launched with a **read-only shell sandbox**. The shell sandbox is **not a security boundary for mouse/keyboard MCP tools**.
 
+JARVIS defaults to Full Access in the existing Codex profile. Disable it in
+Preferences > Access to save a sandbox mode; the regular CLI follows that saved
+choice. No extra login or global Codex sandbox setting is created.
+
 ## Baseline rules
 
-1. Observe and diagnose first; request explicit user permission before any changes.
+1. Observe and diagnose first; carry out authorized reversible tasks and confirm consequential or irreversible actions.
 2. Never enter passwords, OTPs, recovery keys, UAC/polkit credentials or unlock screens using an AI agent.
 3. Do not run with administrator/root privileges or disable security protections.
 4. Review third-party MCP source, permissions, dependencies and upstream licensing before install.
@@ -14,13 +18,13 @@ JARVIS connects a powerful AI agent to external GUI MCP servers. A screenshot ma
 
 ## Platform-specific risk
 
-**Hyprland / Hypruse:** new registrations use `HYPRUSE_CONFINE=launched`, `HYPRUSE_STRICT=1`, `HYPRUSE_AUTH_GUARD=strict`, `HYPRUSE_JOURNAL=1`, and `HYPRUSE_MARK=0`. `jarvis stop` asks Hypruse to stop. It does not govern arbitrary Codex shell commands or other tools.
+**Hyprland / Hypruse:** new registrations allow all windows without a `HYPRUSE_CONFINE` filter and use `HYPRUSE_STRICT=1`, `HYPRUSE_AUTH_GUARD=strict`, `HYPRUSE_JOURNAL=1`, and `HYPRUSE_MARK=0`. `jarvis stop` asks Hypruse to stop. It does not govern arbitrary Codex shell commands or other tools.
 
-**Native X11 (GNOME Xorg, Plasma X11, XFCE, Cinnamon, i3, etc.):** input is initially disabled in the bundled `jarvis-x11` MCP. The `--enable-gui-input` option explicitly allows typing, clicking, focus and scrolling through xdotool. X11 lacks the application isolation expected from modern Wayland portals; a GUI agent may be able to interact with other apps on the same display.
+**Native X11 (GNOME Xorg, Plasma X11, XFCE, Cinnamon, i3, etc.):** new registrations enable input in the bundled `jarvis-x11` MCP. The legacy `--enable-gui-input` option remains accepted. Existing registrations are retained. X11 lacks the application isolation expected from modern Wayland portals; a GUI agent may be able to interact with other apps on the same display.
 
 **GNOME/KDE/other Wayland:** generic Wayland MCP tries supported screenshots and the `org.freedesktop.portal.RemoteDesktop` portal, depending on compositor. It is configured with `WAYLAND_MCP_NO_PERSIST=1` for fresh portal permission prompts (if a portal is used). Do **not** change `/dev/input` to `0666`, add permissive udev rules, run privileged input daemons unnecessarily, or install NOPASSWD sudoers entries. KWin or GNOME-specific MCP servers may bypass portal prompts through their own interfaces. Read their security documentation.
 
-**Windows 11:** newly registered Windows-MCP excludes several extra high-risk tools; keyboard/mouse tools still have significant permissions. Stop Codex with Ctrl+C or `/exit` to terminate its stdio MCP subprocess. Do not run the agent as Administrator.
+**Windows 11:** newly registered Windows-MCP uses its available tool surface; keyboard/mouse tools still have significant permissions. Stop Codex with Ctrl+C or `/exit` to terminate its stdio MCP subprocess. Do not run the agent as Administrator.
 
 ## Monitoring
 
@@ -48,6 +52,6 @@ also removes its user-level login startup registration. See
 
 ## Reliable workflow
 
-**Observe → reproduce safely → establish evidence → propose reversible fix → ask user → apply minimal change → verify result**.
+**Observe → reproduce safely → establish evidence → apply an authorized minimal fix → verify result**. Confirm consequential or irreversible steps when they were not already authorized.
 
 See [Linux backends](mcp-and-skills.md) and [Usage](usage.md).

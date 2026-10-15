@@ -1,4 +1,4 @@
-# JARVIS-CODEX MANAGED — optional, unsandboxed user-level Codex profile
+# JARVIS-CODEX MANAGED - explicit Full Access in the shared Codex profile
 param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Commands)
 $ErrorActionPreference = 'Stop'
 
@@ -6,7 +6,6 @@ if (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]:
      [Security.Principal.WindowsBuiltInRole]::Administrator)) {
   throw 'JARVIS Full Access must not run elevated.'
 }
-$env:CODEX_HOME = Join-Path $env:LOCALAPPDATA 'jarvis-codex\full-codex-home'
 $codex = Get-Command codex.exe -ErrorAction SilentlyContinue
 if (-not $codex) { $codex = Get-Command codex.cmd -ErrorAction SilentlyContinue }
 if (-not $codex) { throw 'Codex CLI not found.' }
@@ -19,7 +18,7 @@ Usage: jarvis-full [fast|normal|deep|login|status|help]
 fast     Full Access with low reasoning effort
 normal   Full Access with configured default reasoning
 deep     Full Access with high reasoning effort
-login    Sign in to independent Codex user profile
+login    Sign in to current Codex profile
 status   Inspect profile login and MCP registrations
 
 All execution modes bypass Codex command approvals and shell sandbox.
@@ -43,7 +42,8 @@ switch ($mode) {
     exit $LASTEXITCODE
   }
   'status' {
-    Write-Host "Independent CODEX_HOME: $env:CODEX_HOME"
+    $sharedHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
+    Write-Host "Shared CODEX_HOME: $sharedHome"
     & $codex.Source login status
     & $codex.Source mcp list
     exit $LASTEXITCODE

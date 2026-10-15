@@ -6,7 +6,7 @@ import time
 import unittest
 from unittest import mock
 
-from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl
+from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl, Q_ARG, QPointF
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
@@ -26,11 +26,12 @@ class TestWindow(unittest.TestCase):
             script = Path(__file__).with_name("fake_app_server.py")
             settings = QSettings(str(root / "settings.ini"), QSettings.Format.IniFormat)
             settings.setValue("folder", folder)
+            Path(settings.fileName()).with_suffix(".access").write_text("read-only\n")
             full_home = root / "full-profile"
             full_home.mkdir()
             (full_home / "AGENTS.md").write_text("Test full profile")
             (full_home / "backend.txt").write_text("none")
-            backend = Backend(settings, codex_command=[sys.executable, "-u", str(script), "normal", str(root / "requests.jsonl")], full_home=full_home)
+            backend = Backend(settings, codex_command=[sys.executable, "-u", str(script), "normal", str(root / "requests.jsonl")], codex_home_override=full_home)
             engine = QQmlApplicationEngine()
             warnings = []
             engine.warnings.connect(lambda items: warnings.extend(str(item) for item in items))
@@ -42,6 +43,18 @@ class TestWindow(unittest.TestCase):
                 composer = window.findChild(QObject, "composer")
                 button = window.findChild(QObject, "sendButton")
                 composer.setProperty("text", "Check the workspace")
+                inline_model = window.findChild(QObject, "inlineModel")
+                inline_model.setProperty("editText", "test-model")
+                self.assertTrue(QMetaObject.invokeMethod(inline_model, "accepted"))
+                QTest.qWait(40)
+                self.assertEqual(backend.model, "test-model")
+                self.assertEqual(composer.property("text"), "Check the workspace")
+                inline_effort = window.findChild(QObject, "inlineEffort")
+                choice = next(i for i, item in enumerate(backend.reasoningOptions) if item["code"] == "high")
+                inline_effort.setProperty("currentIndex", choice)
+                self.assertTrue(QMetaObject.invokeMethod(inline_effort, "activated", Q_ARG(int, choice)))
+                QTest.qWait(40)
+                self.assertEqual(backend.effort, "high")
                 APP.processEvents()
                 self.assertTrue(button.property("enabled"))
                 self.assertTrue(QMetaObject.invokeMethod(button, "clicked"))
@@ -89,6 +102,10 @@ class TestWindow(unittest.TestCase):
                 image = QQuickWindow.grabWindow(window)
                 self.assertFalse(image.isNull())
                 self.assertEqual(image.width(), 1060 * window.devicePixelRatio())
+                for control in (inline_model, inline_effort, button):
+                    position = control.mapToScene(QPointF(0, 0))
+                    self.assertLessEqual(position.x() + control.width(), window.width())
+                    self.assertLessEqual(position.y() + control.height(), window.height())
                 self.assertEqual(warnings, [])
             finally:
                 backend.shutdown()

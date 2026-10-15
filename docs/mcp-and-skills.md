@@ -7,7 +7,7 @@ This project has **one JARVIS command** and different GUI MCP implementations. T
 | Session | Primary backend | Notes |
 |---|---|---|
 | Hyprland/Wayland | [Hypruse](https://github.com/IlyasKhallouki/hypruse) | Compositor-specific IPC + native virtual input |
-| Native X11: GNOME Xorg, Plasma X11, XFCE, Cinnamon, MATE, i3, Openbox, bspwm | Bundled `scripts/x11_mcp.py` | Requires xdotool, maim, wmctrl; input opt-in |
+| Native X11: GNOME Xorg, Plasma X11, XFCE, Cinnamon, MATE, i3, Openbox, bspwm | Bundled `scripts/x11_mcp.py` | Requires xdotool, maim, wmctrl; input enabled for new registrations |
 | GNOME / KDE / COSMIC and other Wayland | [wayland-mcp-kurojs](https://github.com/kurojs/wayland-mcp) | Portal/capture-dependent; experimental outside tested upstream setup |
 | Windows 11 | [Windows-MCP](https://github.com/CursorTouch/Windows-MCP) | Native Windows UI Automation |
 
@@ -24,14 +24,14 @@ uvx hypruse skill install --agent codex
 When missing, register the server (the Linux installer does this automatically):
 
 ~~~sh
-codex mcp add hypruse --env HYPRUSE_CONFINE=launched --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=0 -- uvx hypruse
+codex mcp add hypruse --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=0 -- uvx hypruse
 ~~~
 
-`HYPRUSE_CONFINE=launched` blocks interaction with unrelated existing windows. Existing MCP registrations are preserved rather than silently reset.
+New registrations have no confinement filter. An existing `HYPRUSE_CONFINE=launched` still blocks unrelated windows; registrations are preserved rather than silently reset.
 
 ## X11
 
-The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `screenshot`, `screenshot_region`, `user_select_screenshot`, `focus_window`, `click`, `drag`, `key`, `type_text` and `scroll`. `drag` (application selection or moving objects) requires explicit GUI-input opt-in; `screenshot_region` is read-only; `user_select_screenshot` waits for the human to draw a capture rectangle. The X11 drag always attempts to release its button, even after a failed movement.
+The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `screenshot`, `screenshot_region`, `user_select_screenshot`, `focus_window`, `click`, `drag`, `key`, `type_text` and `scroll`. `drag` (application selection or moving objects) requires GUI input to be enabled in its registration; `screenshot_region` is read-only; `user_select_screenshot` waits for the human to draw a capture rectangle. The X11 drag always attempts to release its button, even after a failed movement.
 
 ~~~sh
 codex mcp get jarvis-x11
@@ -40,10 +40,10 @@ codex mcp get jarvis-x11
 The installer registers:
 
 ~~~sh
-codex mcp add jarvis-x11 --env JARVIS_X11_ALLOW_INPUT=0 -- uv run --no-project --with mcp python "$HOME/.local/share/jarvis-codex/x11_mcp.py"
+codex mcp add jarvis-x11 --env JARVIS_X11_ALLOW_INPUT=1 -- uv run --no-project --with mcp python "$HOME/.local/share/jarvis-codex/x11_mcp.py"
 ~~~
 
-Default is **read-only**. For input opt-in, review security guide then follow [Linux instructions](linux.md#enable-x11-gui-input). X11 MCP **does not** work on Wayland merely because XWayland is running.
+New registrations enable input; existing read-only registrations remain unchanged. To update one deliberately, follow [Linux instructions](linux.md#enable-x11-gui-input). X11 MCP **does not** work on Wayland merely because XWayland is running.
 
 ## General Wayland: GNOME, KDE Plasma, Sway, Niri, COSMIC, River
 
@@ -95,7 +95,7 @@ This targets the **real desktop**; use virtual mode for isolated tests when appr
 
 The installer copies `skills/jarvis-desktop/SKILL.md` to `~/.agents/skills/jarvis-desktop/SKILL.md`. On Windows, the analogous path is under `%USERPROFILE%`.
 
-It also appends a managed block to `~/.codex/AGENTS.md`, preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill now routes requests involving real app interactions to the GUI backend automatically, including drag selection and region screenshots. For exact workflows, see [GUI Operator](gui-operator.md). The managed `AGENTS.md` block is refreshed safely on reinstall, preserving personal instructions.
+It also appends a managed block to `CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill now routes requests involving real app interactions to the GUI backend automatically, including drag selection and region screenshots. For exact workflows, see [GUI Operator](gui-operator.md). The managed `AGENTS.md` block is refreshed safely on reinstall, preserving personal instructions.
 
 Open a **fresh Codex session** after changing MCPs or Skills:
 

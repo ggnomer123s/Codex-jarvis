@@ -1,4 +1,4 @@
-# JARVIS-CODEX MANAGED — native Windows 11; run under an ordinary user
+# JARVIS-CODEX MANAGED - native Windows 11; run under an ordinary user
 [CmdletBinding()]
 param([switch]$EnableMonitor)
 $ErrorActionPreference = 'Stop'
@@ -14,19 +14,26 @@ if (-not $codex) { throw 'Install Codex CLI first: npm.cmd install -g @openai/co
 if (-not $uvx) { throw 'Install uv first: winget install -e --id astral-sh.uv; reopen PowerShell.' }
 $bin = Join-Path $env:USERPROFILE '.local\bin'
 $app = Join-Path $env:USERPROFILE '.local\share\jarvis-codex'
-$agents = Join-Path $env:USERPROFILE '.codex\AGENTS.md'
+$codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $env:USERPROFILE '.codex' }
+$agents = Join-Path $codexHome 'AGENTS.md'
 $state = Join-Path $env:LOCALAPPDATA 'jarvis-codex'
 @($bin,$app,(Split-Path $agents),$state,(Join-Path $state 'reports')) | ForEach-Object {
   New-Item -ItemType Directory -Path $_ -Force | Out-Null
 }
-foreach ($p in @((Join-Path $bin 'jarvis.cmd'), (Join-Path $bin 'jarvis.ps1'))) {
+foreach ($p in @((Join-Path $bin 'jarvis.cmd'), (Join-Path $bin 'jarvis.ps1'), (Join-Path $bin 'jarvis-full.cmd'), (Join-Path $bin 'jarvis-full.ps1'))) {
   if ((Test-Path $p) -and -not (Select-String -Path $p -Pattern 'JARVIS-CODEX MANAGED' -Quiet)) {
     throw "Refusing to overwrite unmanaged $p"
   }
 }
-& $codex mcp get windows-mcp *> $null
-if ($LASTEXITCODE -ne 0) {
-  & $codex mcp add windows-mcp --env 'WINDOWS_MCP_EXCLUDE_TOOLS=PowerShell,Registry,Process,FileSystem,Clipboard' --env 'ANONYMIZED_TELEMETRY=false' -- $uvx windows-mcp serve
+# Windows PowerShell 5 turns native stderr into NativeCommandError under Stop.
+# Scope Continue to this expected "not registered yet" probe only.
+function Test-JarvisMcp([string]$program, [string]$name) {
+  $ErrorActionPreference = 'Continue'
+  & $program mcp get $name *> $null
+  return ($LASTEXITCODE -eq 0)
+}
+if (-not (Test-JarvisMcp $codex 'windows-mcp')) {
+  & $codex mcp add windows-mcp --env 'ANONYMIZED_TELEMETRY=false' -- $uvx windows-mcp serve
   if ($LASTEXITCODE -ne 0) { throw 'Windows-MCP registration failed' }
 }
 # Update only the JARVIS-owned AGENTS.md block, preserving personal instructions.
@@ -69,25 +76,29 @@ if (-not $c) { $c = Get-Command codex.cmd -ErrorAction SilentlyContinue }
 if (-not $c) { throw 'Codex CLI not found' }
 $mode = if ($Commands.Count) { $Commands[0] } else { 'start' }
 $state = Join-Path $env:LOCALAPPDATA 'jarvis-codex'
+$modePath = Join-Path $state 'access-mode'
+$accessMode = if (Test-Path -LiteralPath $modePath) { ([string](Get-Content -LiteralPath $modePath -TotalCount 1)).Trim() } else { 'full-access' }
+$accessArgs = if ($accessMode -eq 'full-access') { @('--dangerously-bypass-approvals-and-sandbox') } elseif ($accessMode -eq 'workspace-write') { @('--sandbox','workspace-write','--ask-for-approval','on-request') } else { @('--sandbox','read-only','--ask-for-approval','on-request') }
+if ($accessMode -eq 'full-access' -and (([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))) { throw 'Run JARVIS as a normal user, not Administrator.' }
 switch ($mode) {
   { $_ -in @('start','fast') } {
     # No automatic startup prompt; show the interactive Codex UI immediately.
-    & $c.Source --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request
+    & $c.Source --config model_reasoning_effort=low @accessArgs
     exit $LASTEXITCODE
   }
   'normal' {
-    & $c.Source --sandbox read-only --ask-for-approval on-request
+    & $c.Source @accessArgs
     exit $LASTEXITCODE
   }
   'full' {
     $launcher = Join-Path $env:USERPROFILE '.local\bin\jarvis-full.cmd'
-    if (-not (Test-Path $launcher)) { throw 'Optional Full Access is not installed; see scripts/install-full-windows.ps1.' }
+    if (-not (Test-Path $launcher)) { throw 'Compatibility launcher is missing; rerun scripts/install-windows.ps1.' }
     $fullArgs = if ($Commands.Count -gt 1) { @($Commands[1..($Commands.Count - 1)]) } else { @() }
     & $launcher @fullArgs
     exit $LASTEXITCODE
   }
   'deep' {
-    & $c.Source --config model_reasoning_effort=high --sandbox read-only --ask-for-approval on-request
+    & $c.Source --config model_reasoning_effort=high @accessArgs
     exit $LASTEXITCODE
   }
   'status' {
@@ -117,7 +128,7 @@ switch ($mode) {
     if ($LASTEXITCODE -ne 0 -or -not $transcript) { throw 'Recording/transcription cancelled or failed.' }
     Write-Host "Recognized: $transcript"
     if ((Read-Host 'Send this transcript to Codex? Type YES') -cne 'YES') { Write-Host 'Cancelled.'; return }
-    & $c.Source --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request "JARVIS dictated request (user-reviewed): $transcript. Use GUI MCP when relevant; observe first and ask before changes."
+    & $c.Source --config model_reasoning_effort=low @accessArgs "JARVIS dictated request (user-reviewed): $transcript. Use GUI MCP when relevant; observe first and ask before changes."
     exit $LASTEXITCODE
   }
   'monitor' {
@@ -130,6 +141,13 @@ switch ($mode) {
   'help' { Write-Host 'jarvis | jarvis fast | jarvis normal | jarvis deep | jarvis full [fast|normal|deep] | jarvis gui-check | jarvis voice | jarvis memory add|list|search|forget | jarvis status | jarvis reports | jarvis monitor on|off | jarvis stop' }
   default { throw "Unknown command $mode. Try: jarvis help" }
 }
+'@
+# Keep old jarvis-full commands working without a second CODEX_HOME.
+Copy-Item (Join-Path $PSScriptRoot 'jarvis-full-launcher.ps1') (Join-Path $bin 'jarvis-full.ps1') -Force
+Set-Content -LiteralPath (Join-Path $bin 'jarvis-full.cmd') -Encoding ASCII -Value @'
+@echo off
+rem JARVIS-CODEX MANAGED
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0jarvis-full.ps1" %*
 '@
 # Put jarvis.cmd on User PATH, without changing global PowerShell Execution Policy.
 $userPath = [Environment]::GetEnvironmentVariable('Path','User')

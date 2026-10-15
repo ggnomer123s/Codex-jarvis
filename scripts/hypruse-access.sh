@@ -89,7 +89,7 @@ if [[ "$confirmation" != "APPLY" ]]; then
   exit 0
 fi
 
-config="$HOME/.codex/config.toml"
+config="${CODEX_HOME:-$HOME/.codex}/config.toml"
 if [[ ! -f "$config" ]]; then
   echo "[error] Expected config file not found at $config; no changes made." >&2
   exit 1

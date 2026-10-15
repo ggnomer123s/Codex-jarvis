@@ -12,10 +12,16 @@ glibc 2.34+; older Linux releases and Alpine/musl need a separate packaging
 solution. Package availability can differ by distribution release. These are
 installation recipes, not evidence of hardware testing on every distribution.
 
+The GUI installer also registers the desktop MCP in the ordinary Codex home.
+Install the [session-specific prerequisites](linux.md#2-install-prerequisites)
+first: X11 needs `xdotool`, `wmctrl`, `maim`; Hyprland needs `grim`, `wtype`
+and compositor tools; other Wayland desktops need their portal backend.
+Existing MCP permissions are retained.
+
 ## CachyOS, Arch, Manjaro, EndeavourOS
 
 ```bash
-sudo pacman -Syu --needed git uv python nodejs npm portaudio mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+sudo pacman -Syu --needed git uv python nodejs npm portaudio grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
 "$HOME/.local/bin/codex" login
@@ -70,8 +76,9 @@ bash "$HOME/Codex-jarvis-gui/scripts/install-gui-linux.sh"
 The curl command uses uv's official HTTPS installer. uv installs the locked
 Python/Qt/voice dependencies without requiring a matching system Python version.
 The Linux installers create `~/.local/bin/jarvis-gui`, a JARVIS application
-menu entry and the included separate Full Access profile. It starts off; enable
-it later with the checkbox in Preferences > Access. Keep the cloned directory in place.
+menu entry and update the ordinary Codex desktop backend. Full Access defaults
+on; disable it in Preferences > Access to save a sandbox mode for GUI and regular
+CLI launchers. All modes reuse the current Codex login. Keep the checkout in place.
 
 ## Windows 11
 
@@ -109,9 +116,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'sc
 ```
 
 JARVIS also appears in the current user's Start menu. Keep the cloned directory
-in place. Full Access is prepared during this installation and is enabled using
-the GUI checkbox, without typing a confirmation phrase. Use the separate profile's
-sign-in button once if needed. Microphone access can be enabled in Windows Privacy settings.
+in place. Full Access is on by default and can be disabled in
+Preferences > Access. Your existing Codex login is reused; no second profile or
+confirmation phrase is needed. Microphone access can be enabled in Windows Privacy settings.
 
 ### Why the previous commands failed
 
@@ -119,11 +126,12 @@ sign-in button once if needed. Microphone access can be enabled in Windows Priva
 Use `git -C "$repoPath" pull --ff-only` as above. Likewise,
 `.\scripts\install-full-windows.ps1` is relative to the current directory. Its
 absolute path would be inside the checkout, but the new GUI installer prepares
-the full profile itself, so a separate invocation is unnecessary. Installing a
+the ordinary shared Codex profile, so an extra full-profile installer is unnecessary. Installing a
 newer PowerShell does not fix a missing checkout or a relative path.
 
 ## Update an existing GUI installation
 
+First use **Quit JARVIS** to stop the background listener and old GUI process.
 If `Codex-jarvis-gui` already exists, update it instead of cloning again.
 Preserve local edits; `--ff-only` refuses a divergent history.
 
@@ -145,12 +153,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-
 
 ## Desktop automation and first voice use
 
-These commands install the frontend and prepare the separate Full Access profile.
-Its installer registers the applicable full-profile desktop MCP. For normal-mode
-mouse/keyboard control, use the existing
-[Linux backend setup](linux.md) or [Windows backend setup](windows11.md) to
-configure the appropriate MCP in the normal Codex profile. Existing MCP settings
-are retained. GUI input permissions remain dependent on that backend.
+These commands install the frontend, launchers and applicable desktop MCP in the
+current Codex profile. All access modes reuse that configuration and login.
+Existing MCP settings are retained. Backend GUI permissions remain authoritative.
 
 The first voice transcription downloads the multilingual Whisper model.
 Speak, stop recording, review the recognized text and press Send. See

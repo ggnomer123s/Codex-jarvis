@@ -105,11 +105,15 @@ bash scripts/install-linux.sh
 
 The installer chooses a backend based on `XDG_SESSION_TYPE` and `XDG_CURRENT_DESKTOP`:
 - **Hyprland/Wayland:** registers Hypruse, preserving your existing registration and its security flags.
-- **X11:** adds the bundled `jarvis-x11` MCP, which supports screenshots, window enumeration, focus, keyboard and mouse via xdotool. **Input is disabled by default**.
+- **X11:** adds the bundled `jarvis-x11` MCP, which supports screenshots, window enumeration, focus, keyboard and mouse via xdotool. **Input is enabled for new registrations**; existing permissions are preserved.
 - **Other Wayland:** registers upstream `wayland-mcp-kurojs` via uvx as an **experimental** backend. It probes compositor capabilities; usable screenshot/input may require extra portal dependencies or permissions.
 - Unknown/headless session: installs launcher/Skill, skips GUI MCP.
 
 It also installs the JARVIS Skill, appends user-level Codex instructions and, if a **systemd --user** instance is available, installs the *optional* watcher. It does **not** install system packages or require root.
+
+All launchers and the GUI reuse `CODEX_HOME` or `~/.codex`, including its login
+and MCP settings. Full Access defaults on; disable it in GUI Preferences >
+Access to save a sandbox mode for the GUI and regular `jarvis` command.
 
 Open a new terminal:
 
@@ -119,7 +123,7 @@ jarvis
 
 ### Enable X11 GUI input
 
-The first X11 installation exposes observation tools, but refuses clicking/typing. To opt in:
+New X11 installations enable input. The legacy option remains accepted:
 
 ~~~sh
 bash scripts/install-linux.sh --enable-gui-input
@@ -133,7 +137,7 @@ codex mcp remove jarvis-x11
 bash scripts/install-linux.sh --enable-gui-input
 ~~~
 
-Do this only on a personal machine, and review security implications first.
+Review the registration before deliberately changing it.
 
 ## 4. GNOME, KDE Plasma and other Wayland sessions
 
@@ -169,7 +173,7 @@ jarvis
 
 In Codex: “Discover desktop MCP tools. Report available screenshot, window and input capabilities. Inspect the active window without changing anything.”
 
-Then run a harmless notepad/terminal text-input test **only after** GUI input has been explicitly enabled and confirmed to work in your current environment.
+Then run a harmless notepad/terminal text-input test after checking the actual tool permissions in your environment.
 
 ### Monitoring (systemd user services only)
 
@@ -191,6 +195,6 @@ The installed script is `~/.local/bin/jarvis`. Fish gets `~/.config/fish/functio
 
 ## 7. Safety
 
-Screenshot and log content may include private data. All desktop MCPs are third-party programs with powerful local access. On X11 any sufficiently privileged client can typically observe and inject input across windows, so the opt-in input mode is particularly sensitive. On Wayland, portals mediate permissions differently by compositor.
+Screenshot and log content may include private data. All desktop MCPs are third-party programs with powerful local access. On X11 any sufficiently privileged client can typically observe and inject input across windows, so enabling input affects other applications on the display. On Wayland, portals mediate permissions differently by compositor.
 
 Review [Security](security.md) and [MCP configuration](mcp-and-skills.md) before using on a real desktop.

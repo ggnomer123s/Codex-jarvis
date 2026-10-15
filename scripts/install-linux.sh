@@ -7,10 +7,11 @@ BIN="$HOME/.local/bin"
 STATE="$HOME/.local/state/jarvis-codex"
 UNITS="$HOME/.config/systemd/user"
 FISH="$HOME/.config/fish/functions"
-AGENTS="$HOME/.codex/AGENTS.md"
+CODEX_DIR="${CODEX_HOME:-$HOME/.codex}"
+AGENTS="$CODEX_DIR/AGENTS.md"
 SESSION="${XDG_SESSION_TYPE:-unknown}"
 DESKTOP="${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-unknown}}"
-ENABLE_INPUT=0
+ENABLE_INPUT=1
 
 for opt in "$@"; do
   case "$opt" in
@@ -23,9 +24,9 @@ require() { command -v "$1" >/dev/null 2>&1 || { echo "Missing command: $1" >&2;
 require codex
 require uv
 require uvx
-mkdir -p "$APP" "$BIN" "$FISH" "$HOME/.codex"
+mkdir -p "$APP" "$BIN" "$FISH" "$CODEX_DIR"
 install -d -m 700 "$STATE" "$STATE/reports"
-for f in "$BIN/jarvis" "$BIN/jarvis-codex" "$FISH/jarvis.fish"; do
+for f in "$BIN/jarvis" "$BIN/jarvis-codex" "$FISH/jarvis.fish" "$BIN/jarvis-full" "$FISH/jarvis-full.fish"; do
   if [[ -e "$f" ]] && ! grep -Fq 'JARVIS-CODEX MANAGED' "$f"; then
     echo "Refusing to overwrite unrelated file: $f" >&2; exit 1
   fi
@@ -40,7 +41,7 @@ if [[ "$SESSION" == 'wayland' ]] && { [[ "$DESKTOP" == *Hyprland* ]] || [[ -n "$
   require grim
   require wtype
   if ! codex mcp get hypruse >/dev/null 2>&1; then
-    codex mcp add hypruse --env HYPRUSE_CONFINE=launched --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=0 -- uvx hypruse
+    codex mcp add hypruse --env HYPRUSE_STRICT=1 --env HYPRUSE_AUTH_GUARD=strict --env HYPRUSE_JOURNAL=1 --env HYPRUSE_MARK=0 -- uvx hypruse
   fi
   uvx hypruse skill install --agent codex || echo '[warn] Hypruse skill install failed.' >&2
 elif [[ "$SESSION" == 'x11' ]]; then
@@ -94,7 +95,7 @@ cat > "$BIN/jarvis-codex" <<'LAUNCH'
 # JARVIS-CODEX MANAGED
 # Fast default: low reasoning effort reduces model thinking latency.
 # Do not send an automatic start-up task; wait for the user's request.
-exec codex --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request
+exec "$HOME/.local/bin/jarvis" fast
 LAUNCH
 chmod 755 "$BIN/jarvis-codex"
 cat > "$BIN/jarvis" <<'ONE'
@@ -102,16 +103,27 @@ cat > "$BIN/jarvis" <<'ONE'
 # JARVIS-CODEX MANAGED
 set -Eeuo pipefail
 APP="$HOME/.local/share/jarvis-codex"
+access_mode=full-access
+if [[ -e "$APP/access-mode" || -L "$APP/access-mode" ]]; then
+  access_mode=read-only
+  IFS= read -r access_mode < "$APP/access-mode" || true
+fi
+case "$access_mode" in
+  full-access) access_args=(--dangerously-bypass-approvals-and-sandbox)
+    if [[ "$EUID" -eq 0 ]]; then echo 'Run JARVIS as a normal user, not root.' >&2; exit 1; fi ;;
+  workspace-write) access_args=(--sandbox workspace-write --ask-for-approval on-request) ;;
+  *) access_args=(--sandbox read-only --ask-for-approval on-request) ;;
+esac
 backend="$(cat "$APP/backend.txt" 2>/dev/null || echo none)"
 case "${1:-start}" in
-  start|fast) exec "$HOME/.local/bin/jarvis-codex" ;;
+  start|fast) exec codex --config model_reasoning_effort=low "${access_args[@]}" ;;
   normal)
-    exec codex --sandbox read-only --ask-for-approval on-request ;;
+    exec codex "${access_args[@]}" ;;
   deep)
-    exec codex --config model_reasoning_effort=high --sandbox read-only --ask-for-approval on-request ;;
+    exec codex --config model_reasoning_effort=high "${access_args[@]}" ;;
   full)
     if [[ ! -x "$HOME/.local/bin/jarvis-full" ]]; then
-      echo 'Optional Full Access is not installed; see scripts/install-full-linux.sh.' >&2
+      echo 'Compatibility launcher is missing; rerun scripts/install-linux.sh.' >&2
       exit 1
     fi
     shift
@@ -161,7 +173,7 @@ case "${1:-start}" in
     printf '\nRecognized: %s\n' "$transcript"
     read -r -p 'Send this transcript to Codex? Type YES: ' answer
     [[ "$answer" == YES ]] || { echo 'Cancelled.'; exit 0; }
-    exec codex --config model_reasoning_effort=low --sandbox read-only --ask-for-approval on-request "JARVIS dictated request (user-reviewed): $transcript. Use available GUI MCP when relevant. Observe first and ask before changes." ;;
+    exec codex --config model_reasoning_effort=low "${access_args[@]}" "JARVIS dictated request (user-reviewed): $transcript. Use available GUI MCP when relevant. Observe first and ask before changes." ;;
   stop)
     if [[ "$backend" == hypruse ]]; then exec uvx hypruse stop; fi
     echo 'End the Codex session with Ctrl+C or /exit. Other MCP servers use stdio.' ;;
@@ -189,6 +201,14 @@ case "${1:-start}" in
 esac
 ONE
 chmod 755 "$BIN/jarvis"
+cp "$ROOT/scripts/jarvis-full-launcher.sh" "$BIN/jarvis-full"
+chmod 755 "$BIN/jarvis-full"
+cat > "$FISH/jarvis-full.fish" <<'FISHFULL'
+# JARVIS-CODEX MANAGED
+function jarvis-full --description 'Launch Full Access using the shared Codex profile'
+    command "$HOME/.local/bin/jarvis-full" $argv
+end
+FISHFULL
 cat > "$FISH/jarvis.fish" <<'FISH'
 # JARVIS-CODEX MANAGED
 function jarvis --description 'Launch JARVIS desktop assistant'

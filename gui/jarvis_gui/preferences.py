@@ -10,7 +10,7 @@ LANGUAGES = [("auto", "Auto detect"), ("ru", "Russian"), ("en", "English"),
              ("pl", "Polish"), ("tr", "Turkish"), ("ar", "Arabic"),
              ("zh", "Chinese"), ("ja", "Japanese"), ("ko", "Korean"), ("hi", "Hindi")]
 VOICE_MODELS = ["tiny", "base", "small", "medium"]
-FULL_ACKNOWLEDGEMENT = "ENABLE FULL ACCESS"
+REASONING = ("default", "none", "minimal", "low", "medium", "high", "xhigh")
 
 
 def valid_model_id(model):
@@ -40,12 +40,6 @@ def cached_models(home):
         if isinstance(slug, str) and slug and valid_model_id(slug) and slug not in models:
             models.append(slug)
     return models
-
-
-def full_profile_home():
-    if os.name == "nt":
-        return Path(os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData/Local"))) / "jarvis-codex/full-codex-home"
-    return Path.home() / ".local/share/jarvis-codex/full-codex-home"
 
 
 def elevated():

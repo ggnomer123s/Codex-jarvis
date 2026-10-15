@@ -19,10 +19,12 @@ Reasoning/tool events are used for activity, not rendered as assistant text.
 Thread options explicitly set `approvalPolicy=never` and the selected sandbox:
 `read-only`, `workspace-write`, or `danger-full-access`. Unexpected approval,
 permission and elicitation requests are declined, never silently accepted.
-Full Access still requires the GUI checkbox, separate profile and independent
-login. Switching access closes the owned process, clears conversation state and
-creates a new process with the correct `CODEX_HOME` on demand. The GUI does not
-attach to a shared daemon or open an HTTP/WebSocket listening port.
+Full Access is on by default and can be disabled in Preferences > Access. The
+saved access flag is shared with regular CLI launchers. All modes use the same
+`CODEX_HOME` (default `~/.codex`), existing login and MCP configuration. Switching
+access closes the owned process, clears context and starts a new process in the
+same home with different sandbox options. The GUI does not attach to a shared
+daemon or open an HTTP/WebSocket listening port.
 
 Stop sends `turn/interrupt`. If interruption does not complete, or a task is still
 starting, the GUI closes its owned process tree. Direct workflow MCP calls do

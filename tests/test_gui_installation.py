@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(os.name != "nt" and shutil.which("bash"), "Linux installer integration")
 class TestGuiInstallation(unittest.TestCase):
-    def test_installation_prepares_full_profile_from_an_unrelated_directory(self):
+    def test_installation_updates_shared_profile_from_an_unrelated_directory(self):
         with tempfile.TemporaryDirectory(prefix="jarvis install ") as folder:
             base = Path(folder)
             checkout = base / "checkout with spaces"
@@ -32,10 +32,10 @@ class TestGuiInstallation(unittest.TestCase):
             for name in ("uv", "uvx", "codex"):
                 executable(tools / name, "pass\n")
             # Record the real installer's embedded menu script without writing to
-            # the runner's home. The full-profile fixture alone writes temp files.
+            # the runner's home. The shared-profile fixture alone writes temp files.
             executable(tools / "python3", "import json,os,sys\nfrom pathlib import Path\nPath(os.environ['JARVIS_TEST_MENU_RECORD']).write_text(json.dumps({'root':sys.argv[2], 'inputMode':sys.argv[1], 'script':sys.stdin.read()}))\n")
-            installer = scripts / "install-full-linux.sh"
-            installer.write_text("#!/usr/bin/env bash\nset -eu\n[[ $# -eq 2 && $1 == --acknowledgement && $2 == 'ENABLE FULL ACCESS' ]]\nmkdir -p \"$JARVIS_TEST_PROFILE_PATH\"\nprintf rules > \"$JARVIS_TEST_PROFILE_PATH/AGENTS.md\"\nprintf none > \"$JARVIS_TEST_PROFILE_PATH/backend.txt\"\n")
+            installer = scripts / "install-linux.sh"
+            installer.write_text("#!/usr/bin/env bash\nset -eu\n[[ $# -eq 0 ]]\nmkdir -p \"$JARVIS_TEST_PROFILE_PATH\"\nprintf rules > \"$JARVIS_TEST_PROFILE_PATH/AGENTS.md\"\nprintf none > \"$JARVIS_TEST_PROFILE_PATH/backend.txt\"\n")
             unrelated = base / "unrelated"
             unrelated.mkdir()
             record = base / "menu-record.json"

@@ -4,7 +4,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import shutil
-from .preferences import valid_model_id
+from .preferences import REASONING, valid_model_id
 
 
 def thread_options(folder: str, access: str, model: str = "") -> dict:
@@ -23,7 +23,7 @@ def thread_options(folder: str, access: str, model: str = "") -> dict:
 
 
 def turn_options(thread_id: str, prompt: str, effort: str, model: str = "") -> dict:
-    if effort not in ("low", "default", "high") or not valid_model_id(model):
+    if effort not in REASONING or not valid_model_id(model):
         raise ValueError("Invalid model or reasoning setting.")
     result = {"threadId": thread_id, "input": [{"type": "text", "text": prompt}]}
     if effort != "default":

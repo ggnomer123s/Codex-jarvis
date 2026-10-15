@@ -1,80 +1,71 @@
-# JARVIS power-user installation
+# Shared Codex profile and Full Access
 
-An optional advanced setup for complex development, media-editing and desktop workflows. It is **separate from regular JARVIS**, uses independent Codex configuration and sign-in, and can access more of the user's files and desktop. It does not provide administrator/root privileges.
+JARVIS uses **one Codex home**, login and MCP configuration on Linux and Windows
+11: the current `CODEX_HOME`, or `~/.codex` if it is unset. The desktop app,
+ordinary CLI and compatibility full launchers all reuse it. No credentials are
+copied and no extra profile is created.
 
-## Installation
+## Default and settings
 
-The GUI installer prepares this same profile automatically. In the desktop app,
-check **Preferences > Access > Enable Full Access** to enable it; no typed
-acknowledgement is needed. Uncheck the box to return to normal access.
-It includes a separate device-login panel and a visible active-mode indicator.
-The mode is scoped to the current window and returns to normal after restart.
-See [Desktop app Full Access](desktop-app.md#full-access-from-the-gui).
-The installers accept an explicit acknowledgement argument for GUI installation;
-ordinary terminal installation still prompts interactively by default.
+Full Access is on by default. In **Preferences > Access**, uncheck **Enable Full
+Access** to select the retained read-only or workspace-edit sandbox. This choice
+persists after restart and is shared with regular `jarvis fast|normal|deep`.
+Checking it again changes runtime permissions without installation or sign-in.
+The active mode remains visible in the window.
 
-The GUI installer already includes profile preparation; use the
-[installation commands](install-desktop.md) first. For manual CLI setup, the
-examples below assume that checkout exists at `Codex-jarvis-gui` in your user
-directory. They use explicit paths so the current directory does not matter.
+The shared preference is stored at:
 
-On Linux, after completing the normal prerequisites:
+- Linux: `~/.local/share/jarvis-codex/access-mode`.
+- Windows: `%LOCALAPPDATA%\jarvis-codex\access-mode`.
 
-```bash
-git -C "$HOME/Codex-jarvis-gui" pull --ff-only
-bash "$HOME/Codex-jarvis-gui/scripts/install-full-linux.sh"
-```
+Missing preference means `full-access`; valid restricted values are `read-only`
+and `workspace-write`. Invalid/unreadable preferences select read-only. Installers
+do not reset a saved choice. The global Codex config is not changed to disable
+its sandbox for unrelated Codex launches.
 
-On Windows 11, in a non-elevated PowerShell window:
+Full Access uses `danger-full-access` / approval policy `never` in app-server,
+or `--dangerously-bypass-approvals-and-sandbox` for CLI launches. This grants
+access available to the current user, not root/Administrator elevation or a
+bypass of OS authentication, locked sessions or MCP-specific guards. Switching
+GUI access restarts its owned app-server and clears context in the same home.
+Run JARVIS as a normal user. Existing desktop backend restrictions are preserved.
 
-```powershell
-git pull --ff-only
-$repoPath = Join-Path $env:USERPROFILE 'Codex-jarvis-gui'
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'scripts\install-full-windows.ps1')
-```
+## Installation and compatibility
 
-Read the installer output before accepting its one-time confirmation. After installation, sign in once and choose a reasoning profile:
+Use the [normal GUI installation/update commands](install-desktop.md).
+All Linux distributions use the same `install-linux.sh` implementation for
+session/backend detection; Windows uses `install-windows.ps1`. New supported
+desktop MCP registrations enable their normal tool surface. Existing registrations
+are retained, including any deliberately configured confinement/input restrictions.
 
-```text
-jarvis-full login
-jarvis-full fast
-jarvis-full normal
-jarvis-full deep
-jarvis-full status
-```
+The old `install-full-linux.sh` and `install-full-windows.ps1` entry points now
+delegate to the ordinary installer. Old acknowledgement arguments are accepted
+for command compatibility but are not needed. Old private profile directories
+are left untouched and unused; authentication is not automatically migrated.
+If your usual Codex home is not signed in, run `codex login` once or use
+**Sign in to Codex** in Access settings.
 
-| Launch command | Reasoning effort | Shell/desktop privilege profile |
+`jarvis-full` and `jarvis full` remain explicit Full Access aliases using this
+same home. They intentionally request Full Access even if the regular launcher's
+saved preference is restricted. Their `fast`, `normal`, `deep`, `login`, `status`
+and `help` commands remain supported; no automatic startup task is submitted.
+
+| Command | Reasoning | Access |
 |---|---|---|
-| `jarvis-full` or `jarvis-full normal` | Configured default | Full Access |
-| `jarvis-full fast` | `low` | Full Access |
-| `jarvis-full deep` | `high` | Full Access |
+| `jarvis` / `jarvis fast` | Low | Saved access; initially Full Access |
+| `jarvis normal` | Configured default | Saved access |
+| `jarvis deep` | High | Saved access |
+| `jarvis-full fast` / `normal` / `deep` | Low / configured default / high | Explicit Full Access, same home |
 
-On supported normal JARVIS installers, `jarvis full fast`, `jarvis full normal`, and `jarvis full deep` are aliases to the **same independently installed full profile**. `jarvis full` selects its default profile.
+The Windows installer scopes a non-terminating error policy to the expected
+`mcp get windows-mcp` existence probe. A missing server triggers registration
+instead of a PowerShell 5 `NativeCommandError`; registration failures still stop
+installation with an actionable error.
 
-The new launcher **does not auto-send a startup task**: Codex opens interactively, with the selected reasoning setting and its existing Full Access profile instructions. This removes an unnecessary model turn during startup; it does not guarantee a specific GUI-task execution speed.
+## Composer controls
 
-## Behavior and limitations
-
-The optional profile turns off Codex's command sandbox and ordinary per-command confirmation prompts. It can manipulate files available to the signed-in user and access existing GUI windows. It also has access to third-party MCP tools. Applications can still deny actions; operating-system authentication, permissions and screen locks are not bypassed.
-
-Use it only on a device and projects you are comfortable delegating to software. Prefer backups or duplicate editing projects, review the tasks and keep a way to interrupt the session. Never make it a system/root administrator.
-
-The agent's Skill still recommends asking before publishing messages, transferring private documents, spending money, permanently deleting important work, manipulating credentials or changing security settings. These textual instructions cannot reliably replace system-enforced permissions.
-
-For a safer alternative, use the regular `jarvis normal` or `jarvis deep` with its sandbox/approval settings. The lower-trust regular launcher remains appropriate for interacting with unknown websites, downloads or chat content.
-
-## Configuration separation
-
-Linux Full Access profile: `~/.local/share/jarvis-codex/full-codex-home`.
-
-Windows Full Access profile: `%LOCALAPPDATA%\jarvis-codex\full-codex-home`.
-
-The separate profile typically requires signing in once independently. Codex discovers the shared desktop Skill from the user location `~/.agents/skills/jarvis-desktop` (or the Windows equivalent), not from a private `CODEX_HOME/skills` directory.
-
-## Keyboard shortcuts
-
-Hyprland uses Hypruse `keyboard` for application shortcuts (e.g. Ctrl+S) and `use_bind` for compositor shortcuts, after inspecting `binds`. X11 supports targeted `key` actions with an optional window ID. Windows uses its GUI MCP's keyboard tools. See [GUI navigation](gui-navigation.md).
-
-## Safety reminder
-
-An unrestricted agent can make unintended changes to data or settings. The project doesn't claim the separate profile is safe for confidential accounts. There is no built-in undo for arbitrary shell or GUI operations, and neither a Skill nor a prompt is a replacement for real security controls.
+Select the model and reasoning level at the bottom left of the input area.
+Model changes clear prior conversation context but keep your unsent draft.
+Reasoning changes apply to the next turn. Choices follow the selected model's
+advertised capabilities after the live catalog is loaded. Neither changes the
+Codex account, access mode or authentication.

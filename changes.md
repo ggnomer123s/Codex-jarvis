@@ -8,6 +8,45 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+
+## 2026-10-15 — One Codex account, default Full Access and composer controls
+
+- GUI, Linux/Windows CLI and legacy Full Access commands now reuse the existing
+  `CODEX_HOME` or ordinary `.codex` directory, login and MCP configuration.
+  Removed separate-home preparation, extra authentication and acknowledgement
+  requirements; old full installers delegate to the standard installers.
+  Existing private home directories are not deleted or imported.
+- Full Access defaults on. The Access checkbox saves a small shared preference
+  for the GUI and regular `jarvis` command, including sandbox selection across
+  restarts. Explicit `jarvis-full` aliases still request Full Access in the same
+  home. A corrupt preference falls back to read-only. Access changes close the
+  owned app-server and clear context; Codex app-server remains the sole transport.
+- Fixed Windows PowerShell 5 native-stderr handling for an absent `windows-mcp`:
+  the probe reports absence without aborting installation, while failed actual
+  registration still fails. Removed ambiguous non-ASCII installer banners and
+  retained `codex.cmd` compatibility and per-process execution policy.
+- Updated GUI installers, normal/full launchers and custom-home instruction
+  paths for all supported Linux session backends and Windows. New registrations
+  enable X11 input, omit Hypruse confinement and Windows tool exclusions;
+  existing registrations retain their settings. OS/authentication guards and
+  refusal to launch Full Access elevated remain.
+- Added model and reasoning selectors at the bottom left of the input composer,
+  preserving the unsent draft. Models may be selected or entered; reasoning
+  choices follow model-advertised support with validated fallback. Model changes
+  reset the conversation; changing reasoning alone preserves it. Preferences
+  uses the same options. GUI and lock version are now 0.4.0, without new dependencies.
+- Updated README, install, access, runtime, security, backend and handoff guides.
+  Added shared-preference and four-session installer integration checks, same-home
+  GUI lifecycle/checkbox/model tests and a native Windows PowerShell 5 regression
+  in the Windows CI job. Refreshed actual main/Access/Voice/Wake QML screenshots.
+- Local verification: 63 root tests discovered (62 passed, native Windows-only
+  probe skipped on Linux), plus 43 passing Qt tests. Actual QML smoke screenshots,
+  compact control bounds, Bash/Python syntax, frozen lock, local document links,
+  English docs/scripts and whitespace checks passed. New four-session installer
+  tests use fake binaries and temporary homes; no authenticated user task,
+  microphone recording or real desktop input was executed. Windows results will
+  be recorded after the fresh automatic CI run.
+
 ## 2026-10-15 — Optional local background voice activation
 
 - Added `wake.py`: continuous local CPU Whisper transcription in bounded

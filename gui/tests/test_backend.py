@@ -23,6 +23,7 @@ class TestBackend(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.settings = QSettings(str(self.root / "settings.ini"), QSettings.Format.IniFormat)
         self.settings.setValue("folder", str(self.root))
+        Path(self.settings.fileName()).with_suffix(".access").write_text("read-only\n")
         self.backends = []
 
     def tearDown(self):
@@ -34,7 +35,7 @@ class TestBackend(unittest.TestCase):
     def backend(self, source, **kwargs):
         script = self.root / "fake_cli.py"
         script.write_text(source, encoding="utf-8")
-        backend = Backend(self.settings, codex_command=[sys.executable, "-u", str(script)], full_home=self.root / "full-profile", **kwargs)
+        backend = Backend(self.settings, codex_command=[sys.executable, "-u", str(script)], codex_home_override=self.root / "full-profile", **kwargs)
         self.backends.append(backend)
         return backend
 
@@ -50,7 +51,7 @@ class TestBackend(unittest.TestCase):
     def server_backend(self, scenario="normal", **kwargs):
         log = self.root / (scenario + ".jsonl")
         script = Path(__file__).with_name("fake_app_server.py")
-        backend = Backend(self.settings, codex_command=[sys.executable, "-u", str(script), scenario, str(log)], full_home=self.root / "full-profile", **kwargs)
+        backend = Backend(self.settings, codex_command=[sys.executable, "-u", str(script), scenario, str(log)], codex_home_override=self.root / "full-profile", **kwargs)
         self.backends.append(backend)
         backend.test_log = log
         return backend
@@ -204,7 +205,7 @@ for line in sys.stdin:
         (backend.profile.home / "AGENTS.md").write_text("Full Access test profile")
         (backend.profile.home / "backend.txt").write_text("none")
 
-    def test_full_access_is_explicit_isolated_and_not_restored_on_restart(self):
+    def test_access_switches_reuse_one_home_but_restart_runtime(self):
         backend = self.server_backend()
         self.prepare_profile(backend)
         backend.send("normal first")
@@ -229,9 +230,9 @@ for line in sys.stdin:
         backend.send("normal")
         self.wait(lambda: not backend.busy)
         starts=[x for x in self.requests(backend) if x["request"].get("method")=="thread/start"]
-        self.assertNotEqual(starts[-1]["home"], str(backend.profile.home))
+        self.assertEqual(starts[-1]["home"], str(backend.profile.home))
         self.assertEqual(starts[-1]["request"]["params"]["sandbox"], "read-only")
-        reopened=Backend(self.settings, full_home=backend.profile.home)
+        reopened=Backend(self.settings, codex_home_override=backend.profile.home)
         self.backends.append(reopened)
         self.assertFalse(reopened.fullAccess)
 
@@ -304,10 +305,17 @@ for line in sys.stdin:
         self.assertEqual(backend.process.state(),backend.process.ProcessState.NotRunning)
         self.assertIn("not connected",backend.messages[-1]["text"])
 
-    def test_full_access_cannot_be_enabled_through_general_preferences(self):
+    def test_default_full_access_and_saved_disable_survive_restart(self):
+        Path(self.settings.fileName()).with_suffix(".access").unlink()
         backend = self.backend("pass")
-        self.assertFalse(backend.savePreferences("low", "full-access", "", "ru", "base"))
+        self.assertTrue(backend.fullAccess)
+        self.assertEqual(backend.profile.home, backend._normal_home)
+        backend.setFullAccess(False)
         self.assertFalse(backend.fullAccess)
+        reopened = Backend(self.settings, codex_home_override=backend.profile.home)
+        self.backends.append(reopened)
+        self.assertFalse(reopened.fullAccess)
+        self.assertEqual(reopened._normal_home, backend._normal_home)
 
     def test_full_access_refuses_elevated_execution(self):
         backend = self.backend("pass")
@@ -325,7 +333,7 @@ for line in sys.stdin:
         self.assertEqual(self.settings.value("language"), "ru")
         self.assertEqual(self.settings.value("model"), "test-model")
 
-    def test_separate_login_uses_full_home_without_starting_a_task(self):
+    def test_login_uses_current_home_without_starting_a_task(self):
         backend = self.backend("import sys; assert sys.argv[1:] == ['login','--device-auth']; print('Complete device sign-in at https://auth.openai.com/codex/device')")
         self.prepare_profile(backend)
         backend.profile.login()
@@ -335,31 +343,26 @@ for line in sys.stdin:
         self.assertFalse(backend.fullAccess)
         self.assertFalse(backend.busy)
 
-    def test_successful_profile_preparation_activates_only_after_process_finishes(self):
+    def test_access_checkbox_never_installs_another_profile(self):
         backend = self.backend("pass")
-        installer = self.root / "prepare.py"
-        installer.write_text("from pathlib import Path; import sys; p=Path(sys.argv[1]); p.mkdir(); (p/'AGENTS.md').write_text('rules'); (p/'backend.txt').write_text('none')")
-        backend.profile._start("install", sys.executable, [str(installer), str(backend.profile.home)])
-        self.assertFalse(backend.fullAccess)
-        self.wait(lambda: not backend.profile.busy)
+        with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+            self.assertTrue(backend.setFullAccess(True))
         self.assertTrue(backend.fullAccess)
+        self.assertEqual(backend.profile.process.processId(), 0)
+        self.assertEqual(backend.profile.home, backend._normal_home)
 
-    def test_cancelled_profile_install_does_not_activate_full_access(self):
+    def test_inline_controls_keep_draft_independent_and_use_advertised_reasoning(self):
         backend = self.backend("pass")
-        self.prepare_profile(backend)
-        installer = self.root / "slow.py"
-        installer.write_text("import time; time.sleep(60)")
-        backend.profile._start("install", sys.executable, [str(installer)])
-        backend.profile.cancel()
-        self.wait(lambda: not backend.profile.busy)
-        self.assertFalse(backend.fullAccess)
-
-    def test_checkbox_prepares_a_legacy_missing_profile_without_text_input(self):
-        backend = self.backend("pass")
-        with mock.patch("jarvis_gui.backend.elevated", return_value=False), mock.patch.object(backend.profile, "install") as install:
-            backend.setFullAccess(True)
-        install.assert_called_once_with()
-        self.assertFalse(backend.fullAccess)
+        backend._thread_id = "old-thread"
+        self.assertTrue(backend.selectModel("test-model"))
+        self.assertEqual(backend._thread_id, "")
+        self.assertTrue(backend.selectReasoning("xhigh"))
+        self.assertEqual(backend.effort, "xhigh")
+        backend._model_efforts["test-model"] = ["low", "high"]
+        self.assertFalse(backend.selectReasoning("xhigh"))
+        self.assertEqual([x["code"] for x in backend.reasoningOptions], ["default", "low", "high"])
+        self.assertTrue(backend.selectReasoning("high"))
+        self.assertFalse(backend.selectModel("invalid model; command"))
 
     def test_unchecking_restores_retained_normal_workspace_access(self):
         backend = self.backend("pass")

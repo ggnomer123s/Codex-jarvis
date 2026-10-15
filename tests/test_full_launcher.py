@@ -1,4 +1,4 @@
-"""Exercise the real optional Full Access CLI dispatcher with a fake Codex binary.
+"""Exercise the real shared-profile Full Access CLI dispatcher with a fake Codex binary.
 
 No elevated privilege, GUI, network or real Codex command is required.
 """
@@ -36,6 +36,7 @@ class TestFullLauncher(unittest.TestCase):
         env = os.environ.copy()
         env.update({
             "HOME": str(self.base),
+            "CODEX_HOME": str(self.base / "chosen-codex-home"),
             "PATH": str(self.bin) + os.pathsep + env.get("PATH", ""),
             "JARVIS_TEST_ARGS_FILE": str(self.argsfile),
             "JARVIS_TEST_HOME_FILE": str(self.homefile),
@@ -49,7 +50,7 @@ class TestFullLauncher(unittest.TestCase):
         self.assertEqual(self.argsfile.read_text().splitlines(), expected)
         self.assertEqual(
             self.homefile.read_text().strip(),
-            str(self.base / ".local/share/jarvis-codex/full-codex-home"),
+            str(self.base / "chosen-codex-home"),
         )
 
     def test_fast_effort_and_full_access(self):
@@ -75,7 +76,7 @@ class TestFullLauncher(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.check_codex_call(["--dangerously-bypass-approvals-and-sandbox"])
 
-    def test_login_uses_isolated_home(self):
+    def test_login_reuses_configured_home(self):
         result = self.call("login")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.check_codex_call(["login"])

@@ -15,11 +15,12 @@ from .app_server import AppServer, terminate_tree
 from .core import find_codex, launch_command, thread_options, turn_options
 from .messages import Messages
 from .voice import dependencies_available
-from .preferences import LANGUAGES, VOICE_MODELS, cached_models, elevated, valid_model_id, valid_voice_model
+from .preferences import LANGUAGES, VOICE_MODELS, REASONING, cached_models, elevated, valid_model_id, valid_voice_model
 from .profiles import FullProfile
 from .runtime import Checkpoints, Profiler
 from .workflows import WorkflowRunner, match_workflow, validate_workflows
 from .wake_control import WakeControl
+from .access import codex_home, access_file, read_access, write_access
 
 
 class Backend(QObject):
@@ -28,7 +29,7 @@ class Backend(QObject):
     transcriptReady = Signal(str)
     transcriptPreview = Signal(str)
 
-    def __init__(self, settings=None, *, codex_command=None, voice_command=None, full_home=None, start_hidden=False, tray_available=False):
+    def __init__(self, settings=None, *, codex_command=None, voice_command=None, codex_home_override=None, start_hidden=False, tray_available=False, access_path=None):
         super().__init__()
         self.settings = settings or QSettings("Jarvis", "Desktop")
         self._start_hidden = start_hidden
@@ -37,11 +38,10 @@ class Backend(QObject):
         saved = str(self.settings.value("folder", str(Path.home())))
         self._folder = saved if Path(saved).is_dir() else str(Path.home())
         self._effort = str(self.settings.value("effort", "low"))
-        self._access = str(self.settings.value("access", "read-only"))
-        if self._effort not in ("low", "default", "high"):
+        self._access_path = Path(access_path) if access_path else (Path(settings.fileName()).with_suffix(".access") if settings is not None else access_file())
+        self._access = read_access(self._access_path)
+        if self._effort not in REASONING:
             self._effort = "low"
-        if self._access not in ("read-only", "workspace-write"):
-            self._access = "read-only"
         self._model = str(self.settings.value("model", ""))
         if not valid_model_id(self._model):
             self._model = ""
@@ -64,7 +64,7 @@ class Backend(QObject):
             self._voice_options["device"] = "cpu"
         if self._voice_options["beam"] not in (1, 3, 5):
             self._voice_options["beam"] = 3
-        self._normal_home = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
+        self._normal_home = Path(codex_home_override) if codex_home_override else codex_home()
         self._models = cached_models(self._normal_home)
         self._model_efforts = {}
         self._codex = os.environ.get("JARVIS_GUI_CODEX") or find_codex() or ""
@@ -136,10 +136,9 @@ class Backend(QObject):
         self._ui_tick = QTimer(self)
         self._ui_tick.setInterval(1000)
         self._ui_tick.timeout.connect(self.changed.emit)
-        self.profile = FullProfile(self._codex_launch, self, home=full_home)
+        self.profile = FullProfile(self._codex_launch, self, home=self._normal_home)
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
-        self.profile.prepared.connect(self._activate_full)
         self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle"))
 
     @Property("QVariantList", notify=messagesChanged)
@@ -201,6 +200,29 @@ class Backend(QObject):
         if self._model and self._model not in names:
             names.append(self._model)
         return ["Codex default", *names]
+
+    @Property("QVariantList", notify=changed)
+    def reasoningOptions(self):
+        known = self._model_efforts.get(self._model)
+        choices = known if known is not None else ("low", "medium", "high", "xhigh")
+        labels = {"default": "Model default", "none": "None", "minimal": "Minimal", "low": "Low", "medium": "Medium", "high": "High", "xhigh": "Extra high"}
+        return [{"code": key, "label": labels[key]} for key in REASONING if key == "default" or key in choices]
+
+    @Slot(str, result=bool)
+    def selectModel(self, model):
+        model = "" if model.strip() == "Codex default" else model.strip()
+        effort = self._effort
+        supported = self._model_efforts.get(model)
+        if supported is not None and effort not in supported:
+            effort = "default"
+        return self.savePreferences(effort, self._access, model, self._language, self._voice_model)
+
+    @Slot(str, result=bool)
+    def selectReasoning(self, effort):
+        supported = self._model_efforts.get(self._model)
+        if supported is not None and effort != "default" and effort not in supported:
+            return self._settings_error("This model does not advertise that reasoning level.")
+        return self.savePreferences(effort, self._access, self._model, self._language, self._voice_model)
 
     @Property(str, notify=changed)
     def language(self):
@@ -308,7 +330,7 @@ class Backend(QObject):
         return names
 
     def _checkpoint_key(self):
-        home = self.profile.home if self.fullAccess else self._normal_home
+        home = self._normal_home
         return Checkpoints.key(home, Path(self._folder), self._access, self._model)
 
     def _message(self, role, text):
@@ -345,8 +367,7 @@ class Backend(QObject):
                 self._server_failed(str(exc))
                 return
             environment = QProcessEnvironment.systemEnvironment()
-            if self.fullAccess:
-                environment.insert("CODEX_HOME", str(self.profile.home))
+            environment.insert("CODEX_HOME", str(self._normal_home))
             self.server.start(program, args, environment, self._folder)
         self.changed.emit()
 
@@ -418,6 +439,10 @@ class Backend(QObject):
                     if item.get("isDefault"):
                         self._model_efforts[""] = efforts
             self._models = names
+            supported = self._model_efforts.get(self._model)
+            if supported is not None and self._effort != "default" and self._effort not in supported:
+                self._effort = "default"
+                self.settings.setValue("effort", "default")
             self.changed.emit()
         self.server.request("model/list", {"limit": 100}, returned)
 
@@ -741,13 +766,15 @@ class Backend(QObject):
         model, voice_model = model.strip(), voice_model.strip()
         self._preferences_error = ""
         try:
-            if access == "full-access" and not self.fullAccess:
-                raise ValueError("Enable Full Access explicitly in the Access tab first.")
             thread_options(self._folder, access, model)
-            if effort not in ("low", "default", "high") or language not in dict(LANGUAGES) or not valid_voice_model(voice_model):
+            if effort not in REASONING or language not in dict(LANGUAGES) or not valid_voice_model(voice_model):
                 raise ValueError("Choose supported reasoning, voice language and multilingual model settings.")
         except ValueError as exc:
             return self._settings_error(str(exc))
+        try:
+            write_access(self._access_path, access)
+        except (OSError, ValueError) as exc:
+            return self._settings_error("Could not save access mode: " + str(exc))
         if access != self._access:
             self._reset_context()
             self.server.close()
@@ -763,7 +790,7 @@ class Backend(QObject):
             self.settings.setValue("access", access)
         for key, value in (("model", model), ("language", language), ("voiceModel", voice_model)):
             self.settings.setValue(key, value)
-        self._models = cached_models(self.profile.home if self.fullAccess else self._normal_home)
+        self._models = cached_models(self._normal_home)
         if self.server.connected:
             self._fetch_models()
         self.changed.emit()
@@ -773,7 +800,7 @@ class Backend(QObject):
     def refreshModels(self):
         if self._locked():
             return
-        self._models = cached_models(self.profile.home if self.fullAccess else self._normal_home)
+        self._models = cached_models(self._normal_home)
         self._ensure_server(lambda: None)
         if self.server.connected:
             self._fetch_models()
@@ -788,23 +815,7 @@ class Backend(QObject):
             return True
         if elevated():
             return self._settings_error("Run JARVIS as a normal user before enabling Full Access.")
-        self._preferences_error = ""
-        if self.profile.ready:
-            self._activate_full()
-        else:
-            self.profile.install()
-        return self.fullAccess or self.profile.busy
-
-    def _activate_full(self):
-        if self._locked() or not self.profile.ready:
-            return
-        self._reset_context()
-        self.server.close()
-        self._access = "full-access"
-        self._models = cached_models(self.profile.home)
-        self._model_efforts = {}
-        self._activity = "Full Access enabled for this window"
-        self.changed.emit()
+        return self.savePreferences(self._effort, "full-access", self._model, self._language, self._voice_model)
 
     @Slot()
     def disableFullAccess(self):
@@ -840,9 +851,7 @@ class Backend(QObject):
             return False
         try:
             thread_options(self._folder, access, model.strip())
-            if access == "full-access" and not self.fullAccess:
-                raise ValueError("Enable Full Access explicitly in the Access tab first.")
-            if effort not in ("low", "default", "high") or language not in dict(LANGUAGES) or not valid_voice_model(voice_model.strip()):
+            if effort not in REASONING or language not in dict(LANGUAGES) or not valid_voice_model(voice_model.strip()):
                 raise ValueError("Choose supported reasoning, voice language and multilingual model settings.")
             validate_workflows(workflows)
             if device not in ("cpu", "cuda") or beam not in (1, 3, 5) or len(microphone) > 200:

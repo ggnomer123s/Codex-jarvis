@@ -1,4 +1,4 @@
-"""Prepare and sign into the existing separate Full Access profile."""
+"""Sign into the existing shared Codex account; access is a runtime setting."""
 import os
 from pathlib import Path
 import re
@@ -7,17 +7,16 @@ import signal
 from PySide6.QtCore import QObject, Property, QProcess, QProcessEnvironment, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
-from .preferences import FULL_ACKNOWLEDGEMENT, full_profile_home
+from .access import codex_home
 
 
 class FullProfile(QObject):
     changed = Signal()
-    prepared = Signal()
     error = Signal(str)
 
     def __init__(self, command_factory, parent=None, home=None):
         super().__init__(parent)
-        self.home = Path(home) if home else full_profile_home()
+        self.home = Path(home) if home else codex_home()
         self.command_factory = command_factory
         self._busy = False
         self._operation = ""
@@ -32,8 +31,7 @@ class FullProfile(QObject):
 
     @Property(bool, notify=changed)
     def ready(self):
-        return (self.home / "AGENTS.md").is_file() and any(
-            (self.home / name).is_file() for name in ("backend.txt", "config.toml"))
+        return True
 
     @Property(bool, notify=changed)
     def busy(self):
@@ -53,23 +51,9 @@ class FullProfile(QObject):
         if self.loginUrl:
             QDesktopServices.openUrl(QUrl(self.loginUrl))
 
-    def install(self):
-        if self._busy:
-            return
-        root = Path(__file__).resolve().parents[2]
-        script = root / "scripts" / ("install-full-windows.ps1" if os.name == "nt" else "install-full-linux.sh")
-        if not script.is_file():
-            self.error.emit("Full Access setup requires the source checkout. Install jarvis-full using docs/full-access.md, then reopen the app.")
-            return
-        args = ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script), "-Acknowledgement", FULL_ACKNOWLEDGEMENT] if os.name == "nt" else [str(script), "--acknowledgement", FULL_ACKNOWLEDGEMENT]
-        self._start("install", "powershell.exe" if os.name == "nt" else "bash", args)
-
     @Slot()
     def login(self):
         if self._busy:
-            return
-        if not self.ready:
-            self.error.emit("Prepare the Full Access profile before signing in.")
             return
         try:
             program, args = self.command_factory(["login", "--device-auth"])
@@ -81,7 +65,7 @@ class FullProfile(QObject):
     def _start(self, operation, program, args):
         self._operation = operation
         self._busy = True
-        self._output = "Preparing separate profile..." if operation == "install" else "Starting separate device sign-in..."
+        self._output = "Starting Codex device sign-in..."
         environment = QProcessEnvironment.systemEnvironment()
         if operation == "login":
             environment.insert("CODEX_HOME", str(self.home))
@@ -101,15 +85,9 @@ class FullProfile(QObject):
         operation = self._operation
         self._operation = ""
         if operation and code != 0:
-            self.error.emit(f"Full Access {operation} failed. Check the profile log in Preferences.")
-        elif operation == "install":
-            if self.ready:
-                self._output += "\nProfile prepared. Use Sign in if this profile is not authenticated."
-                self.prepared.emit()
-            else:
-                self.error.emit("Installer finished without a complete Full Access profile.")
+            self.error.emit(f"Codex {operation} failed. Check the account log in Preferences.")
         elif operation == "login":
-            self._output += "\nSeparate profile sign-in completed."
+            self._output += "\nCodex sign-in completed."
         self.changed.emit()
 
     def _failed(self, error):
@@ -136,7 +114,7 @@ class FullProfile(QObject):
             killer.finished.connect(killer.deleteLater)
             killer.start("taskkill", ["/PID", str(pid), "/T", "/F"])
         self.process.kill()
-        self._output += "\nOperation cancelled. Any installed files remain in place."
+        self._output += "\nSign-in cancelled."
 
     def shutdown(self):
         if self._busy:

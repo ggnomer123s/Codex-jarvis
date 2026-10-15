@@ -123,7 +123,7 @@ class TestWakeControl(unittest.TestCase):
         self.wait(lambda: self.control.state == 'listening')
 
     def test_background_window_is_hidden_and_close_keeps_enabled_listener(self):
-        backend = Backend(self.settings, start_hidden=True, tray_available=True, full_home=self.root / 'full')
+        backend = Backend(self.settings, start_hidden=True, tray_available=True, codex_home_override=self.root / 'full')
         engine = QQmlApplicationEngine()
         warnings = []
         engine.warnings.connect(lambda items: warnings.extend(str(i) for i in items))
@@ -158,7 +158,7 @@ for line in sys.stdin:
  if value['command']=='shutdown': break
  if value['command']=='record': print(json.dumps({'type':'recording','id':value['id']}),flush=True)
 """, encoding='utf-8')
-        backend = Backend(self.settings, voice_command=[sys.executable, '-u', str(voice)], full_home=self.root / 'full')
+        backend = Backend(self.settings, voice_command=[sys.executable, '-u', str(voice)], codex_home_override=self.root / 'full')
         self.addCleanup(backend.shutdown)
         wake = backend.wake_control
         wake.command, wake.register = self.control.command, self.register
@@ -177,7 +177,7 @@ for line in sys.stdin:
         self.assertEqual(backend.process.processId(), 0)
 
     def test_backend_cancel_before_pause_ack_does_not_start_manual_worker(self):
-        backend = Backend(self.settings, full_home=self.root / 'full')
+        backend = Backend(self.settings, codex_home_override=self.root / 'full')
         self.addCleanup(backend.shutdown)
         wake = backend.wake_control
         wake.command, wake.register = self.control.command, self.register
@@ -193,7 +193,7 @@ for line in sys.stdin:
         self.assertEqual(wake.state, 'listening')
 
     def test_backend_stop_before_pause_ack_cancels_without_opening_manual_mic(self):
-        backend = Backend(self.settings, full_home=self.root / 'full')
+        backend = Backend(self.settings, codex_home_override=self.root / 'full')
         self.addCleanup(backend.shutdown)
         wake = backend.wake_control
         wake.command, wake.register = self.control.command, self.register

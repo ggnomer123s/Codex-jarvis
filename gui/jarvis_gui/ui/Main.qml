@@ -16,6 +16,10 @@ ApplicationWindow {
     property bool compact: width < 1250
     property real coreSize: Math.min(compact ? 310 : 360, Math.max(220, height - 520))
     property string liveTranscript: ""
+    function syncComposerControls() {
+        if (!inlineModel.activeFocus && !inlineModel.contentItem.activeFocus) inlineModel.editText = bridge.model || "Codex default"
+        inlineEffort.currentIndex = Math.max(0, inlineEffort.indexOfValue(bridge.effort))
+    }
 
     onClosing: function(close) {
         if (bridge.wake.enabled) {
@@ -35,7 +39,10 @@ ApplicationWindow {
             composer.forceActiveFocus()
         }
         function onTranscriptPreview(text) { window.liveTranscript = text }
-        function onChanged() { if (bridge.voiceState === "starting") window.liveTranscript = "" }
+        function onChanged() {
+            if (bridge.voiceState === "starting") window.liveTranscript = ""
+            Qt.callLater(window.syncComposerControls)
+        }
         function onMessagesChanged() { scrollDelay.restart() }
     }
     Timer { id: scrollDelay; interval: 50; onTriggered: conversation.positionViewAtEnd() }
@@ -254,8 +261,33 @@ ApplicationWindow {
                                         source: bridge.voiceState === "recording" ? "microphone-active.svg" : "microphone.svg"
                                     }
                                 }
+                                HudComboBox {
+                                    id: inlineModel; objectName: "inlineModel"
+                                    Layout.preferredWidth: window.compact ? 140 : 190
+                                    implicitHeight: 34; font.pixelSize: 10
+                                    model: bridge.models; editable: true; enabled: !window.locked
+                                    Accessible.name: "Codex model"
+                                    Component.onCompleted: editText = bridge.model || "Codex default"
+                                    onActivated: bridge.selectModel(currentText)
+                                    onAccepted: bridge.selectModel(editText)
+                                    ToolTip.visible: hovered; ToolTip.text: bridge.model || "Codex default"
+                                }
+                                HudComboBox {
+                                    id: inlineEffort; objectName: "inlineEffort"
+                                    Layout.preferredWidth: window.compact ? 105 : 135
+                                    implicitHeight: 34; font.pixelSize: 10
+                                    model: bridge.reasoningOptions; textRole: "label"; valueRole: "code"
+                                    enabled: !window.locked
+                                    currentIndex: Math.max(0, indexOfValue(bridge.effort))
+                                    Component.onCompleted: Qt.callLater(window.syncComposerControls)
+                                    onModelChanged: Qt.callLater(window.syncComposerControls)
+                                    Accessible.name: "Reasoning level"
+                                    onActivated: bridge.selectReasoning(currentValue)
+                                    ToolTip.visible: hovered; ToolTip.text: "Reasoning level; availability depends on the model"
+                                }
                                 Text {
-                                    Layout.fillWidth: true
+                                    Layout.fillWidth: true; Layout.minimumWidth: 0
+                                    visible: !window.compact
                                     text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? "Transcribing locally..." : (bridge.voiceReady ? "Local voice model ready" : "Voice stays local until you send"))
                                     color: "#7897a7"; font.pixelSize: 9; elide: Text.ElideRight
                                 }
@@ -370,7 +402,7 @@ ApplicationWindow {
                 wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked)
         }
         onOpened: {
-            effortChoice.currentIndex = ["low", "default", "high"].indexOf(bridge.effort)
+            effortChoice.currentIndex = Math.max(0, effortChoice.indexOfValue(bridge.effort))
             accessChoice.currentIndex = ["read-only", "workspace-write"].indexOf(bridge.normalAccess)
             modelChoice.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
             modelChoice.editText = bridge.model || "Codex default"
@@ -425,7 +457,7 @@ ApplicationWindow {
                     Text { text: "Reasoning"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox {
                         id: effortChoice; Layout.fillWidth: true; enabled: !window.locked
-                        model: ["Fast - low reasoning", "Normal - Codex default", "Deep - high reasoning"]
+                        model: bridge.reasoningOptions; textRole: "label"; valueRole: "code"
                     }
                     CheckBox {
                         id: adaptiveChoice; text: "Adapt reasoning to task difficulty"; enabled: !window.locked
@@ -490,15 +522,15 @@ ApplicationWindow {
                             }
                             contentItem: Text { text: fullAccessToggle.text; color: "#f3c38d"; font.pixelSize: 13; leftPadding: fullAccessToggle.indicator.width + 10; verticalAlignment: Text.AlignVCenter }
                         }
-                        Text { Layout.fillWidth: true; text: bridge.fullProfile.ready ? "Full Access profile is included and ready." : (bridge.fullProfile.busy ? "Preparing the Full Access profile..." : "The profile will be prepared when you enable the checkbox."); color: "#84b9b0"; font.pixelSize: 10; wrapMode: Text.WordWrap }
-                        Text { Layout.fillWidth: true; text: "Allows Codex to change your user files and run commands without its sandbox or command approvals. Uses a separate profile and login. Root / Administrator privileges and OS authentication are unchanged."; color: "#dfb987"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
-                        Text { visible: bridge.fullAccess; text: "FULL ACCESS IS ACTIVE FOR THIS WINDOW"; color: "#f4c185"; font.pixelSize: 10; font.letterSpacing: 1 }
+                        Text { Layout.fillWidth: true; text: "One Codex profile, login and MCP configuration for every access mode."; color: "#84b9b0"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                        Text { Layout.fillWidth: true; text: "Full Access is on by default and allows changes to your user files and commands without the Codex sandbox or command approvals. Turn it off above to use the selected sandbox. This setting is saved and shared with the jarvis CLI. OS authentication and root / Administrator protections remain in place."; color: "#dfb987"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Text { visible: bridge.fullAccess; text: "FULL ACCESS IS ACTIVE"; color: "#f4c185"; font.pixelSize: 10; font.letterSpacing: 1 }
                         RowLayout {
-                            HudButton { text: "Sign in to full profile"; enabled: bridge.fullProfile.ready && !window.locked; onClicked: bridge.fullProfile.login() }
+                            HudButton { text: "Sign in to Codex"; enabled: !window.locked; onClicked: bridge.fullProfile.login() }
                             HudButton { text: "Open sign-in page"; visible: bridge.fullProfile.loginUrl.length > 0; onClicked: bridge.fullProfile.openLoginPage() }
                             HudButton { text: "Cancel"; visible: bridge.fullProfile.busy; danger: true; onClicked: bridge.fullProfile.cancel() }
                         }
-                        Text { Layout.fillWidth: true; text: "Sign in once if this separate profile has no login. Follow the device link and code below. Full Access returns to your normal mode when you reopen JARVIS."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                        Text { Layout.fillWidth: true; text: "Your existing Codex login is reused. Sign in only if Codex is not authenticated. No extra profile is installed and no credentials are copied."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         TextArea {
                             Layout.fillWidth: true; Layout.preferredHeight: 115
                             visible: bridge.fullProfile.output.length > 0
@@ -580,7 +612,7 @@ ApplicationWindow {
                     if (preferenceTabs.currentIndex === 5) { if (preferences.applyWake()) preferences.close(); return }
                     let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
                     let access = bridge.fullAccess ? "full-access" : ["read-only", "workspace-write"][accessChoice.currentIndex]
-                    if (bridge.saveAllPreferences(["low", "default", "high"][effortChoice.currentIndex], access, model, languageChoice.currentValue, voiceModelChoice.editText,
+                    if (bridge.saveAllPreferences(effortChoice.currentValue, access, model, languageChoice.currentValue, voiceModelChoice.editText,
                         workflowEditor.text, adaptiveChoice.checked, ["cpu", "cuda"][deviceChoice.currentIndex], [1, 3, 5][beamChoice.currentIndex], previewChoice.checked, micChoice.currentValue || "")) preferences.close()
                 }
             }
