@@ -19,7 +19,11 @@ See [GUI controls/storage](gui-conveniences.md) and the newest
 passed 65 root tests (one native Windows skip) and 48 Qt tests. Initial CI
 passed static/root and Ubuntu but found Windows clipboard-cache removal did not
 match a noncanonical settings path to the resolved attachment path. Cleanup now
-resolves both parents, with a noncanonical-path regression; follow-up CI pending.
+resolves both parents, with a noncanonical-path regression. Final
+[CI run 38747237298](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38747237298)
+for `eb34751` passed static/root and both Ubuntu/Windows desktop jobs. This
+result-only follow-up skips CI. Real user-machine model/clipboard/file/desktop
+permissions still require target-environment verification.
 
 **Conversation readability update — 2026-10-15 (GUI 0.4.1):** A- / A+ controls
 in the right panel header change all message text between 12 and 28 px (default
