@@ -1,5 +1,7 @@
 # JARVIS — cross-platform Codex desktop assistant
 
+Implementation history and verification results: [changes.md](changes.md).
+
 A community project that connects **OpenAI Codex CLI** to desktop automation via **Model Context Protocol (MCP)**, and adds a simple **`jarvis` command**, reusable Skills, troubleshooting instructions, and optional error monitoring.
 
 ## JARVIS desktop app — Linux and Windows 11
@@ -123,7 +125,7 @@ General **task replay/rollback**, **JARVIS Doctor auto-repair**, an **applicatio
 2. Preserve the existing user setup and the separation between regular and Full Access; diagnose before altering working MCP registrations or OS settings.
 3. When a user asks to operate an application, use an authorized GUI MCP if it exists; when deterministic APIs are more reliable, use them. Verify actions rather than inventing outcomes.
 4. For code changes, update related tests/docs and check the latest GitHub Actions result. Do not mistake a green syntax/unit-test run for successful real-world visual automation.
-5. Update this README and the detailed handoff whenever architecture, supported commands, known problems or major milestones change.
+5. Update this README and the detailed handoff whenever architecture, supported commands, known problems or major milestones change. Record every change and its actual validation in [changes.md](changes.md).
 
 **Source-of-truth files:** [main CLI installers](scripts/) · [GUI Skill](skills/jarvis-desktop/SKILL.md) · [managed agent rules](config/jarvis-agents.md) · [tests](tests/) · [CI workflow](.github/workflows/validate.yml) · [complete technical handoff](docs/AI_HANDOFF.md).
 
