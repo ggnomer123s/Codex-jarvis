@@ -8,6 +8,16 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-15 — Fresh Linux and Windows CI requested
+
+- Requested a new full GitHub Actions run through a report-only push to `main`,
+  following the request to run the platform checks again. This replaces the
+  earlier pause on additional runs.
+- The existing workflow covers static checks, root unit tests and separate
+  Ubuntu/Windows desktop jobs with process/QML tests, simulated audio and a
+  desktop-window smoke test. No application or workflow code changed.
+- Result: pending; a follow-up entry will link the run and record its outcome.
+
 ## 2026-10-15 — Verification completed and change reporting started
 
 - Created this report, including a backfill of the current runtime work and a
