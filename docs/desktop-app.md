@@ -14,6 +14,20 @@ code/message copying, reviewed file/image attachments, searchable pinned local
 history and an activity/time/error card. See [GUI controls](gui-conveniences.md)
 for usage, shortcuts and storage behavior.
 
+## JARVIS character and spoken replies
+
+The installed Skill and managed Codex instructions now describe a composed,
+respectful assistant who treats the user as mentor, uses their language and
+keeps a little restrained wit. Updating the installer refreshes these managed
+instructions while preserving personal text. Start a new conversation afterward.
+
+Completed successful answers are spoken by default through local OS voices.
+Use **Speech on/off** below the chat, **Read** on an assistant message,
+**Stop speech** or Escape. **Preferences > Speech** provides voice selection,
+rate, pitch, volume, refresh and a test. Russian requires an installed Russian
+voice. Wake capture pauses during output; manual recording interrupts output
+before opening the microphone. See [speech output](speech-output.md).
+
 ## Conversation text size
 
 Use **A- / A+** beside **CONVERSATION** at the top of the right-hand panel to
@@ -38,6 +52,7 @@ software renderer and requires no new dependency or network request.
 | Ready | Slow turquoise breathing and drifting filaments |
 | Connecting, voice preparation, profile setup | Pale-blue rotating preparation arc |
 | Recording | Mint filaments expand and the center wave responds to microphone level |
+| Speaking | Pale-cyan outward pulses while local speech is active |
 | Transcribing | Blue processing wave and traveling arc |
 | Planning | Violet orbital loops change inclination |
 | Acting | Faster blue particles with short orbital trails |

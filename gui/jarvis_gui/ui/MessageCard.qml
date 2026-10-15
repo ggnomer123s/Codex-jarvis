@@ -32,6 +32,11 @@ Rectangle {
                 onClicked: bridge.copyText(card.messageText)
             }
             HudButton {
+                objectName: "readMessageButton"; text: "Read"; implicitHeight: 26; font.pixelSize: 10
+                visible: card.messageRole === "assistant"; enabled: !card.locked
+                onClicked: bridge.readMessage(card.index)
+            }
+            HudButton {
                 objectName: "editMessageButton"; text: "Edit & resend"; implicitHeight: 26; font.pixelSize: 10
                 visible: card.messageRole === "user"; enabled: !card.locked
                 onClicked: bridge.editMessage(card.index)

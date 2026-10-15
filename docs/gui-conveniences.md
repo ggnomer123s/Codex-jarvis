@@ -29,6 +29,11 @@ Send to submit it as a new turn in the current conversation. Earlier messages
 and completed actions remain; editing is not a rollback or automatic retry.
 Missing or changed attachments are reported for reattachment.
 
+**Read** speaks an assistant message with the installed local voice, including
+when automatic speech is off. **Speech on/off** in the composer controls
+automatic final replies; **Stop speech** interrupts output. See
+[speech controls and prerequisites](speech-output.md).
+
 ## Files, images and screenshots
 
 Use **Attach files**, drag local files onto the window, or copy a screenshot

@@ -143,3 +143,13 @@ Managed/corporate PCs may prevent creation of user tasks; normal GUI assistance 
 - Avoid pasting Windows event logs into public GitHub issues without removing secrets.
 
 Further reading: [MCP & Skills](mcp-and-skills.md) · [Usage](usage.md) · [Security](security.md) · [Upstream Windows-MCP](https://github.com/CursorTouch/Windows-MCP).
+
+## Spoken replies in the GUI
+
+Spoken final answers are on by default. Use **Preferences > Speech** to select
+an installed Windows voice, change rate/pitch/volume and test it. For Russian,
+open **Settings > Time & language > Speech > Add voices**, install Russian and
+restart JARVIS, then Refresh voices. Choose a voice that appears in JARVIS's
+list: voices available only to Narrator may not be exposed to Qt's speech
+engine. Speech on/off and Stop speech are available directly beside the chat.
+See [speech output](speech-output.md) for microphone coordination and limits.

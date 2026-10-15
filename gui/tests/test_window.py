@@ -14,6 +14,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
 from jarvis_gui.backend import Backend
+from fake_speech import Engine
 import jarvis_gui
 
 APP = QApplication.instance() or QApplication([])
@@ -26,13 +27,14 @@ class TestWindow(unittest.TestCase):
             script = root / "codex.py"
             script = Path(__file__).with_name("fake_app_server.py")
             settings = QSettings(str(root / "settings.ini"), QSettings.Format.IniFormat)
+            settings.setValue('speech/enabled', False)
             settings.setValue("folder", folder)
             Path(settings.fileName()).with_suffix(".access").write_text("read-only\n")
             full_home = root / "full-profile"
             full_home.mkdir()
             (full_home / "AGENTS.md").write_text("Test full profile")
             (full_home / "backend.txt").write_text("none")
-            backend = Backend(settings, codex_command=[sys.executable, "-u", str(script), "normal", str(root / "requests.jsonl")], codex_home_override=full_home)
+            backend = Backend(settings, codex_command=[sys.executable, "-u", str(script), "normal", str(root / "requests.jsonl")], codex_home_override=full_home, speech_engine_factory=Engine)
             engine = QQmlApplicationEngine()
             warnings = []
             engine.warnings.connect(lambda items: warnings.extend(str(item) for item in items))
@@ -113,9 +115,19 @@ class TestWindow(unittest.TestCase):
                 self.assertEqual(language.property("currentValue"), "ru")
                 self.assertEqual(model.property("editText"), "test-model")
                 tabs = window.findChild(QObject, "preferenceTabs")
-                for index in (1, 2, 3, 4, 5, 0):
+                for index in (1, 2, 3, 4, 5, 6):
                     tabs.setProperty("currentIndex", index)
                     QTest.qWait(50)
+                auto_speech = window.findChild(QObject, 'autoSpeechToggle')
+                auto_speech.setProperty('checked', True)
+                self.assertTrue(QMetaObject.invokeMethod(auto_speech, 'clicked'))
+                self.assertTrue(backend.speaker.enabled)
+                self.assertTrue(QMetaObject.invokeMethod(window.findChild(QObject, 'testSpeechButton'), 'clicked'))
+                self.assertTrue(backend.speaker.active)
+                self.assertIn('наставник', backend.speaker._engine.spoken[-1])
+                backend.speaker.stop()
+                QTest.qWait(350)
+                backend.speaker.setEnabled(False)
                 tabs.setProperty("currentIndex", 2)
                 QTest.qWait(50)
                 toggle = window.findChild(QObject, "fullAccessToggle")
@@ -172,14 +184,26 @@ class TestWindow(unittest.TestCase):
                 QTest.qWait(100)
                 items = [window.findChild(QObject, "conversation").property("contentItem")]
                 copy_code = None
+                read_message = None
                 while items:
                     item = items.pop()
                     items.extend(item.childItems())
                     if item.objectName() == "copyCodeButton" and item.property("visible"):
                         copy_code = item
+                    if item.objectName() == 'readMessageButton' and item.property('visible'):
+                        read_message = item
                 self.assertIsNotNone(copy_code)
                 self.assertTrue(QMetaObject.invokeMethod(copy_code, "clicked"))
                 self.assertEqual(APP.clipboard().text(), "print('ready')\n")
+                self.assertIsNotNone(read_message)
+                before_read_pid = backend.process.processId()
+                self.assertTrue(QMetaObject.invokeMethod(read_message, 'clicked'))
+                self.assertTrue(backend.speaker.active)
+                self.assertEqual(backend.stage, 'speaking')
+                self.assertEqual(backend.process.processId(), before_read_pid)
+                self.assertTrue(QMetaObject.invokeMethod(window.findChild(QObject, 'stopSpeechButton'), 'clicked'))
+                QTest.qWait(350)
+                self.assertFalse(backend.speaker.active)
                 attached_file = root / "drop fixture.txt"
                 attached_file.write_text("Review before sending", encoding="utf-8")
                 before_drop_pid = backend.process.processId()

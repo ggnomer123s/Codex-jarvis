@@ -21,7 +21,7 @@ Existing MCP permissions are retained.
 ## CachyOS, Arch, Manjaro, EndeavourOS
 
 ```bash
-sudo pacman -Syu --needed git uv python nodejs npm portaudio grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+sudo pacman -Syu --needed git uv python nodejs npm portaudio speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
 "$HOME/.local/bin/codex" login
@@ -37,7 +37,7 @@ fi && bash "$repo_dir/scripts/install-gui-linux.sh" && "$HOME/.local/bin/jarvis-
 
 ```bash
 sudo apt update
-sudo apt install -y git curl python3 nodejs npm libportaudio2 libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0
+sudo apt install -y git curl python3 nodejs npm libportaudio2 speech-dispatcher espeak-ng libspeechd2 libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0
 curl --proto '=https' --tlsv1.2 -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
@@ -50,7 +50,7 @@ bash "$HOME/Codex-jarvis-gui/scripts/install-gui-linux.sh"
 ## Fedora
 
 ```bash
-sudo dnf install -y git curl python3 nodejs npm portaudio mesa-libEGL mesa-libGL libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+sudo dnf install -y git curl python3 nodejs npm portaudio speech-dispatcher speech-dispatcher-espeak-ng espeak-ng mesa-libEGL mesa-libGL libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
 curl --proto '=https' --tlsv1.2 -LsSf https://astral.sh/uv/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
@@ -79,6 +79,10 @@ The Linux installers create `~/.local/bin/jarvis-gui`, a JARVIS application
 menu entry and update the ordinary Codex desktop backend. Full Access defaults
 on; disable it in Preferences > Access to save a sandbox mode for GUI and regular
 CLI launchers. All modes reuse the current Codex login. Keep the checkout in place.
+
+Linux spoken replies use Speech Dispatcher and an installed speech module.
+For openSUSE, install the Speech Dispatcher/eSpeak NG packages available for
+your release and configure its output module; see [speech setup](speech-output.md).
 
 ## Windows 11
 
@@ -150,6 +154,16 @@ git -C "$env:USERPROFILE\Codex-jarvis-gui" pull --ff-only
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-jarvis-gui\scripts\install-gui-windows.ps1"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-jarvis-gui\scripts\jarvis-gui-windows.ps1"
 ```
+
+## Spoken replies
+
+Speech is on by default. Open **Preferences > Speech** to test installed voices
+and adjust voice/rate/pitch/volume. Windows uses native system voices; add the
+Russian voice under **Settings > Time & language > Speech > Add voices** if
+needed. Linux uses the packages listed above; existing CachyOS users can run
+`sudo pacman -S --needed speech-dispatcher espeak-ng` before updating.
+The installer updates the managed JARVIS Skill and AGENTS character instructions;
+start a new conversation after updating. See [speech output](speech-output.md).
 
 ## Desktop automation and first voice use
 

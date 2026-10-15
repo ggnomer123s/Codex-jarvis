@@ -1,6 +1,23 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-15; see the newest entry for current behavior._
 
+**JARVIS character and speech update — 2026-10-15 (GUI 0.6.0):** the user
+requested a mentor-oriented JARVIS character and spoken answers. The installed
+Skill and managed AGENTS block carry the persona; updates require reinstalling
+the managed instructions and starting a new conversation. `speech.py` uses local
+Qt native engines only, lazily, with auto reading on by default. Read/Stop and
+Preferences > Speech expose voices/rate/pitch/volume. Enumerate Qt voices across
+all installed locales; automatic matches Russian/English and prefers an adult
+male voice if present. Missing Russian is visible, never silently substituted.
+Only the current successful final reply is auto-read; opened history, explicit
+commentary and failed/canceled turns are silent. No cloud TTS, actor clone or
+new model backend is included. Code/URLs are omitted and speech is bounded.
+Wake pause acknowledgment precedes playback; a 300 ms cooldown precedes resumed
+capture. PTT interrupts speech and waits for quiet, with stale callback guards.
+See [speech setup](speech-output.md) and [change report](../changes.md). Automated
+adapters/test-plugin checks do not establish physical speaker/microphone quality.
+Cross-platform CI outcomes are recorded in the newest change-report entry.
+
 **Conversation workspace update — 2026-10-15 (GUI 0.5.0):** the user explicitly
 approved all six proposed GUI conveniences and deferred other model providers.
 Main.qml now has a saved SplitView layout/full-chat/core visibility and one

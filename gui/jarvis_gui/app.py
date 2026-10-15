@@ -21,7 +21,7 @@ def main() -> int:
     parser.add_argument("--smoke-test", action="store_true", help="Load the actual UI, then exit without sending a request")
     parser.add_argument("--background", action="store_true", help="Start hidden if voice activation is enabled")
     parser.add_argument("--screenshot", type=Path, help="Save a window image before the smoke-test exits")
-    tabs = ["intelligence", "voice", "access", "runtime", "automation", "wake"]
+    tabs = ["intelligence", "voice", "access", "runtime", "automation", "wake", "speech"]
     parser.add_argument("--settings-tab", choices=tabs, help="Show a preferences tab during the smoke test")
     args = parser.parse_args()
     app = QApplication(sys.argv[:1])

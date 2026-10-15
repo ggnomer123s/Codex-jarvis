@@ -86,6 +86,15 @@ normal launch restores the existing instance through same-user local IPC; no
 network listener is exposed. Wayland/Windows focus policies may highlight/show
 the window rather than forcibly transferring keyboard focus.
 
+## Spoken replies and microphone coordination
+
+The local wake microphone pauses before JARVIS speaks. Speech waits for the
+worker's pause acknowledgment and resumes listening after a 300 ms audio-tail
+cooldown. Manual push-to-talk interrupts output and waits for quiet before
+recording. This prevents ordinary self-activation; it is not full-duplex echo
+cancellation. External speakers or delayed room echoes can still warrant a
+headset. See [spoken replies](speech-output.md).
+
 ## Audio and resource limits
 
 While enabled, the background microphone stays open. Its callback only queues

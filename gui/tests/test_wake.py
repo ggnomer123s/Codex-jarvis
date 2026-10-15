@@ -44,6 +44,7 @@ class TestWakeControl(unittest.TestCase):
         script = self.root / 'fake_wake.py'
         script.write_text(FAKE, encoding='utf-8')
         self.settings = QSettings(str(self.root / 'settings.ini'), QSettings.IniFormat)
+        self.settings.setValue('speech/enabled', False)
         self.register = mock.Mock()
         self.control = WakeControl(self.settings, command=[sys.executable, '-u', str(script)], register=self.register)
         self.addCleanup(self.control.shutdown)

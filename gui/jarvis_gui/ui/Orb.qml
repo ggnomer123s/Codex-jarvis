@@ -18,7 +18,7 @@ Item {
         if (listening || stage === "recording") return "listening"
         if (["loading", "starting", "connecting"].indexOf(stage) >= 0) return "connecting"
         if (stage === "planning") return "thinking"
-        if (["transcribing", "acting", "verifying", "complete", "failed", "stopping", "stopped"].indexOf(stage) >= 0) return stage
+        if (["transcribing", "acting", "verifying", "complete", "failed", "stopping", "stopped", "speaking"].indexOf(stage) >= 0) return stage
         return active ? "thinking" : "idle"
     }
     readonly property string stateLabel: {
@@ -26,6 +26,7 @@ Item {
         case "listening": return "LISTENING"
         case "connecting": return "PREPARING"
         case "transcribing": return "DECODING VOICE"
+        case "speaking": return "SPEAKING"
         case "thinking": return "THINKING"
         case "acting": return "IN MOTION"
         case "verifying": return "VERIFYING"
@@ -38,6 +39,7 @@ Item {
     }
     readonly property real motionRate: {
         switch (mode) {
+        case "speaking": return 18
         case "thinking": return 26
         case "acting": return 68
         case "verifying": return 34
@@ -53,6 +55,7 @@ Item {
     }
     property color accent: {
         switch (mode) {
+        case "speaking": return "#91e9ff"
         case "thinking": return "#b8a7ff"
         case "acting": return "#61d9ff"
         case "verifying": return "#ffd493"
@@ -199,6 +202,11 @@ Item {
                     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
                 }
                 ctx.stroke()
+            }
+            if (mode === "speaking") {
+                // A stylized output pulse, not a measured speaker waveform.
+                strokeCircle(r * (1.02 + 0.035 * Math.sin(t * 7)), 0.55, 1.6)
+                strokeCircle(r * (1.08 + 0.02 * Math.sin(t * 7 - 1)), 0.25, 1)
             }
             if (mode === "verifying") {
                 ctx.save()

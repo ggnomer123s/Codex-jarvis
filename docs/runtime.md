@@ -67,6 +67,20 @@ model, language, microphone, fuzzy matching and sign-in startup are configured i
 afterward; stale inference is discarded. Closing the window keeps the opted-in
 listener in the tray/minimized. Quit stops workers; disable also removes startup.
 
+## Local spoken output
+
+Qt TextToSpeech uses installed Windows winrt/sapi or Linux speechd/flite engines.
+Speech initializes lazily and stays separate from Codex and Whisper. Only the
+current successful completed final answer is automatically read; manual Read
+also works with automatic speech off. Opening history stays silent.
+
+Wake capture must acknowledge pause (or its process must exit) before speech
+starts. A 300 ms cooldown keeps the mic paused through the audio tail. Recording
+interrupts speech and waits for quiet; generation/recording IDs reject canceled
+callbacks. Shutdown stops owned speech. No full-duplex echo cancellation is
+implemented. Settings, voice prerequisites and text limits are described in
+[speech output](speech-output.md).
+
 ## Fast commands
 
 These commands execute locally without model inference:

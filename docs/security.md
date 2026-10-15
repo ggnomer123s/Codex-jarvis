@@ -67,3 +67,13 @@ The timings export still excludes conversation content.
 **Observe → reproduce safely → establish evidence → apply an authorized minimal fix → verify result**. Confirm consequential or irreversible steps when they were not already authorized.
 
 See [Linux backends](mcp-and-skills.md) and [Usage](usage.md).
+
+## Spoken replies
+
+Automatic speech is on by default and may make the displayed answer audible to
+people nearby. The composer Speech toggle disables it immediately; Stop speech
+interrupts current output. Native Qt speech uses installed local system engines,
+without sending answer text to a cloud TTS service or creating audio files.
+The answer itself still comes from Codex. Wake capture pauses before speech and
+manual recording waits for output to stop. These are microphone coordination
+controls, not full-duplex echo cancellation. See [speech output](speech-output.md).

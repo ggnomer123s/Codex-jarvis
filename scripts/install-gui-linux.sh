@@ -4,6 +4,9 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 for tool in uv uvx python3 codex; do command -v "$tool" >/dev/null || { echo "Missing $tool; see docs/install-desktop.md." >&2; exit 1; }; done
 uv sync --project "$ROOT/gui" --frozen --extra voice
+if ! command -v speech-dispatcher >/dev/null; then
+    echo 'Spoken replies need a system speech engine. See docs/speech-output.md (Speech Dispatcher and eSpeak NG on Linux).'
+fi
 echo 'Updating the shared Codex profile and desktop backend.'
 bash "$ROOT/scripts/install-linux.sh"
 python3 - "$ROOT" <<'PY'

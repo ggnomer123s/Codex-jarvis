@@ -175,7 +175,7 @@ class WakeControl(QObject):
         if self.process.state() != QProcess.NotRunning:
             self.process.kill()
         else:
-            self._set_status('paused', 'Wake microphone paused for manual voice input.')
+            self._set_status('paused', 'Wake microphone paused for voice interaction.')
             self._release()
 
     def _read(self):
@@ -204,7 +204,7 @@ class WakeControl(QObject):
                 elif self._pause_token:
                     self._write('pause', token=self._pause_token)
             elif kind == 'paused' and value.get('token') == self._pause_token:
-                self._set_status('paused', 'Wake microphone paused for manual voice input.')
+                self._set_status('paused', 'Wake microphone paused for voice interaction.')
                 self._release()
             elif kind == 'error':
                 self._set_status('error', str(value.get('message', 'Voice activation unavailable.'))[:500])
@@ -218,7 +218,7 @@ class WakeControl(QObject):
             self._set_status('off', self._off_message)
             self._release()
         elif self._suspended:
-            self._set_status('paused', 'Wake microphone paused for manual voice input.')
+            self._set_status('paused', 'Wake microphone paused for voice interaction.')
             self._release()
         elif self._restart and not self._closing:
             self.start()

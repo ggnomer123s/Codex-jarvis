@@ -26,6 +26,14 @@ files/clipboard screenshots, and search/pin/rename local conversations. A status
 card shows the current activity, elapsed time and errors. See the
 [GUI controls and history guide](docs/gui-conveniences.md).
 
+**JARVIS character and spoken replies:** the installed Skill and managed Codex
+instructions treat you as the mentor: respectful, composed, concise and lightly
+witty. Completed answers are read aloud by default using local Windows/Linux
+voices. Use **Speech on/off**, a message's **Read**, or **Stop speech**; choose
+voice/rate/pitch/volume in **Preferences > Speech**. Russian needs an installed
+Russian speech voice. Wake listening pauses during output. See
+[speech setup and limitations](docs/speech-output.md).
+
 **Optional voice activation:** enable **Preferences > Wake** to listen locally
 for Jarvis or its Russian name and restore the app from the background. Includes
 tolerant matching, microphone/model/language settings and per-user login startup.

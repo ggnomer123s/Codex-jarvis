@@ -75,13 +75,18 @@ for line in sys.stdin:
         if previous and scenario == 'late':
             notice('item/agentMessage/delta', {'threadId': thread, 'turnId': previous, 'itemId': 'old-item', 'delta': 'STALE'})
             notice('turn/completed', {'threadId': thread, 'turn': {'id': previous, 'status': 'completed', 'items': []}})
+        if scenario in ('commentary', 'commentary-only'):
+            notice('item/completed', {'threadId': thread, 'turnId': turn, 'item': {'id':'commentary','type':'agentMessage','phase':'commentary','text':'I will inspect the task.'}})
+            if scenario == 'commentary-only':
+                notice('turn/completed', {'threadId':thread,'turn':{'id':turn,'status':'completed','items':[]}})
+                continue
         text = params['input'][0]['text']
         if scenario == 'fragmented':
             text = 'hello ★'
         item = 'answer-' + str(turn_count)
         send({'method': 'item/agentMessage/delta', 'params': {'threadId': thread, 'turnId': turn, 'itemId': item, 'delta': text[:2]}}, scenario == 'fragmented')
         notice('item/agentMessage/delta', {'threadId': thread, 'turnId': turn, 'itemId': item, 'delta': text[2:]})
-        notice('item/completed', {'threadId': thread, 'turnId': turn, 'item': {'id': item, 'type': 'agentMessage', 'text': text}})
+        notice('item/completed', {'threadId': thread, 'turnId': turn, 'item': {'id': item, 'type': 'agentMessage', 'phase':'final_answer', 'text': text}})
         notice('turn/completed', {'threadId': thread, 'turn': {'id': turn, 'status': 'completed', 'items': []}})
         previous = turn
         continue

@@ -30,7 +30,7 @@ ApplicationWindow {
         }
     }
 
-    Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel() } }
+    Shortcut { sequence: "Escape"; onActivated: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else if (bridge.fullProfile.busy) bridge.fullProfile.cancel(); else if (bridge.speech.active) bridge.speech.stop() } }
     Shortcut { sequence: "Ctrl+Shift+F"; onActivated: bridge.setChatOnly(!bridge.chatOnly) }
     Shortcut { sequence: "Ctrl+H"; onActivated: historyPopup.open() }
     Shortcut { sequence: "Ctrl+O"; enabled: !window.locked; onActivated: bridge.chooseAttachments() }
@@ -200,7 +200,7 @@ ApplicationWindow {
                         Layout.preferredWidth: window.coreSize
                         Layout.preferredHeight: window.coreSize
                         Layout.minimumHeight: 220
-                        active: bridge.busy || window.voiceActive || bridge.fullProfile.busy
+                        active: bridge.busy || window.voiceActive || bridge.fullProfile.busy || bridge.speech.active
                         listening: bridge.voiceState === "recording"
                         targetLevel: bridge.audioLevel
                         stage: bridge.fullProfile.busy ? "connecting" : bridge.stage
@@ -312,7 +312,7 @@ ApplicationWindow {
                         Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
                         RowLayout {
                             Layout.fillWidth: true
-                            BusyIndicator { running: bridge.busy || window.voiceActive; visible: running; implicitWidth: 24; implicitHeight: 24 }
+                            BusyIndicator { running: bridge.busy || window.voiceActive || bridge.speech.active; visible: running; implicitWidth: 24; implicitHeight: 24 }
                             ColumnLayout {
                                 Layout.fillWidth: true; spacing: 4
                                 Text { text: bridge.taskStatus.title + (bridge.taskStatus.elapsed ? "  ·  " + bridge.taskStatus.elapsed : ""); color: bridge.taskStatus.state === "failed" ? "#ff9baf" : "#8ae0d1"; font.pixelSize: 12 }
@@ -322,8 +322,10 @@ ApplicationWindow {
                                 visible: window.locked; text: "Stop"; danger: true; implicitHeight: 30; font.pixelSize: 11
                                 onClicked: { if (bridge.busy) bridge.stop(); else if (window.voiceActive) bridge.cancelVoice(); else bridge.fullProfile.cancel() }
                             }
+                            HudButton { objectName: "stopSpeechButton"; visible: bridge.speech.active; text: "Stop speech"; danger: true; implicitHeight: 30; font.pixelSize: 11; onClicked: bridge.speech.stop() }
                             HudButton { visible: !window.followConversation; text: "Latest ↓"; implicitHeight: 28; font.pixelSize: 10; onClicked: { window.followConversation = true; conversation.positionViewAtEnd() } }
                         }
+                        Text { Layout.fillWidth: true; visible: bridge.speech.state === "error"; text: bridge.speech.status; color: "#f0b0a2"; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
                         Text { Layout.fillWidth: true; visible: bridge.notice.length > 0; text: bridge.notice; color: "#efc389"; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: bridge.attachments.length > 0 ? 232 : 174
@@ -334,6 +336,7 @@ ApplicationWindow {
                                 Layout.fillWidth: true; spacing: 8
                                 HudButton { text: "Attach files"; objectName: "attachFilesButton"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.chooseAttachments() }
                                 HudButton { text: "Paste image"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.pasteImage() }
+                                HudButton { objectName: "speechToggleButton"; text: bridge.speech.enabled ? "Speech on" : "Speech off"; implicitHeight: 28; font.pixelSize: 10; onClicked: bridge.speech.setEnabled(!bridge.speech.enabled); ToolTip.visible: hovered; ToolTip.text: "Automatic spoken replies; choose a voice in Preferences > Speech" }
                                 Text { Layout.fillWidth: true; text: "Drop files here"; color: "#668d9b"; font.pixelSize: 10; elide: Text.ElideRight }
                             }
                             ScrollView {
@@ -456,7 +459,7 @@ ApplicationWindow {
         id: preferences
         objectName: "preferences"
         anchors.centerIn: parent
-        width: 600; height: Math.min(window.height - 60, 700); padding: 24
+        width: 700; height: Math.min(window.height - 60, 700); padding: 24
         modal: true; focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         background: Rectangle { radius: 18; color: "#111f2b"; border.color: "#345463" }
@@ -466,6 +469,7 @@ ApplicationWindow {
                 wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked)
         }
         onOpened: {
+            speechPage.sync()
             effortChoice.currentIndex = Math.max(0, effortChoice.indexOfValue(bridge.effort))
             accessChoice.currentIndex = ["read-only", "workspace-write"].indexOf(bridge.normalAccess)
             modelChoice.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
@@ -495,9 +499,10 @@ ApplicationWindow {
                 id: preferenceTabs
                 objectName: "preferenceTabs"
                 property int currentIndex: 0
+                onCurrentIndexChanged: if (currentIndex === 6) { bridge.speech.refresh(); speechPage.sync() }
                 Layout.fillWidth: true; spacing: 8
                 Repeater {
-                    model: ["Intelligence", "Voice", "Access", "Runtime", "Automation", "Wake"]
+                    model: ["Intelligence", "Voice", "Access", "Runtime", "Automation", "Wake", "Speech"]
                     HudButton {
                         required property string modelData
                         required property int index
@@ -668,11 +673,13 @@ ApplicationWindow {
                         HudButton { text: "Quit JARVIS / stop listening"; onClicked: Qt.quit() }
                     }
                 }
+                SpeechSettings { id: speechPage }
             }
             HudButton {
                 Layout.fillWidth: true; primary: true; text: preferenceTabs.currentIndex === 5 ? "Apply voice activation" : "Save preferences"
                 enabled: !window.locked
                 onClicked: {
+                    if (preferenceTabs.currentIndex === 6) { if (speechPage.apply()) preferences.close(); return }
                     if (preferenceTabs.currentIndex === 5) { if (preferences.applyWake()) preferences.close(); return }
                     let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
                     let access = bridge.fullAccess ? "full-access" : ["read-only", "workspace-write"][accessChoice.currentIndex]

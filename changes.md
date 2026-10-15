@@ -11,6 +11,44 @@ the source of commit timestamps.
 
 
 
+## 2026-10-15 — JARVIS mentor character and local speech (GUI 0.6.0)
+
+- Updated the installed `jarvis-desktop` Skill and managed AGENTS instructions:
+  composed, respectful mentor-oriented conversation in the user's language,
+  concise results, restrained wit and thoughtful disagreement. The persona
+  does not change tool authorization or claim fictional identity. Existing
+  installers refresh both managed sources; start a new conversation afterward.
+- Added lazy local Qt TextToSpeech output through Windows winrt/sapi or Linux
+  speechd/flite. Automatic reading defaults on for the current successful final
+  answer; Read also works with auto off. Streaming/commentary, canceled/failed
+  turns and opened history remain silent. Native errors stay visible without
+  resending requests. Test/mock engines are injected only in tests.
+- Added Preferences > Speech: installed voice selection, rate/pitch/volume,
+  refresh, test and stop; immediate saved Speech on/off in the composer, message
+  Read, Stop speech/Escape and a distinct cyan speaking animation. Enumerates
+  every installed Qt locale so Russian can be selected on an English desktop;
+  Automatic matches Russian/English and prefers an installed adult male voice.
+  Missing matching voices are reported rather than reading in another language.
+- Spoken text removes fenced code, images, raw URLs and Markdown; limits output
+  to 6,000 characters with a continuation notice. Chat text is preserved.
+- Speech waits for the real wake-worker pause acknowledgment or process exit.
+  Wake capture stays paused during output and a 300 ms tail cooldown. Manual
+  recording interrupts speech and waits for quiet; generation/recording IDs
+  reject canceled or superseded callbacks. Warm transcription remains reusable.
+- Added speech prerequisites to distribution recipes and installer messages,
+  a speech setup/privacy/troubleshooting guide, and updated README, Windows,
+  desktop, runtime, wake, security and handoff docs. GUI/lock/client version is
+  0.6.0; Qt speech is bundled, with no new Python dependency or cloud TTS key.
+- Verification: 68 root tests discovered (67 passed, one Windows-native probe
+  skipped locally), 59 passing Qt process/QML tests, and successful normal and
+  Speech-settings smoke checks. English docs/scripts, relative Markdown links,
+  Python/Bash syntax and the frozen dependency lock passed. Tests cover native Qt API via its test plugin,
+  locale-specific voice discovery, errors/cancellation, final-only reading,
+  real subprocess wake/manual-mic handoff, and production-window controls.
+  This cloud has no usable system speech runtime/speakers; missing-engine UI
+  was checked. Actual OS voice quality and physical audio remain target-machine
+  checks. Cross-platform GitHub CI results will be appended after publication.
+
 ## 2026-10-15 — Conversation workspace conveniences (GUI 0.5.0)
 
 - Added a draggable core/chat splitter, saved pane width, Hide/Show core and a

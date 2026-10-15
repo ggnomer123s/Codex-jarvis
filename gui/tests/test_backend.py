@@ -22,6 +22,7 @@ class TestBackend(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.settings = QSettings(str(self.root / "settings.ini"), QSettings.Format.IniFormat)
+        self.settings.setValue('speech/enabled', False)
         self.settings.setValue("folder", str(self.root))
         Path(self.settings.fileName()).with_suffix(".access").write_text("read-only\n")
         self.backends = []

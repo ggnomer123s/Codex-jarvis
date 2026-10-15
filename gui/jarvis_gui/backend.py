@@ -24,6 +24,7 @@ from .wake_control import WakeControl
 from .access import codex_home, access_file, read_access, write_access
 from .history import History
 from .attachments import inspect_file, validate_files, MAX_FILES
+from .speech import Speech
 
 
 class Backend(QObject):
@@ -38,7 +39,7 @@ class Backend(QObject):
     transcriptReady = Signal(str)
     transcriptPreview = Signal(str)
 
-    def __init__(self, settings=None, *, codex_command=None, voice_command=None, codex_home_override=None, start_hidden=False, tray_available=False, access_path=None):
+    def __init__(self, settings=None, *, codex_command=None, voice_command=None, codex_home_override=None, start_hidden=False, tray_available=False, access_path=None, speech_engine_factory=None):
         super().__init__()
         self.settings = settings or QSettings("Jarvis", "Desktop")
         try:
@@ -61,6 +62,12 @@ class Backend(QObject):
         self._start_hidden = start_hidden
         self._tray_available = tray_available
         self.wake_control = WakeControl(self.settings, self)
+        self.speaker = Speech(self.settings, self, prepare=self._prepare_speech, engine_factory=speech_engine_factory)
+        self.speaker.changed.connect(self.changed.emit)
+        self._speech_handoff = ''
+        self._speech_start_row = 0
+        self._final_speech_text = ''
+        self._speech_commentary_ids = set()
         saved = str(self.settings.value("folder", str(Path.home())))
         self._folder = saved if Path(saved).is_dir() else str(Path.home())
         self._effort = str(self.settings.value("effort", "low"))
@@ -165,7 +172,7 @@ class Backend(QObject):
         self.profile = FullProfile(self._codex_launch, self, home=self._normal_home)
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
-        self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle"))
+        self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle" or self.speaker.active))
         self._notice_timer = QTimer(self)
         self._notice_timer.setSingleShot(True)
         self._notice_timer.timeout.connect(lambda: self._show_notice(''))
@@ -457,14 +464,38 @@ class Backend(QObject):
         if self._voice_state != 'idle':
             title = 'Voice: ' + self._voice_state
         detail = self._activity
-        if self._stage == 'failed':
+        if self.speaker.active and not self._busy and self._voice_state == 'idle':
+            title, detail = 'Speaking', self.speaker.status
+        if self._stage == 'failed' and not self.speaker.active and self._voice_state == 'idle':
             detail = next((x['text'] for x in reversed(self._messages) if x['role']=='error'), detail)
         current = self.profiler.current
         last = self.profiler.history[-1] if self.profiler.history else None
         seconds = (self.profiler.clock() - self.profiler._started) if current else ((last or {}).get('durationMs',0)/1000)
-        return {'title':title, 'detail':detail[:500], 'elapsed':f'{int(seconds)//60}:{int(seconds)%60:02d}' if self._voice_state == 'idle' and self._stage != 'idle' else '',
+        return {'title':title, 'detail':detail[:500], 'elapsed':f'{int(seconds)//60}:{int(seconds)%60:02d}' if self._voice_state == 'idle' and self._stage != 'idle' and not self.speaker.active else '',
                 'busy':self._busy, 'state':self._stage}
 
+
+    @Property(QObject, constant=True)
+    def speech(self):
+        return self.speaker
+
+    def _prepare_speech(self, callback):
+        if self._voice_state != 'idle' or self.profile.busy:
+            self.speaker.stop()
+            return
+        self.wake_control.reserve_microphone(callback)
+
+    @Slot(int)
+    def readMessage(self, index):
+        if not self._locked() and 0 <= index < len(self._messages):
+            message = self._messages[index]
+            if message['role'] == 'assistant':
+                self.speaker.read(message['text'])
+
+    @Slot()
+    def testSpeech(self):
+        if not self._locked():
+            self.speaker.read('К вашим услугам, наставник. Системы готовы.' if not self.speaker.voice or self.speaker.voice.startswith('ru_') else 'At your service, mentor. Systems are ready.')
 
     @Property(QObject, constant=True)
     def wake(self):
@@ -593,6 +624,8 @@ class Backend(QObject):
 
     @Property(str, notify=changed)
     def stage(self):
+        if self.speaker.active and not self._busy and self._voice_state == "idle":
+            return "speaking"
         return self._voice_state if self._voice_state != "idle" else self._stage
 
     @Property(bool, notify=changed)
@@ -771,6 +804,10 @@ class Backend(QObject):
         self.server.request("model/list", {"limit": 100}, returned)
 
     def _begin(self, kind):
+        self.speaker.stop()
+        self._speech_start_row = len(self._messages)
+        self._final_speech_text = ''
+        self._speech_commentary_ids.clear()
         self._task_id = str(uuid.uuid4())
         self._busy = True
         self._cancelled = False
@@ -896,6 +933,10 @@ class Backend(QObject):
                 self._flush_text()
                 text = item.get("text", "")
                 if isinstance(text, str):
+                    if item.get('phase') == 'final_answer':
+                        self._final_speech_text = text
+                    elif item.get('phase') == 'commentary':
+                        self._speech_commentary_ids.add(item_id)
                     self.profiler.mark("firstText")
                     self._set_item_text(item_id, text, replace=True)
             elif kind in ("mcpToolCall", "commandExecution", "fileChange", "webSearch"):
@@ -959,6 +1000,11 @@ class Backend(QObject):
             self._stage, self._activity = "complete", "Ready when you are"
             self._needs_deep = False
         self._save_history()
+        if not error and status == 'completed' and self._task_kind in ('codex', 'workflow'):
+            commentary_rows = {self._item_rows[item_id] for item_id in self._speech_commentary_ids if item_id in self._item_rows}
+            reply = self._final_speech_text or next((self._messages[row]['text'] for row in range(len(self._messages)-1, self._speech_start_row-1, -1) if row not in commentary_rows and self._messages[row]['role'] == 'assistant'), '')
+            if reply:
+                self.speaker.read(reply, automatic=True)
         self.changed.emit()
 
     def _server_failed(self, text):
@@ -1035,6 +1081,7 @@ class Backend(QObject):
         self._finish("interrupted" if self._cancelled else "failed", "Codex connection stopped.")
 
     def _reset_context(self):
+        self.speaker.stop()
         self._save_history()
         self._conversation_id = str(uuid.uuid4())
         self._turn_attachments = []
@@ -1225,6 +1272,12 @@ class Backend(QObject):
         self.changed.emit()
 
     def _start_voice(self):
+        if self.speaker.active and self._voice_state != 'idle' and not self._voice_cancelled:
+            if self._speech_handoff != self._voice_id:
+                self._speech_handoff = self._voice_id
+                token = self._voice_id
+                self.speaker.when_quiet(lambda: self._voice_after_speech(token))
+            return
         if self._voice_state == "idle" or self._voice_cancelled:
             return
         if self._voice_state == "transcribing" and self._voice_stop_requested:
@@ -1245,6 +1298,11 @@ class Backend(QObject):
             self._voice_ready = False
             self.voice.start(self._voice_command[0], [*self._voice_command[1:], "--worker", "--model", self._voice_model,
                               "--device", self._voice_options["device"]])
+
+    def _voice_after_speech(self, token):
+        self._speech_handoff = ''
+        if token == self._voice_id and not self._voice_cancelled and self._voice_state != 'idle':
+            self._start_voice()
 
     @Slot()
     def toggleVoice(self):
@@ -1361,6 +1419,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.speaker.shutdown()
         self._history_timer.stop()
         self.wake_control.shutdown()
         self.profile.shutdown()
