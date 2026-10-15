@@ -16,6 +16,13 @@ Disable stops capture even if startup cleanup fails. Normal mic pause retains
 the wake model; a stalled pause kills only that worker, then reloads after manual
 voice completes. See [voice-activation.md](voice-activation.md) for limits and
 target-machine checks; older "no wake listener" descriptions are superseded.
+After a Windows activation-delivery regression, local IPC now waits for an owner
+acknowledgement and is tested between real separate processes. Public CI error
+annotations include the child exit code and final traceback. Final
+[run 38704976904](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38704976904)
+for `2496dfe` passed all static/root, Ubuntu and Windows jobs. Local suites passed
+60 root plus 44 Qt tests (104 total). Real microphone accuracy, sign-in startup
+and native tray/focus behavior remain target-machine checks.
 
 **Activity artwork and scope update — 2026-10-15:** `Orb.qml` replaces the
 central J with an original generated `energy-core.png` and procedural Canvas

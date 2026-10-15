@@ -37,8 +37,8 @@ the source of commit timestamps.
   passes 60 root and 44 Qt tests (104 total), with no real microphone/model
   download or OS startup modification during tests. Inspected the actual Wake
   settings screenshot. Python syntax, frozen lock, English docs/scripts, local
-  documentation links and whitespace checks passed. CI outcome will be recorded
-  after publication. Tests also cover Stop/Cancel before microphone handoff.
+  documentation links and whitespace checks passed. Tests also cover Stop/Cancel
+  before microphone handoff. Final CI outcome is recorded below.
 - Scope: explicitly requested wake activation supersedes the earlier deferred
   wake proposal only. Other declined features and specialized bots are unchanged.
 - Initial [CI run 38703887487](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38703887487)
@@ -52,6 +52,13 @@ the source of commit timestamps.
   `activation.py` to wait for an explicit owner acknowledgement before closing
   the local channel, and changed the IPC regression to launch a real second
   process so the owner's event loop can accept the Windows named pipe.
+- Final [CI run 38704976904](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38704976904)
+  for [2496dfe](https://github.com/ggnomer123s/Codex-jarvis/commit/2496dfe) passed
+  all three jobs: static/root checks, Ubuntu desktop and Windows desktop,
+  including real cross-process activation, Qt/QML, simulated speech/protocol and
+  window smoke tests. A separate local normal-app/menu boot and clean quit also
+  passed with isolated disabled wake settings. No native microphone accuracy or
+  real login startup is claimed. This result-only report/handoff update skips CI.
 
 ## 2026-10-15 — Activity-reactive artwork replaces the central J
 
