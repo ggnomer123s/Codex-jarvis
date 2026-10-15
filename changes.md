@@ -8,7 +8,7 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
-## 2026-10-15 — Fresh Linux and Windows CI requested
+## 2026-10-15 — Fresh Linux and Windows CI passed
 
 - Requested a new full GitHub Actions run through a report-only push to `main`,
   following the request to run the platform checks again. This replaces the
@@ -16,7 +16,15 @@ the source of commit timestamps.
 - The existing workflow covers static checks, root unit tests and separate
   Ubuntu/Windows desktop jobs with process/QML tests, simulated audio and a
   desktop-window smoke test. No application or workflow code changed.
-- Result: pending; a follow-up entry will link the run and record its outcome.
+- Result: [run 38698094096](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38698094096)
+  for [c9e7b2d](https://github.com/ggnomer123s/Codex-jarvis/commit/c9e7b2d)
+  completed successfully. Verified all three jobs and their individual steps:
+  static/root checks, Windows desktop and Ubuntu desktop. Both desktop jobs
+  passed locked dependency installation, process/QML tests, protocol/simulated
+  audio tests and window loading; Ubuntu also installed the Qt runtime libraries.
+- Updated this report and the maintainer handoff with the completed result.
+  Checked documentation links, the English-only rule and whitespace. Publishing
+  this result uses `[skip ci]` to avoid starting another run for the report.
 
 ## 2026-10-15 — Verification completed and change reporting started
 

@@ -11,6 +11,14 @@ Maintain [changes.md](../changes.md) for every subsequent modification, recordin
 files/behavior, verification evidence and unresolved limits. Its initial entries
 also backfill the persistent-runtime and preceding GUI/install changes.
 
+**Fresh CI result — 2026-10-15:** after a subsequent request to run both
+platforms, [run 38698094096](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38698094096)
+for `c9e7b2d` passed all three jobs: static/root checks, Ubuntu desktop and
+Windows desktop. Individual process/QML, protocol/simulated-audio and window
+smoke-test steps succeeded on both platforms. This supersedes the earlier pause
+on additional runs. The result-only documentation update skips another CI run;
+hardware-validation limits remain unchanged. See [changes.md](../changes.md).
+
 **Persistent runtime update — 2026-10-14:** the GUI now uses an owned Codex
 app-server stdio JSON-RPC process as its only model transport. This supersedes
 earlier descriptions of per-message `codex exec`, completed-only chat and
