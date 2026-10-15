@@ -53,7 +53,12 @@ the source of commit timestamps.
   QtTextToSpeech. Added libpulse client-library prerequisites to CI and recipes;
   missing speech-module imports now become a visible speech error while the
   text GUI stays usable. Added an isolated-process missing-library regression.
-  Final cross-platform CI results will be appended after the fix.
+  Final [CI run 38779340998](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38779340998)
+  for `f01ecf5` passed static/root, Ubuntu desktop and Windows desktop jobs,
+  including the Windows PowerShell 5 shared-profile probe. Source commits:
+  [208df7c](https://github.com/ggnomer123s/Codex-jarvis/commit/208df7c) and
+  [f01ecf5](https://github.com/ggnomer123s/Codex-jarvis/commit/f01ecf5).
+  This result-only report update skips CI.
 
 ## 2026-10-15 — Conversation workspace conveniences (GUI 0.5.0)
 

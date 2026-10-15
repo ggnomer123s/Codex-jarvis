@@ -64,8 +64,8 @@ sudo dnf install pulseaudio-libs speech-dispatcher speech-dispatcher-espeak-ng e
 ```
 
 On openSUSE, use the Speech Dispatcher/eSpeak NG packages and output module
-provided by your release, plus its libpulse client library. Check the distribution's module configuration if
-Russian is absent from the voice list. Restart JARVIS after installing packages.
+provided by your release, plus its libpulse client library. Check the
+distribution's module configuration if Russian is absent from the voice list. Restart JARVIS after installing packages.
 If provided, `spd-say -l ru "Speech test"` checks the system output independently.
 The GUI installer never invokes sudo or edits system speech configuration.
 Qt uses `speechd`, or `flite` if its plugin and suitable voices are installed.

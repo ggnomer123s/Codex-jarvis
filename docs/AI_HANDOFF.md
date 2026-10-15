@@ -16,7 +16,14 @@ Wake pause acknowledgment precedes playback; a 300 ms cooldown precedes resumed
 capture. PTT interrupts speech and waits for quiet, with stale callback guards.
 See [speech setup](speech-output.md) and [change report](../changes.md). Automated
 adapters/test-plugin checks do not establish physical speaker/microphone quality.
-Cross-platform CI outcomes are recorded in the newest change-report entry.
+Local verification passed 67 root tests (one native Windows skip) and 60 Qt
+process/QML tests. Initial CI passed Windows but revealed a missing Ubuntu
+libpulse import dependency. CI/recipes now install the libpulse client library;
+missing optional native-module imports keep the text backend usable and report
+speech errors, covered by an isolated-process regression. Final
+[CI run 38779340998](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38779340998)
+for `f01ecf5` passed static/root and Ubuntu/Windows desktop jobs, including the
+Windows shared-profile probe. This result-only documentation update skips CI.
 
 **Conversation workspace update — 2026-10-15 (GUI 0.5.0):** the user explicitly
 approved all six proposed GUI conveniences and deferred other model providers.
