@@ -58,12 +58,49 @@ class TestWindow(unittest.TestCase):
                 APP.processEvents()
                 self.assertTrue(button.property("enabled"))
                 self.assertTrue(QMetaObject.invokeMethod(button, "clicked"))
+                smaller = window.findChild(QObject, "conversationFontSmaller")
+                larger = window.findChild(QObject, "conversationFontLarger")
+                self.assertTrue(backend.busy)
+                self.assertTrue(QMetaObject.invokeMethod(larger, "clicked"))
+                self.assertEqual(backend.conversationFontSize, 16)
+                self.assertTrue(QMetaObject.invokeMethod(smaller, "clicked"))
                 deadline = time.monotonic() + 5
                 while backend.busy and time.monotonic() < deadline:
                     QTest.qWait(20)
                 self.assertFalse(backend.busy)
                 self.assertEqual(backend.messages[-1]["text"], "Check the workspace")
                 self.assertEqual(composer.property("text"), "")
+                self.assertEqual(backend.conversationFontSize, 14)
+                history, pid = list(backend.messages), backend.process.processId()
+                composer.setProperty("text", "Keep this draft")
+                self.assertTrue(QMetaObject.invokeMethod(smaller, "clicked"))
+                self.assertEqual(backend.conversationFontSize, 12)
+                self.assertFalse(smaller.property("enabled"))
+                for _ in range(8):
+                    self.assertTrue(QMetaObject.invokeMethod(larger, "clicked"))
+                QTest.qWait(80)
+                self.assertEqual(backend.conversationFontSize, 28)
+                self.assertFalse(larger.property("enabled"))
+                # ListView delegates belong to its visual tree, not the window's QObject tree.
+                items = [window.findChild(QObject, "conversation").property("contentItem")]
+                bodies = []
+                while items:
+                    item = items.pop()
+                    items.extend(item.childItems())
+                    if item.objectName() == "conversationMessageBody":
+                        bodies.append(item)
+                self.assertGreaterEqual(len(bodies), 2)
+                self.assertTrue(all(body.property("font").pixelSize() == 28 for body in bodies))
+                self.assertEqual(backend.messages, history)
+                self.assertEqual(backend.process.processId(), pid)
+                self.assertEqual(composer.property("text"), "Keep this draft")
+                settings.sync()
+                reopened = Backend(QSettings(str(root / "settings.ini"), QSettings.Format.IniFormat), codex_home_override=full_home)
+                try:
+                    self.assertEqual(reopened.conversationFontSize, 28)
+                finally:
+                    reopened.shutdown()
+                    reopened.deleteLater()
                 popup = window.findChild(QObject, "preferences")
                 self.assertTrue(QMetaObject.invokeMethod(popup, "open"))
                 QTest.qWait(100)
@@ -102,7 +139,7 @@ class TestWindow(unittest.TestCase):
                 image = QQuickWindow.grabWindow(window)
                 self.assertFalse(image.isNull())
                 self.assertEqual(image.width(), 1060 * window.devicePixelRatio())
-                for control in (inline_model, inline_effort, button):
+                for control in (inline_model, inline_effort, button, smaller, larger):
                     position = control.mapToScene(QPointF(0, 0))
                     self.assertLessEqual(position.x() + control.width(), window.width())
                     self.assertLessEqual(position.y() + control.height(), window.height())

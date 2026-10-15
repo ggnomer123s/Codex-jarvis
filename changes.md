@@ -9,6 +9,25 @@ machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
 
+
+## 2026-10-15 — Adjustable conversation text size (GUI 0.4.1)
+
+- Added A- / A+ buttons and a size indicator beside CONVERSATION in the right
+  panel. Requests, streamed responses and status text update immediately from
+  12 to 28 pixels, in two-pixel steps. Increased the default from 12 to 14 pixels.
+- Persisted `conversationFontSize` in GUI settings. Changing it leaves model,
+  access, connection, conversation and composer draft intact, and is available
+  during active requests. Added dedicated notification rather than runtime refresh.
+- Updated the actual QML window check to exercise both buttons, disabled limits,
+  rendered user/assistant fonts, persistence, unchanged history/runtime/draft,
+  and compact-window control bounds. Updated the desktop guide, version/lock
+  and screenshots; no new dependencies.
+- Local verification: all 43 Qt tests passed, including actual-window font
+  changes during an active request and restart persistence. Actual application
+  smoke passed; inspected full and compact (1060x760) renders with 20 px sample
+  messages. Python syntax, frozen lock and whitespace checks passed. Fresh
+  automatic CI results will be recorded after publication.
+
 ## 2026-10-15 — One Codex account, default Full Access and composer controls
 
 - GUI, Linux/Windows CLI and legacy Full Access commands now reuse the existing

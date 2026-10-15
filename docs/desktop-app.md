@@ -9,6 +9,16 @@ not a signed standalone EXE, AppImage, DEB or RPM release.
 
 ![JARVIS desktop command center](images/jarvis-desktop.png)
 
+## Conversation text size
+
+Use **A- / A+** beside **CONVERSATION** at the top of the right-hand panel to
+change message text from 12 to 28 pixels in two-pixel steps. The default is 14
+pixels. The change applies immediately to existing and incoming requests,
+responses and status messages, and is saved for the next launch. It works while
+an answer streams and preserves the conversation, connection and unsent draft.
+
+![Larger text in the conversation panel](images/jarvis-conversation-size.png)
+
 ## Animated activity core
 
 The central J has been replaced with an original woven-light energy sculpture.

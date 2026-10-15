@@ -321,10 +321,30 @@ ApplicationWindow {
                     ColumnLayout {
                         anchors.fill: parent; anchors.margins: 22; spacing: 14
                         RowLayout {
-                            Layout.fillWidth: true; Layout.topMargin: 9
+                            Layout.fillWidth: true; Layout.topMargin: 9; spacing: 6
                             Text { text: "CONVERSATION"; color: "#a5bfcc"; font.pixelSize: 10; font.letterSpacing: 2 }
                             Item { Layout.fillWidth: true }
-                            Text { text: "01"; color: "#38606f"; font.pixelSize: 11; font.family: "monospace" }
+                            HudButton {
+                                objectName: "conversationFontSmaller"
+                                text: "A−"; implicitWidth: 34; implicitHeight: 30; font.pixelSize: 12
+                                enabled: bridge.conversationFontSize > 12
+                                Accessible.name: "Decrease conversation text size"
+                                onClicked: bridge.setConversationFontSize(bridge.conversationFontSize - 2)
+                                ToolTip.visible: hovered; ToolTip.text: "Smaller conversation text"
+                            }
+                            Text {
+                                Layout.preferredWidth: 32; horizontalAlignment: Text.AlignHCenter
+                                text: bridge.conversationFontSize + " px"; color: "#89b9be"; font.pixelSize: 10
+                                Accessible.name: "Conversation text size: " + bridge.conversationFontSize + " pixels"
+                            }
+                            HudButton {
+                                objectName: "conversationFontLarger"
+                                text: "A+"; implicitWidth: 34; implicitHeight: 30; font.pixelSize: 12
+                                enabled: bridge.conversationFontSize < 28
+                                Accessible.name: "Increase conversation text size"
+                                onClicked: bridge.setConversationFontSize(bridge.conversationFontSize + 2)
+                                ToolTip.visible: hovered; ToolTip.text: "Larger conversation text"
+                            }
                         }
                         Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
                         Item {
@@ -362,8 +382,9 @@ ApplicationWindow {
                                             font.pixelSize: 9; font.letterSpacing: 1.7
                                         }
                                         TextEdit {
+                                            objectName: "conversationMessageBody"
                                             width: parent.width
-                                            text: messageText; color: "#cbdde5"; font.pixelSize: 12
+                                            text: messageText; color: "#cbdde5"; font.pixelSize: bridge.conversationFontSize
                                             readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap
                                             textFormat: TextEdit.PlainText
                                             Accessible.name: messageRole + " message"

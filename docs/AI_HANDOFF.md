@@ -1,6 +1,15 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-15; see the newest entry for current behavior._
 
+**Conversation readability update — 2026-10-15 (GUI 0.4.1):** A- / A+ controls
+in the right panel header change all message text between 12 and 28 px (default
+14), including existing and streamed messages. Backend `conversationFontSize`
+has its own notification and saved QSettings value; changing it does not reset
+runtime, thread or draft and is available while busy. The actual-window test
+checks controls, rendered message fonts, saved size and compact bounds. See
+[the desktop guide](desktop-app.md#conversation-text-size) and the newest
+[change-report entry](../changes.md) for verification.
+
 **Shared account/access update — 2026-10-15 (GUI 0.4.0):** the user's latest
 request supersedes all older separate-profile, second-login, acknowledgement
 and off-by-default Full Access instructions below. GUI, normal CLI and legacy

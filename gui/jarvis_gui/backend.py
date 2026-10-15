@@ -25,6 +25,7 @@ from .access import codex_home, access_file, read_access, write_access
 
 class Backend(QObject):
     changed = Signal()
+    conversationFontSizeChanged = Signal()
     messagesChanged = Signal()
     transcriptReady = Signal(str)
     transcriptPreview = Signal(str)
@@ -32,6 +33,11 @@ class Backend(QObject):
     def __init__(self, settings=None, *, codex_command=None, voice_command=None, codex_home_override=None, start_hidden=False, tray_available=False, access_path=None):
         super().__init__()
         self.settings = settings or QSettings("Jarvis", "Desktop")
+        try:
+            font_size = int(self.settings.value("conversationFontSize", 14))
+        except (TypeError, ValueError):
+            font_size = 14
+        self._conversation_font_size = max(12, min(28, font_size))
         self._start_hidden = start_hidden
         self._tray_available = tray_available
         self.wake_control = WakeControl(self.settings, self)
@@ -144,6 +150,18 @@ class Backend(QObject):
     @Property("QVariantList", notify=messagesChanged)
     def messages(self):
         return self._messages
+
+    @Property(int, notify=conversationFontSizeChanged)
+    def conversationFontSize(self):
+        return self._conversation_font_size
+
+    @Slot(int)
+    def setConversationFontSize(self, size):
+        size = max(12, min(28, size))
+        if size != self._conversation_font_size:
+            self._conversation_font_size = size
+            self.settings.setValue("conversationFontSize", size)
+            self.conversationFontSizeChanged.emit()
 
     @Property(QObject, constant=True)
     def wake(self):
