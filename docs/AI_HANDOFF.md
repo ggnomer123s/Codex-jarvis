@@ -1,6 +1,14 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-15; see the newest entry for current behavior._
 
+**Start with [readmeai.md](../readmeai.md)** for the consolidated current product
+and architecture, implemented features, preserved decisions, source map, state
+locations and verification commands. This longer file retains chronological
+investigations: older diagrams, setup instructions and roadmap sections may be
+superseded or declined. Read them with the current overview and newest change
+report, not as a list of work to implement. The new overview was checked against
+GUI 0.6.0 source; this documentation update changes no runtime behavior.
+
 **JARVIS character and speech update — 2026-10-15 (GUI 0.6.0):** the user
 requested a mentor-oriented JARVIS character and spoken answers. The installed
 Skill and managed AGENTS block carry the persona; updates require reinstalling

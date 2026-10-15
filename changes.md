@@ -11,6 +11,26 @@ the source of commit timestamps.
 
 
 
+## 2026-10-15 — Consolidated AI project overview
+
+- Added root `readmeai.md` as the first-read context for another AI maintainer:
+  project purpose, JARVIS mentor character, app-server/MCP architecture and
+  lifecycle, current GUI/voice/speech/workflow features, local state, access,
+  installation, source map, development checks and known regression paths.
+- Recorded decisions to preserve: one existing Codex home/login, app-server-only
+  GUI transport, saved default Full Access, reviewed voice submission and one
+  current desktop assistant. Distinguished deferred providers/specialist bots,
+  declined roadmap ideas and hardware limitations from implemented behavior.
+- Linked the overview prominently from README and the long AI handoff; refreshed
+  the stale README continuation date and explained that older handoff sections
+  can describe superseded behavior. The root overview does not replace installed
+  Skills/AGENTS instructions or grant authority to publish or run unrelated work.
+- Verification: source/documentation consistency review, local Markdown link and
+  fragment checks, English documentation check and `git diff --check`. This is a
+  documentation-only update; no runtime/model/audio/hardware or new platform
+  test run is implied. The commit skips CI; the preceding runtime verification
+  remains recorded below.
+
 ## 2026-10-15 — JARVIS mentor character and local speech (GUI 0.6.0)
 
 - Updated the installed `jarvis-desktop` Skill and managed AGENTS instructions:

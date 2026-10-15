@@ -2,6 +2,9 @@
 
 Implementation history and verification results: [changes.md](changes.md).
 
+**For an AI taking over development:** read [readmeai.md](readmeai.md) first for
+the current product, architecture, constraints, source map and verification steps.
+
 A community project that connects **OpenAI Codex CLI** to desktop automation via **Model Context Protocol (MCP)**, and adds a simple **`jarvis` command**, reusable Skills, troubleshooting instructions, and optional error monitoring.
 
 ## JARVIS desktop app — Linux and Windows 11
@@ -86,7 +89,13 @@ use an explicit checkout path and work from your user directory as well.
 
 ## Start here: project handoff for another AI
 
-**Continuation status — 2026-10-14.** This README is the project's public entry point. A much more detailed, source-checked maintainer handoff is maintained at **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**. If you are an AI coding agent taking over JARVIS, read **both files**, then fetch the latest source, tests and GitHub Actions output before making changes. The code always takes precedence over any dated summary.
+**Current overview — 2026-10-15, GUI 0.6.0.** Start with
+**[readmeai.md](readmeai.md)** for the project's purpose, implemented features,
+architecture, decisions to preserve, code map, local state and test commands.
+This README is the public usage guide. **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**
+retains detailed historical investigations, including superseded behavior and
+declined proposals. Inspect the latest source, tests and relevant GitHub Actions
+results before changing behavior; code takes precedence over dated summaries.
 
 ### What we are building
 
