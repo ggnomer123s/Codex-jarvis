@@ -44,6 +44,11 @@ the source of commit timestamps.
   passed static/root and both GUI suites but failed the new Windows updater
   fixture step. Extended the existing child-test runner with a bootstrap option
   so its failure traceback appears in the public CI annotation for diagnosis.
+  [Diagnostic CI 38869600351](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38869600351)
+  confirmed a Windows checkout-root comparison failure from short/long path
+  aliases. The updater now checks Git's empty root prefix instead of comparing
+  differently normalized directory strings; the existing real-Git/path-spaces
+  fixture covers the regression. Native PowerShell 5 error/login probes passed.
   Final test/CI outcomes are recorded after publication.
   No real pacman, winget, Windows capability install, sign-in or hardware task
   ran in this cloud.

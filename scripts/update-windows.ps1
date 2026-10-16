@@ -49,8 +49,10 @@ function Test-JarvisLoginNeeded([string]$program) {
 function Update-JarvisCheckout([string]$path) {
     $git = (Get-Command git.exe -ErrorAction Stop).Source
     if (Test-Path -LiteralPath (Join-Path $path '.git')) {
-        $top = & $git -C $path rev-parse --show-toplevel
-        if ($LASTEXITCODE -ne 0 -or [IO.Path]::GetFullPath($top).TrimEnd('\','/') -ne $path.TrimEnd('\','/')) { throw 'The target is not the root of its checkout.' }
+        # Git normalizes long/8.3 path aliases differently from PowerShell.
+        # An empty prefix establishes the checkout root without comparing aliases.
+        $prefix = & $git -C $path rev-parse --show-prefix
+        if ($LASTEXITCODE -ne 0 -or $prefix) { throw 'The target is not the root of its checkout.' }
         $origin = & $git -C $path remote get-url origin
         if ($LASTEXITCODE -ne 0 -or $origin -notin @('https://github.com/ggnomer123s/Codex-jarvis.git','https://github.com/ggnomer123s/Codex-jarvis','git@github.com:ggnomer123s/Codex-jarvis.git')) { throw 'The existing checkout origin is not the JARVIS repository.' }
         $branch = & $git -C $path symbolic-ref --quiet --short HEAD

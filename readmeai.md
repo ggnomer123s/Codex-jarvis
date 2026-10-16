@@ -600,6 +600,9 @@ wrong-origin/non-main checkouts and stop on failures. Do not run them on this
 cloud just to test: fixture tests replace package managers, login and launchers.
 Whisper/backend packages can still download on first use; custom native Codex,
 Node-manager selection and OS permission issues may require user attention.
+Windows updater root validation uses Git's empty `--show-prefix`, not literal
+path equality: Git/PowerShell may choose different long/8.3 aliases for the same
+directory. The real-Git Windows fixture found this regression during CI.
 
 Use the full [OS recipes](docs/install-desktop.md) for fresh installations.
 Do not run `git pull` in the user's home directory without specifying the
