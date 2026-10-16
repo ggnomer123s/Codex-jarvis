@@ -13,9 +13,9 @@ from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from jarvis_gui.backend import Backend
+from tigo_gui.backend import Backend
 from fake_speech import Engine
-import jarvis_gui
+import tigo_gui
 
 APP = QApplication.instance() or QApplication([])
 
@@ -45,10 +45,13 @@ class TestWindow(unittest.TestCase):
             warnings = []
             engine.warnings.connect(lambda items: warnings.extend(str(item) for item in items))
             engine.rootContext().setContextProperty("bridge", backend)
-            engine.load(QUrl.fromLocalFile(str(Path(jarvis_gui.__file__).parent / "ui/Main.qml")))
+            engine.load(QUrl.fromLocalFile(str(Path(tigo_gui.__file__).parent / "ui/Main.qml")))
             try:
                 self.assertTrue(engine.rootObjects(), warnings)
                 window = engine.rootObjects()[0]
+                self.assertEqual(window.property("title"), "Tigo - Personal intelligence")
+                self.assertEqual(window.findChild(QObject, "brandMonogram").property("text"), "T")
+                self.assertEqual(window.findChild(QObject, "brandTitle").property("text"), "Tigo")
                 composer = window.findChild(QObject, "composer")
                 button = window.findChild(QObject, "sendButton")
                 composer.setProperty("text", "Check the workspace")
@@ -148,7 +151,7 @@ class TestWindow(unittest.TestCase):
                 self.assertTrue(toggle.property("enabled"))
                 self.assertIsNone(window.findChild(QObject, "fullAcknowledgement"))
                 self.assertFalse(backend.fullAccess)
-                with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+                with mock.patch("tigo_gui.backend.elevated", return_value=False):
                     toggle.setProperty("checked", True)
                     self.assertTrue(QMetaObject.invokeMethod(toggle, "clicked"))
                     APP.processEvents()

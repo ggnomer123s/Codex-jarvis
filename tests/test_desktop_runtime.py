@@ -5,8 +5,8 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gui"))
-from jarvis_gui.core import thread_options, turn_options
-from jarvis_gui.runtime import Checkpoints, Profiler
+from tigo_gui.core import thread_options, turn_options
+from tigo_gui.runtime import Checkpoints, Profiler
 
 
 class Settings:

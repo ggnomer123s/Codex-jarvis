@@ -7,8 +7,8 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gui"))
-from jarvis_gui.core import thread_options, turn_options, launch_command
-from jarvis_gui.preferences import LANGUAGES, cached_models
+from tigo_gui.core import thread_options, turn_options, launch_command
+from tigo_gui.preferences import LANGUAGES, cached_models
 
 
 class TestDesktopProtocol(unittest.TestCase):
@@ -55,12 +55,12 @@ class TestDesktopProtocol(unittest.TestCase):
                 thread_options(str(Path(folder) / "missing"), "read-only")
 
     def test_windows_npm_launch_avoids_shell_interpolation(self):
-        with tempfile.TemporaryDirectory(prefix="jarvis & space ") as folder:
+        with tempfile.TemporaryDirectory(prefix="tigo & space ") as folder:
             root = Path(folder)
             script = root / "node_modules/@openai/codex/bin/codex.js"
             script.parent.mkdir(parents=True)
             script.write_text("// fixture")
-            with mock.patch("jarvis_gui.core.shutil.which", return_value="node.exe"):
+            with mock.patch("tigo_gui.core.shutil.which", return_value="node.exe"):
                 program, args = launch_command(str(root / "codex.cmd"), ["app-server", "--stdio"], windows=True)
             self.assertEqual(program, "node.exe")
             self.assertEqual(args, [str(script), "app-server", "--stdio"])

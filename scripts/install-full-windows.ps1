@@ -1,4 +1,4 @@
-# JARVIS-CODEX MANAGED - compatibility installer; one shared Codex profile.
+# TIGO-CODEX MANAGED - compatibility installer; one shared Codex profile.
 [CmdletBinding()]
 param([string]$Acknowledgement)
 $ErrorActionPreference = 'Stop'

@@ -1,5 +1,12 @@
-# JARVIS — AI MAINTAINER HANDOFF
+# Tigo — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-16; see the newest entry for current behavior._
+
+**Tigo rename — 2026-10-16 (GUI 0.8.0):** the current product, CLI,
+Python package, Skill, icons, UI and wake name are Tigo. See [rename.md](rename.md)
+for migration behavior. Existing private data and desktop grants are preserved.
+The speech-era testing pause below is historical; the new rename request includes
+relevant checks, recorded in the newest change report. Source repository URLs
+and names of third-party projects remain real external identities.
 
 **Local neural speech — 2026-10-16 (GUI 0.7.0):** the user disliked system TTS.
 Default output now uses CPU Piper/VITS through sherpa-onnx: Dmitri Russian,
@@ -36,7 +43,7 @@ snapshot before using the historical sections below.
 shared login/settings and safe fast-forward updates. uv uses Python 3.12 and
 the frozen CPU voice environment. CachyOS runs a full pacman upgrade; Windows
 checks winget tools, refreshes PATH and optionally installs official Russian TTS
-via a separate UAC process. No JARVIS elevation or live package install was
+via a separate UAC process. No Tigo elevation or live package install was
 performed in cloud tests. Dirty/wrong-origin/non-main checkouts stop without
 reset/stash; compatible existing Codex and login are retained. See
 [bootstrap commands](install-desktop.md#automatic-dependency-aware-update-cachyos-and-windows-11)
@@ -69,8 +76,8 @@ Local suites passed 71 root tests (one native Windows skip) and 65 Qt tests.
 for `d63f53d` passed static/root and both Ubuntu/Windows desktop jobs, including
 the Windows shared-profile probe. This result-only documentation update skips CI.
 
-**JARVIS character and speech update — 2026-10-15 (GUI 0.6.0):** the user
-requested a mentor-oriented JARVIS character and spoken answers. The installed
+**Tigo character and speech update — 2026-10-15 (GUI 0.6.0):** the user
+requested a mentor-oriented Tigo character and spoken answers. The installed
 Skill and managed AGENTS block carry the persona; updates require reinstalling
 the managed instructions and starting a new conversation. `speech.py` uses local
 Qt native engines only, lazily, with auto reading on by default. Read/Stop and
@@ -135,7 +142,7 @@ and off-by-default Full Access instructions below. GUI, normal CLI and legacy
 Full Access aliases now reuse `CODEX_HOME` or the ordinary `~/.codex`. No auth is
 copied and existing MCP registrations are retained. Full Access defaults on;
 Preferences > Access saves a shared `access-mode` file for GUI and regular CLI.
-Explicit `jarvis-full`/`jarvis full` commands still request Full Access. Switching
+Explicit `tigo-full`/`tigo full` commands still request Full Access. Switching
 access restarts the owned app-server and clears its conversation context while
 keeping the same Codex account. Old private home directories are left unused.
 Installers prepare the ordinary home, and legacy full installers delegate to
@@ -254,7 +261,7 @@ failures/crashes as GitHub annotations so failures are visible without API log
 access. This is CI observability and environment setup, not live desktop proof.
 
 **Desktop frontend addition — 2026-10-13:** `gui/` now contains a native
-PySide6/Qt Quick application for Linux and Windows 11, with an animated JARVIS
+PySide6/Qt Quick application for Linux and Windows 11, with an animated Tigo
 core, Codex JSON subprocess chat, session resume, cancellation, workspace and
 reasoning preferences, and isolated local push-to-talk transcription. Separate
 launch scripts and user-level menu installers are under `scripts/*gui*`.
@@ -298,15 +305,15 @@ target-machine validation. This update supersedes the earlier GUI text-entry flo
 
 ## 1. Mission and actual product
 
-**Repository:** [ggnomer123s/Codex-jarvis](https://github.com/ggnomer123s/Codex-jarvis); default branch: `main`.
+**Repository:** [ggnomer123s/Tigo](https://github.com/ggnomer123s/Codex-jarvis); default branch: `main`.
 
-JARVIS is a cross-platform **computer assistant with terminal and native desktop interfaces** built around the **OpenAI Codex CLI**. It connects Codex to the user's desktop through MCP and augments it with reusable agent instructions, local confirmed-repair memory, push-to-talk speech transcription, and optional error monitoring. This is an independently developed community project, **not an official OpenAI product**.
+Tigo is a cross-platform **computer assistant with terminal and native desktop interfaces** built around the **OpenAI Codex CLI**. It connects Codex to the user's desktop through MCP and augments it with reusable agent instructions, local confirmed-repair memory, push-to-talk speech transcription, and optional error monitoring. This is an independently developed community project, **not an official OpenAI product**.
 
 The intended experience: say/type a real computer task, have Codex select the correct **GUI, compositor API, application scripting API, or shell route**, perform the permitted actions, and confirm the result. The goal encompasses **video editing, Linux diagnostics, programming, file management, browser workflows and other demanding tasks**—not merely taking screenshots and pressing buttons.
 
 The original active setup was reported as **CachyOS / Hyprland / fish**, with interest in **Windows 11 and Adobe Premiere Pro** support. This does not mean all platforms have been tested. Do not commit personal data, authentication secrets, screen captures, chat histories or machine-specific configuration.
 
-**Do not misrepresent implementation:** There is no separately trained JARVIS model, no autonomous visual video editor, and no guaranteed always-on background operator. Codex provides the reasoning; the repo provides a desktop frontend, launchers, backends, instructions, and utilities.
+**Do not misrepresent implementation:** There is no separately trained Tigo model, no autonomous visual video editor, and no guaranteed always-on background operator. Codex provides the reasoning; the repo provides a desktop frontend, launchers, backends, instructions, and utilities.
 
 ## 2. Architecture (as implemented)
 
@@ -314,7 +321,7 @@ The original active setup was reported as **CachyOS / Hyprland / fish**, with in
                      user: task / optional push-to-talk
                                    |
                                    v
-           jarvis / jarvis-full command-line launchers
+           tigo / tigo-full command-line launchers
                                    |
                                    v
                   OpenAI Codex CLI (LLM/planner)
@@ -337,7 +344,7 @@ The original active setup was reported as **CachyOS / Hyprland / fish**, with in
   Optional memory -> local confirmed-fixes.json (not automatic memory)
 ```
 
-Installed **Skills** live under `~/.agents/skills/jarvis-desktop/SKILL.md` (Windows counterpart under `%USERPROFILE%`). The installer synchronizes a **JARVIS-owned block** in `CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`) from `config/jarvis-agents.md`; it preserves other user text, makes backups, refuses malformed managed markers, and avoids overwriting a symlinked target.
+Installed **Skills** live under `~/.agents/skills/tigo-desktop/SKILL.md` (Windows counterpart under `%USERPROFILE%`). The installer synchronizes a **TIGO-owned block** in `CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`) from `config/tigo-agents.md`; it preserves other user text, makes backups, refuses malformed managed markers, and avoids overwriting a symlinked target.
 
 ### Platform-specific backend registration
 
@@ -348,50 +355,50 @@ Installed **Skills** live under `~/.agents/skills/jarvis-desktop/SKILL.md` (Wind
 | GNOME/KDE/other Wayland | Upstream `uvx wayland-mcp-kurojs`, `WAYLAND_MCP_NO_PERSIST=1`; actual remote-control permission depends on compositor/portal. | Experimental, potentially observation-only. |
 | Windows 11 | Upstream `uvx windows-mcp serve`; new registrations use available tools with no installer exclusions. | Installer implemented; user hardware support still needs verification. |
 
-**Critical behavior:** Installers generally **preserve existing MCP registrations** rather than force-replacing them. Re-running an installer may update the Skill/launcher but **does not necessarily change existing GUI confinement or input permission**. Check `codex mcp get hypruse` / `jarvis status` before making claims. Restart interactive Codex after MCP/Skill changes.
+**Critical behavior:** Installers generally **preserve existing MCP registrations** rather than force-replacing them. Re-running an installer may update the Skill/launcher but **does not necessarily change existing GUI confinement or input permission**. Check `codex mcp get hypruse` / `tigo status` before making claims. Restart interactive Codex after MCP/Skill changes.
 
 ## 3. Commands — source-of-truth: launcher scripts
 
 ```sh
-jarvis                     # same as fast: Codex low reasoning, interactive
-jarvis fast                # low reasoning
-jarvis normal              # default reasoning from Codex config/model
-jarvis deep                # high reasoning
-jarvis full                # explicit unsandboxed mode in the same profile
-jarvis full fast           # Full Access, low reasoning
-jarvis full normal         # Full Access, default reasoning
-jarvis full deep           # Full Access, high reasoning
+tigo                     # same as fast: Codex low reasoning, interactive
+tigo fast                # low reasoning
+tigo normal              # default reasoning from Codex config/model
+tigo deep                # high reasoning
+tigo full                # explicit unsandboxed mode in the same profile
+tigo full fast           # Full Access, low reasoning
+tigo full normal         # Full Access, default reasoning
+tigo full deep           # Full Access, high reasoning
 
-jarvis-full                # Full Access, default reasoning
-jarvis-full fast|normal|deep
-jarvis-full login          # sign into the shared CODEX_HOME
-jarvis-full status         # shared profile / MCP status
-jarvis-full help
+tigo-full                # Full Access, default reasoning
+tigo-full fast|normal|deep
+tigo-full login          # sign into the shared CODEX_HOME
+tigo-full status         # shared profile / MCP status
+tigo-full help
 
-jarvis status              # configured backend and watcher
-jarvis gui-check           # desktop prerequisites & diagnostics
-jarvis reports             # list optional watcher reports
-jarvis voice               # one-shot local Whisper transcription; user reviews
-jarvis memory add          # opt-in confirmed fix
-jarvis memory list
-jarvis memory search QUERY
-jarvis memory forget ID    # explicit deletion confirmation
-jarvis monitor on|off      # installed optional user watcher
-jarvis stop                # on Hyprland, stop Hypruse; other OS: guidance
-jarvis test                # Linux only: synthetic failed user service
-jarvis help
+tigo status              # configured backend and watcher
+tigo gui-check           # desktop prerequisites & diagnostics
+tigo reports             # list optional watcher reports
+tigo voice               # one-shot local Whisper transcription; user reviews
+tigo memory add          # opt-in confirmed fix
+tigo memory list
+tigo memory search QUERY
+tigo memory forget ID    # explicit deletion confirmation
+tigo monitor on|off      # installed optional user watcher
+tigo stop                # on Hyprland, stop Hypruse; other OS: guidance
+tigo test                # Linux only: synthetic failed user service
+tigo help
 
 # Hyprland-only, regular Codex profile:
-jarvis access status
-jarvis access restricted   # HYPRUSE_CONFINE=launched
-jarvis access telegram     # class:org.telegram.desktop,kitty
-jarvis access allow firefox Spotify   # window classes, case-sensitive
-jarvis access all          # remove HYPRUSE_CONFINE; all desktop windows
+tigo access status
+tigo access restricted   # HYPRUSE_CONFINE=launched
+tigo access telegram     # class:org.telegram.desktop,kitty
+tigo access allow firefox Spotify   # window classes, case-sensitive
+tigo access all          # remove HYPRUSE_CONFINE; all desktop windows
 ```
 
-`jarvis access` prompts for `APPLY`, backs up the current `CODEX_HOME/config.toml` (default `~/.codex/config.toml`), replaces the Hypruse MCP registration, keeps strict/authorization/journaling, sets `HYPRUSE_MARK=0`, and optionally asks for `RELOAD` to run `hyprctl reload` to clear old runtime red border rules. The profile helper requires an existing config file and can drop nonstandard MCP flags: **review and improve this before claiming it preserves everything.**
+`tigo access` prompts for `APPLY`, backs up the current `CODEX_HOME/config.toml` (default `~/.codex/config.toml`), replaces the Hypruse MCP registration, keeps strict/authorization/journaling, sets `HYPRUSE_MARK=0`, and optionally asks for `RELOAD` to run `hyprctl reload` to clear old runtime red border rules. The profile helper requires an existing config file and can drop nonstandard MCP flags: **review and improve this before claiming it preserves everything.**
 
-`jarvis full ...` delegates to `jarvis-full ...`, installed alongside `jarvis`.
+`tigo full ...` delegates to `tigo-full ...`, installed alongside `tigo`.
 All commands use the current Codex home/login/MCPs. Regular commands read the
 saved GUI access preference (missing means Full Access); the explicit full
 aliases always bypass the Codex shell sandbox and ordinary approvals under the
@@ -403,7 +410,7 @@ Reasoning effort is not a separate model or guaranteed performance target. `low`
 
 User-requested **visible application tasks** should actually use the GUI MCP when available. The code does not implement a formal separate intent classifier: routing is currently **an instruction in the Skill and managed AGENTS.md**, with discretion exercised by Codex. Shell or native application APIs are better for deterministic batch edits; GUI is appropriate for visual controls and app-specific workflows; complex video editing may require both.
 
-`skills/jarvis-desktop/SKILL.md` is the authoritative behavioral implementation. Current priorities:
+`skills/tigo-desktop/SKILL.md` is the authoritative behavioral implementation. Current priorities:
 
 1. Identify app/window using semantic window inventory once.
 2. Prefer compositor IPC or a native app API, then accessibility tree / named controls; use image grounding only when necessary.
@@ -420,15 +427,15 @@ Read [gui-operator.md](gui-operator.md), [gui-navigation.md](gui-navigation.md),
 
 ## 5. The important historical bugs (and current fixes)
 
-1. **Spotify/Firefox out of scope:** the user had `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`; screenshots worked but clicks/focus on Spotify or Firefox failed with `outside the agent's confinement scope`. The `jarvis access all` helper is an *explicit user-driven* way to change this, not a global default or hidden workaround. Correct GUI window visibility or workspace alone does **not** remove confinement.
+1. **Spotify/Firefox out of scope:** the user had `HYPRUSE_CONFINE=class:org.telegram.desktop,kitty`; screenshots worked but clicks/focus on Spotify or Firefox failed with `outside the agent's confinement scope`. The `tigo access all` helper is an *explicit user-driven* way to change this, not a global default or hidden workaround. Correct GUI window visibility or workspace alone does **not** remove confinement.
 2. **Red borders:** `HYPRUSE_MARK=1` tagged agent-opened windows and installed red outlines. Fresh registrations and access helper now use `HYPRUSE_MARK=0`. Previously installed runtime rules may remain until user-approved Hyprland config reload. `docs/security.md` and other older docs may need consistency checks after future changes.
 3. **Excessive screenshots / reasoning loops:** Skill was consolidated to prefer semantic UI, window crops, action batching, event waits and appropriate reasoning effort. The GUI now adds actual task/tool/voice timing records, but no measured end-to-end speedup is claimed; instructions alone cannot promise one.
 4. **Wrong X11 keyboard focus:** `key(...,window_id=...)` now verifies activated window before typing; refusal is better than typing into a different app.
 5. **Limited X11 region capabilities:** added bounded region screenshots, selection drag with interpolated mouse motion/cleanup, interactive human region capture and support for negative monitor coordinates.
-6. **Stale AGENTS instructions:** Linux and Windows installers now use `scripts/sync_agents.py` and `config/jarvis-agents.md` to refresh the managed block while preserving custom text with backup.
-7. **Full profile Skill misplaced:** fixed to install the shared Skill under `~/.agents/skills/jarvis-desktop`, a recognized Codex location, not an unsupported `CODEX_HOME/skills` folder.
-8. **Full modes missing:** separate Linux and Windows launchers now accept `fast|normal|deep` and `login|status|help`; `jarvis full ...` passes those arguments along. They start interactive Codex **without auto-sending a task**.
-9. **Deep was only medium:** `jarvis deep` now uses `model_reasoning_effort=high`, as does `jarvis-full deep`.
+6. **Stale AGENTS instructions:** Linux and Windows installers now use `scripts/sync_agents.py` and `config/tigo-agents.md` to refresh the managed block while preserving custom text with backup.
+7. **Full profile Skill misplaced:** fixed to install the shared Skill under `~/.agents/skills/tigo-desktop`, a recognized Codex location, not an unsupported `CODEX_HOME/skills` folder.
+8. **Full modes missing:** separate Linux and Windows launchers now accept `fast|normal|deep` and `login|status|help`; `tigo full ...` passes those arguments along. They start interactive Codex **without auto-sending a task**.
+9. **Deep was only medium:** `tigo deep` now uses `model_reasoning_effort=high`, as does `tigo-full deep`.
 
 These are **code changes and test outcomes**, not proof of full end-to-end success on a real Hyprland/Windows installation.
 
@@ -438,7 +445,7 @@ These are **code changes and test outcomes**, not proof of full end-to-end succe
 |---|---|
 | `README.md` | Public overview, install quick starts, commands and AI handoff entry point |
 | `changes.md` | Dated implementation and verification report; update for every change |
-| `gui/jarvis_gui/` | Qt Quick frontend, owned persistent app-server transport, incremental messages, warm voice, metrics/checkpoints and checked workflows |
+| `gui/tigo_gui/` | Qt Quick frontend, owned persistent app-server transport, incremental messages, warm voice, metrics/checkpoints and checked workflows |
 | `gui/pyproject.toml`, `gui/uv.lock` | Desktop app and optional voice dependencies, locked for Linux/Windows |
 | `scripts/*gui*` | Separate Linux/Windows launchers and current-user application menu installers |
 | `gui/tests/`, `tests/test_desktop_*.py` | Protocol, simulated audio, Qt process and actual QML-window tests |
@@ -448,14 +455,14 @@ These are **code changes and test outcomes**, not proof of full end-to-end succe
 | `scripts/install-windows.ps1` | Regular Windows launcher, Windows-MCP, Skill, managed rules and optional Windows watcher |
 | `scripts/install-full-linux.sh` | Compatibility entry point for the shared Linux installer |
 | `scripts/install-full-windows.ps1` | Compatibility entry point for the shared Windows installer |
-| `scripts/jarvis-full-launcher.sh`, `.ps1` | Explicit Full Access CLI presets in the shared home; **source**, copied by installers |
+| `scripts/tigo-full-launcher.sh`, `.ps1` | Explicit Full Access CLI presets in the shared home; **source**, copied by installers |
 | `scripts/hypruse-access.sh` | Regular Hyprland confinement profiles and backups |
 | `scripts/x11_mcp.py` | Bundled native X11 GUI MCP implementation |
-| `skills/jarvis-desktop/SKILL.md` | GUI intent detection, selection, screenshot crops, shortcuts and efficient task execution instructions |
-| `config/jarvis-agents.md` | Managed JARVIS agent rules template |
+| `skills/tigo-desktop/SKILL.md` | GUI intent detection, selection, screenshot crops, shortcuts and efficient task execution instructions |
+| `config/tigo-agents.md` | Managed Tigo agent rules template |
 | `scripts/sync_agents.py` | Safe replacement of managed rules in `AGENTS.md` |
-| `scripts/jarvis_memory.py` | Local confirmed-fixes JSON memory CLI; user confirms saves/deletions |
-| `scripts/jarvis_voice.py` | Microphone push-to-talk, faster-whisper offline transcription |
+| `scripts/tigo_memory.py` | Local confirmed-fixes JSON memory CLI; user confirms saves/deletions |
+| `scripts/tigo_voice.py` | Microphone push-to-talk, faster-whisper offline transcription |
 | `scripts/watch-linux.sh` | Optional read-only systemd user-service incident diagnosis |
 | `scripts/watch-windows.ps1` | Optional read-only Windows Application Error diagnosis |
 | `docs/*.md` | Installation, backend, security, performance, GUI, voice, memory and shortcuts guides |
@@ -471,11 +478,11 @@ These are **code changes and test outcomes**, not proof of full end-to-end succe
 ### Regular Linux
 
 ```bash
-git clone https://github.com/ggnomer123s/Codex-jarvis.git
-cd Codex-jarvis
+git clone https://github.com/ggnomer123s/Codex-jarvis.git Tigo
+cd Tigo
 bash scripts/install-linux.sh
 # Open a new shell
-jarvis
+tigo
 ```
 
 Existing checkout:
@@ -509,15 +516,15 @@ The repository has GitHub Actions to check Bash syntax, PowerShell parsing, Pyth
 
 CI is **not** real desktop validation. Explicitly unverified/partially verified: Windows GUI behaviors, many distros/compositors, video editing inside Premiere Pro, drag accuracy on complex timelines, generic Wayland portal input, full workflow duration, and privacy boundaries of third-party MCP servers.
 
-Some commands may depend on Codex versions, chosen model, installed GUI tools, and local portal permissions. There are **no measured benchmarks proving JARVIS outperforms Microsoft UFO, Agent-S or E2B Desktop**. The existing [gui-operator.md](gui-operator.md) documents architecture inspiration; no competitor code was imported.
+Some commands may depend on Codex versions, chosen model, installed GUI tools, and local portal permissions. There are **no measured benchmarks proving Tigo outperforms Microsoft UFO, Agent-S or E2B Desktop**. The existing [gui-operator.md](gui-operator.md) documents architecture inspiration; no competitor code was imported.
 
 ## 9. Roadmap — ideas, NOT already implemented
 
 **Priority 1 — real reliability and observability:** The GUI timing/connection
 controls now implement the initial profiler scope. Expand measurements and
 target-machine coverage rather than treating the older proposal as unimplemented.
-- **JARVIS Profiler**: capture real per-tool latency and reasoning/tool-turn counts; compare same end-to-end task before/after tuning. Avoid speculative "x times faster" claims.
-- **JARVIS Doctor**: one diagnostic overview of Codex, MCP, Hypruse configuration, desktop session, Skills, dependencies and conflicting installed profiles; provide evidence-first repair guidance.
+- **Tigo Profiler**: capture real per-tool latency and reasoning/tool-turn counts; compare same end-to-end task before/after tuning. Avoid speculative "x times faster" claims.
+- **Tigo Doctor**: one diagnostic overview of Codex, MCP, Hypruse configuration, desktop session, Skills, dependencies and conflicting installed profiles; provide evidence-first repair guidance.
 - **GUI end-to-end tests**: reproducible disposable text editor/browser/window/rectangle tasks with screenshots, timings and an authorization-refusal test. Avoid destructive production tests.
 - **Documentation consistency**: ensure README, `docs/security.md`, launcher help and actual new/default MCP env flags all agree. Pay special attention to `HYPRUSE_MARK=0` and pre-existing registrations.
 
@@ -538,7 +545,7 @@ target-machine coverage rather than treating the older proposal as unimplemented
 1. **Read before writing:** open current `README.md`, this handoff, active installer/launcher/Skill paths, and recent CI logs. Do not assume this file is newer than the code.
 2. **Confirm intent and platform:** a CachyOS/Hyprland fix may be completely different from Windows 11 or X11. Match the user's current environment, not just the original setup.
 3. **Use GitHub as source of truth:** fetch the current file and SHA before updating; avoid blind overwrites and deleting other contributors' work. Add tests/docs for feature changes. Keep English in repo docs/scripts because CI currently checks for Cyrillic.
-4. **Preserve the shared account:** use the current `CODEX_HOME` and saved access preference. Never create a second login home, copy credentials or overwrite personal MCP settings to work around access errors. The latest user request explicitly defaults JARVIS to Full Access.
+4. **Preserve the shared account:** use the current `CODEX_HOME` and saved access preference. Never create a second login home, copy credentials or overwrite personal MCP settings to work around access errors. The latest user request explicitly defaults Tigo to Full Access.
 5. **Prefer GUI when GUI is requested:** route appropriately, but use native APIs for large deterministic tasks, and always verify output. Do not fake MCP responses, successful clicks, renders or unit-test results.
 6. **Respect security:** block OS auth bypass, credential input, prompt-injection-driven changes and nonconsensual sending/deletion. In particular, `HYPRUSE_STRICT` seat conflicts and `HYPRUSE_CONFINE` scope refusals have different causes.
 7. **Test honestly:** inspect GitHub Actions and, if the user can provide a safe environment, validate live GUI. Distinguish static/unit CI from real UI hardware coverage; document unresolved bugs and testing gaps.

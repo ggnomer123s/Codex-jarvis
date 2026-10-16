@@ -13,10 +13,10 @@ from PySide6.QtQuick import QQuickWindow
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-import jarvis_gui
-from jarvis_gui.activation import Instance
-from jarvis_gui.backend import Backend
-from jarvis_gui.wake_control import WakeControl
+import tigo_gui
+from tigo_gui.activation import Instance
+from tigo_gui.backend import Backend
+from tigo_gui.wake_control import WakeControl
 
 APP = QApplication.instance() or QApplication([])
 FAKE = '''import json, sys, time
@@ -58,7 +58,7 @@ class TestWakeControl(unittest.TestCase):
         self.assertTrue(condition(), self.control.status)
 
     def enable(self, model='base'):
-        with mock.patch('jarvis_gui.wake_control.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.wake_control.dependencies_available', return_value=True):
             self.assertTrue(self.control.configure(True, True, model, 'ru', '', True))
         self.wait(lambda: self.control.state == 'listening')
 
@@ -129,7 +129,7 @@ class TestWakeControl(unittest.TestCase):
         warnings = []
         engine.warnings.connect(lambda items: warnings.extend(str(i) for i in items))
         engine.rootContext().setContextProperty('bridge', backend)
-        engine.load(QUrl.fromLocalFile(str(Path(jarvis_gui.__file__).parent / 'ui/Main.qml')))
+        engine.load(QUrl.fromLocalFile(str(Path(tigo_gui.__file__).parent / 'ui/Main.qml')))
         try:
             self.assertTrue(engine.rootObjects(), warnings)
             window = engine.rootObjects()[0]
@@ -163,11 +163,11 @@ for line in sys.stdin:
         self.addCleanup(backend.shutdown)
         wake = backend.wake_control
         wake.command, wake.register = self.control.command, self.register
-        with mock.patch('jarvis_gui.wake_control.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.wake_control.dependencies_available', return_value=True):
             wake.configure(True, False, 'base', 'ru', '', True)
         self.wait(lambda: wake.state == 'listening')
         pid = wake.process.processId()
-        with mock.patch('jarvis_gui.backend.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.backend.dependencies_available', return_value=True):
             backend.toggleVoice()
         self.assertEqual(backend.voice.processId(), 0)
         self.wait(lambda: backend.voiceState == 'recording')
@@ -182,10 +182,10 @@ for line in sys.stdin:
         self.addCleanup(backend.shutdown)
         wake = backend.wake_control
         wake.command, wake.register = self.control.command, self.register
-        with mock.patch('jarvis_gui.wake_control.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.wake_control.dependencies_available', return_value=True):
             wake.configure(True, False, 'base', 'ru', '', True)
         self.wait(lambda: wake.state == 'listening')
-        with mock.patch('jarvis_gui.backend.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.backend.dependencies_available', return_value=True):
             backend.toggleVoice()
             backend.cancelVoice()
         QTest.qWait(180)
@@ -198,10 +198,10 @@ for line in sys.stdin:
         self.addCleanup(backend.shutdown)
         wake = backend.wake_control
         wake.command, wake.register = self.control.command, self.register
-        with mock.patch('jarvis_gui.wake_control.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.wake_control.dependencies_available', return_value=True):
             wake.configure(True, False, 'base', 'ru', '', True)
         self.wait(lambda: wake.state == 'listening')
-        with mock.patch('jarvis_gui.backend.dependencies_available', return_value=True):
+        with mock.patch('tigo_gui.backend.dependencies_available', return_value=True):
             backend.toggleVoice()
             backend.toggleVoice()
         self.wait(lambda: backend.voiceState == 'idle' and wake.state == 'listening')
@@ -210,7 +210,7 @@ for line in sys.stdin:
 
 class TestInstance(unittest.TestCase):
     def test_second_launch_activates_owner_and_background_ping_does_not(self):
-        name = 'jarvis-test-' + str(uuid.uuid4())
+        name = 'tigo-test-' + str(uuid.uuid4())
         owner = Instance(namespace=name)
         self.addCleanup(owner.close)
         activations = []
@@ -220,7 +220,7 @@ class TestInstance(unittest.TestCase):
         # loop from accepting the Windows pipe. Exercise real cross-process IPC.
         code = """import sys
 from PySide6.QtCore import QCoreApplication
-from jarvis_gui.activation import Instance
+from tigo_gui.activation import Instance
 app=QCoreApplication([])
 instance=Instance(namespace=sys.argv[1])
 print('owner' if instance.claim(activate=sys.argv[2]=='show') else 'contacted',flush=True)

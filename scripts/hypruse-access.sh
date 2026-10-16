@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# JARVIS-CODEX MANAGED — explicit per-app Hypruse confinement profiles
+# TIGO-CODEX MANAGED — explicit per-app Hypruse confinement profiles
 set -Eeuo pipefail
 
 usage() {
   cat <<'HELP'
-Usage: jarvis access status
-       jarvis access all
-       jarvis access telegram
-       jarvis access allow <window-class> [more classes...]
-       jarvis access restricted
+Usage: tigo access status
+       tigo access all
+       tigo access telegram
+       tigo access allow <window-class> [more classes...]
+       tigo access restricted
 
 Hyprland/Wayland only:
   status      Show the existing Hypruse MCP configuration
@@ -20,7 +20,7 @@ Hyprland/Wayland only:
 This replaces the current Hypruse MCP registration after confirmation.
 A timestamped backup of ~/.codex/config.toml is saved locally.
 Use 'hyprctl clients -j' to inspect the class of a window.
-After switching access, restart the interactive Codex/JARVIS session.
+After switching access, restart the interactive Codex/Tigo session.
 HELP
 }
 
@@ -66,7 +66,7 @@ case "$action" in
 esac
 
 if ! codex mcp get hypruse >/dev/null 2>&1; then
-  echo "[error] Hypruse is not registered in Codex. Install JARVIS first." >&2
+  echo "[error] Hypruse is not registered in Codex. Install Tigo first." >&2
   exit 1
 fi
 
@@ -94,7 +94,7 @@ if [[ ! -f "$config" ]]; then
   echo "[error] Expected config file not found at $config; no changes made." >&2
   exit 1
 fi
-backups="$HOME/.codex/jarvis-backups"
+backups="$HOME/.codex/tigo-backups"
 mkdir -p "$backups"
 chmod 700 "$backups"
 backup="$backups/config-$(date +%Y%m%d-%H%M%S)-$$.toml"
@@ -130,7 +130,7 @@ else
 fi
 echo '[ok] HYPRUSE_MARK disabled for new Hypruse sessions.'
 echo "[ok] Configuration backup: $backup"
-echo "[next] Close all old Codex sessions, then run: jarvis"
+echo "[next] Close all old Codex sessions, then run: tigo"
 echo '[info] Old red border rules may persist until Hyprland config reload.'
 read -r -p 'Reload Hyprland configuration now to clear old red borders? Type RELOAD: ' reload_choice
 if [[ "$reload_choice" == RELOAD ]]; then

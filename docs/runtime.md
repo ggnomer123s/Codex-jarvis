@@ -1,8 +1,8 @@
-# Persistent JARVIS runtime
+# Persistent Tigo runtime
 
 The desktop GUI uses **Codex app-server over local stdio JSON-RPC** as its only
 model transport. It does not switch to OpenCode or silently fall back to
-`codex exec`. The terminal `jarvis` launchers remain interactive Codex CLI tools.
+`codex exec`. The terminal `tigo` launchers remain interactive Codex CLI tools.
 Update Codex if the app-server command or required methods are unavailable.
 The transport was probed with Codex CLI **0.159.2** on Linux: initialization and
 `config/read` succeeded without making an authenticated model request.
@@ -129,12 +129,12 @@ observed. This requires existing X11 input permission; it does not enable it:
     "steps": [
       {
         "call": {
-          "server": "jarvis-x11",
+          "server": "tigo-x11",
           "tool": "focus_window",
           "arguments": {"window_id": "0x1234"}
         },
         "after": {
-          "call": {"server": "jarvis-x11", "tool": "active_window", "arguments": {}},
+          "call": {"server": "tigo-x11", "tool": "active_window", "arguments": {}},
           "path": ["id"],
           "equals": "0x1234"
         },

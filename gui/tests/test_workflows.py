@@ -1,14 +1,14 @@
 """Workflow definitions cannot turn observations into unrestricted execution."""
 import json
 import unittest
-from jarvis_gui.workflows import validate_workflows, match_workflow, WorkflowRunner
+from tigo_gui.workflows import validate_workflows, match_workflow, WorkflowRunner
 
 
 class TestWorkflows(unittest.TestCase):
     def definition(self):
-        check={'call':{'server':'jarvis-x11','tool':'windows','arguments':{}},'contains':'Editor'}
+        check={'call':{'server':'tigo-x11','tool':'windows','arguments':{}},'contains':'Editor'}
         return [{'name':'Focus editor','aliases':['focus editor'],'steps':[{
-            'call':{'server':'jarvis-x11','tool':'focus_window','arguments':{'window_id':'1'}}, 'after':check}]}]
+            'call':{'server':'tigo-x11','tool':'focus_window','arguments':{'window_id':'1'}}, 'after':check}]}]
 
     def test_exact_alias_only(self):
         definitions=validate_workflows(json.dumps(self.definition()))
@@ -38,7 +38,7 @@ class TestWorkflows(unittest.TestCase):
         with self.assertRaises(ValueError):validate_workflows(json.dumps(value))
 
     def test_structured_checks_match_actual_values_without_boolean_coercion(self):
-        check={"call":{"server":"jarvis-x11","tool":"active_window","arguments":{}},"path":["id"],"equals":"0x1234"}
+        check={"call":{"server":"tigo-x11","tool":"active_window","arguments":{}},"path":["id"],"equals":"0x1234"}
         value=self.definition()
         value[0]['steps'][0]['after']=check
         validate_workflows(json.dumps(value))
@@ -50,6 +50,6 @@ class TestWorkflows(unittest.TestCase):
 
     def test_nonfinite_json_and_invalid_paths_are_rejected(self):
         value=self.definition()
-        value[0]['steps'][0]['after']={"call":{"server":"jarvis-x11","tool":"active_window"},"path":[True],"equals":1}
+        value[0]['steps'][0]['after']={"call":{"server":"tigo-x11","tool":"active_window"},"path":[True],"equals":1}
         with self.assertRaises(ValueError):validate_workflows(json.dumps(value))
         with self.assertRaises(ValueError):validate_workflows('[NaN]')

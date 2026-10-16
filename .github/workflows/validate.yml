@@ -20,7 +20,7 @@ jobs:
             if ($errors.Count -gt 0) { throw "$($_.Name): $($errors | Out-String)" }
           }
       - name: Check Python syntax
-        run: python3 -m py_compile scripts/x11_mcp.py scripts/jarvis_memory.py scripts/jarvis_voice.py scripts/sync_agents.py tests/test_memory.py tests/test_gui_regressions.py tests/test_full_launcher.py
+        run: python3 -m py_compile scripts/x11_mcp.py scripts/tigo_memory.py scripts/tigo_voice.py scripts/sync_agents.py tests/test_memory.py tests/test_gui_regressions.py tests/test_full_launcher.py
       - name: Verify local memory lifecycle
         run: python3 -m unittest discover -s tests -v
       - name: Check English documentation and managed scripts
@@ -66,7 +66,7 @@ jobs:
       - name: Test protocol and simulated audio
         run: python -m unittest discover -s tests -p "test_desktop_*.py" -v
       - name: Load desktop window
-        run: uv run --project gui --frozen --extra speech jarvis-gui --smoke-test
+        run: uv run --project gui --frozen --extra speech tigo-gui --smoke-test
       - name: Synthesize Russian and English neural speech on CPU
         run: uv run --project gui --frozen --extra speech python scripts/check_neural_speech.py
       - name: Test Windows PowerShell 5 MCP probe and shared access

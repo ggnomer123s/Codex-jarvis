@@ -1,6 +1,6 @@
 # Linux installation — Debian, Ubuntu, Fedora, Arch, openSUSE and more
 
-JARVIS is **distribution-independent** at the application level. What matters most is your graphical session (**X11 vs Wayland**) and the GUI MCP backend that can interact with it.
+Tigo is **distribution-independent** at the application level. What matters most is your graphical session (**X11 vs Wayland**) and the GUI MCP backend that can interact with it.
 
 ## 1. Detect your environment
 
@@ -95,30 +95,30 @@ Install `git`, `uv`, `codex` plus:
 
 Do **not** modify `/dev/input` permissions or install a privileged `ydotoold` daemon just to make the wizard say “success.”
 
-## 3. Install JARVIS
+## 3. Install Tigo
 
 ~~~sh
-git clone https://github.com/ggnomer123s/Codex-jarvis.git
-cd Codex-jarvis
+git clone https://github.com/ggnomer123s/Codex-jarvis.git Tigo
+cd Tigo
 bash scripts/install-linux.sh
 ~~~
 
 The installer chooses a backend based on `XDG_SESSION_TYPE` and `XDG_CURRENT_DESKTOP`:
 - **Hyprland/Wayland:** registers Hypruse, preserving your existing registration and its security flags.
-- **X11:** adds the bundled `jarvis-x11` MCP, which supports screenshots, window enumeration, focus, keyboard and mouse via xdotool. **Input is enabled for new registrations**; existing permissions are preserved.
+- **X11:** adds the bundled `tigo-x11` MCP, which supports screenshots, window enumeration, focus, keyboard and mouse via xdotool. **Input is enabled for new registrations**; existing permissions are preserved.
 - **Other Wayland:** registers upstream `wayland-mcp-kurojs` via uvx as an **experimental** backend. It probes compositor capabilities; usable screenshot/input may require extra portal dependencies or permissions.
 - Unknown/headless session: installs launcher/Skill, skips GUI MCP.
 
-It also installs the JARVIS Skill, appends user-level Codex instructions and, if a **systemd --user** instance is available, installs the *optional* watcher. It does **not** install system packages or require root.
+It also installs the Tigo Skill, appends user-level Codex instructions and, if a **systemd --user** instance is available, installs the *optional* watcher. It does **not** install system packages or require root.
 
 All launchers and the GUI reuse `CODEX_HOME` or `~/.codex`, including its login
 and MCP settings. Full Access defaults on; disable it in GUI Preferences >
-Access to save a sandbox mode for the GUI and regular `jarvis` command.
+Access to save a sandbox mode for the GUI and regular `tigo` command.
 
 Open a new terminal:
 
 ~~~sh
-jarvis
+tigo
 ~~~
 
 ### Enable X11 GUI input
@@ -129,11 +129,11 @@ New X11 installations enable input. The legacy option remains accepted:
 bash scripts/install-linux.sh --enable-gui-input
 ~~~
 
-**Existing MCP registrations are deliberately preserved**, so if `jarvis-x11` was already registered in read-only mode, you must explicitly remove that server after inspecting it, then rerun the installer:
+**Existing MCP registrations are deliberately preserved**, so if `tigo-x11` was already registered in read-only mode, you must explicitly remove that server after inspecting it, then rerun the installer:
 
 ~~~sh
-codex mcp get jarvis-x11
-codex mcp remove jarvis-x11
+codex mcp get tigo-x11
+codex mcp remove tigo-x11
 bash scripts/install-linux.sh --enable-gui-input
 ~~~
 
@@ -152,23 +152,23 @@ A configured Wayland MCP is **not proof that GUI control works**. The upstream g
 
 ## 5. Optional voice and memory
 
-`jarvis voice` records only when you press Enter. It transcribes audio locally using the multilingual Whisper **base** model and asks for explicit YES before forwarding the text to Codex.
+`tigo voice` records only when you press Enter. It transcribes audio locally using the multilingual Whisper **base** model and asks for explicit YES before forwarding the text to Codex.
 
 Install the OS PortAudio runtime first: Debian/Ubuntu: `sudo apt install libportaudio2`, Fedora: `sudo dnf install portaudio`, Arch-based: `sudo pacman -S --needed portaudio`. See the openSUSE-specific package search in [Memory & Voice](memory-and-voice.md).
 
-`jarvis memory add`, `jarvis memory search <keyword>` and `jarvis memory forget <id>` manage manually confirmed solutions without cloud syncing or auto-learning. The installer does not import older conversations into memory.
+`tigo memory add`, `tigo memory search <keyword>` and `tigo memory forget <id>` manage manually confirmed solutions without cloud syncing or auto-learning. The installer does not import older conversations into memory.
 
 See [Memory & Voice](memory-and-voice.md) for first-run downloads, privacy and microphone troubleshooting.
 
 ## 6. Verify and troubleshoot
 
 ~~~sh
-jarvis status
+tigo status
 codex mcp list
 # Hyprland:
 uvx hypruse doctor
 # All:
-jarvis
+tigo
 ~~~
 
 In Codex: “Discover desktop MCP tools. Report available screenshot, window and input capabilities. Inspect the active window without changing anything.”
@@ -180,18 +180,18 @@ Then run a harmless notepad/terminal text-input test after checking the actual t
 The watcher polls **failed user systemd services** every two minutes and may send diagnostic logs to Codex for read-only analysis. It is **not** a general crash detector; it does not automatically repair anything.
 
 ~~~sh
-jarvis status
-jarvis reports
-jarvis monitor off
-jarvis monitor on
-jarvis test
+tigo status
+tigo reports
+tigo monitor off
+tigo monitor on
+tigo test
 ~~~
 
-`jarvis test` creates a short-lived failing test user-service then clears the failed state. If your distribution doesn't use systemd --user, the watcher is skipped; GUI tools can still work.
+`tigo test` creates a short-lived failing test user-service then clears the failed state. If your distribution doesn't use systemd --user, the watcher is skipped; GUI tools can still work.
 
 ### Paths and shells
 
-The installed script is `~/.local/bin/jarvis`. Fish gets `~/.config/fish/functions/jarvis.fish`. For Bash or Zsh ensure `~/.local/bin` is in PATH (the installer adds a managed PATH line to your interactive shell configuration when needed).
+The installed script is `~/.local/bin/tigo`. Fish gets `~/.config/fish/functions/tigo.fish`. For Bash or Zsh ensure `~/.local/bin` is in PATH (the installer adds a managed PATH line to your interactive shell configuration when needed).
 
 ## 7. Safety
 

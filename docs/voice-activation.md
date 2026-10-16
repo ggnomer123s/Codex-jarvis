@@ -1,15 +1,15 @@
 # Local voice activation
 
-**Preferences > Wake** enables a background listener that opens the JARVIS
-window when local transcription contains `Jarvis`, its Russian name or an
+**Preferences > Wake** enables a background listener that opens the Tigo
+window when local transcription contains `Tigo`, its Russian name or an
 optional close spelling. It is off by default and uses existing faster-whisper
 dependencies. Codex app-server remains the only GUI model backend.
 
 ## Enable it
 
 1. Update the checkout and use the voice-enabled launcher:
-   `bash scripts/jarvis-gui-linux.sh` on Linux, or
-   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\jarvis-gui-windows.ps1`
+   `bash scripts/tigo-gui-linux.sh` on Linux, or
+   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\tigo-gui-windows.ps1`
    on Windows 11. Linux also needs PortAudio; see the installation guide.
 2. Open **Preferences > Wake**. Select **Russian** for mostly Russian speech,
    **English** for English, or **Auto detect** for mixed speech. Short names can
@@ -24,12 +24,12 @@ dependencies. Codex app-server remains the only GUI model backend.
 5. Keep **Recognize similar pronunciations** enabled for tolerant matching, or
    disable it for exact English/Russian wake-name tokens. Keep **Start listening
    when I sign in** checked if desired.
-6. Check **Listen for Jarvis in the background**. This applies the displayed wake
+6. Check **Listen for Tigo in the background**. This applies the displayed wake
    settings immediately. Later model/language/microphone changes require
    **Apply voice activation**. Wait for the microphone-on status; first use may
    download the selected model.
 
-![Wake settings](images/jarvis-wake-settings.png)
+![Wake settings](images/tigo-wake-settings.png)
 
 Say the wake name in a short phrase. The existing window is restored. The rest
 of the sentence is not submitted as a task. Dictate a request with the existing
@@ -43,20 +43,20 @@ with a tray icon. Its menu restores the window, disables voice activation or
 quits. Without tray support, close and background login startup minimize the
 window instead, keeping the app reachable. The sidebar displays listener status.
 
-**Quit JARVIS** in the tray menu or **Quit JARVIS / stop listening** in the Wake
+**Quit Tigo** in the tray menu or **Quit Tigo / stop listening** in the Wake
 tab stops all app workers. A checked startup option still applies at the next
-sign-in. Uncheck background listening to stop the microphone and remove JARVIS's
+sign-in. Uncheck background listening to stop the microphone and remove Tigo's
 own startup entry. A startup-cleanup error is reported without keeping the
 microphone enabled.
 
 Startup registration is per-user, without elevation:
 
-- Linux: `$XDG_CONFIG_HOME/autostart/jarvis-voice.desktop`, defaulting to
-  `~/.config/autostart/jarvis-voice.desktop`.
+- Linux: `$XDG_CONFIG_HOME/autostart/tigo-voice.desktop`, defaulting to
+  `~/.config/autostart/tigo-voice.desktop`.
 - Windows 11: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value
-  `JarvisVoiceActivation`, using the environment's `pythonw.exe`.
+  `TigoVoiceActivation`, using the environment's `pythonw.exe`.
 
-It launches the current environment's Python with `-m jarvis_gui --background`.
+It launches the current environment's Python with `-m tigo_gui --background`.
 Keep the checkout and environment in place; reapply Wake settings after moving
 them. Unrelated startup files/values are not replaced. Linux requires a graphical
 session honoring XDG autostart; minimal window managers may require their own
@@ -64,21 +64,21 @@ session-autostart support to be enabled.
 
 For bare Hyprland sessions that do not consume XDG autostart, an optional
 `exec-once` line in your own Hyprland configuration can launch the same saved
-opt-in. Replace the path with your actual checkout; JARVIS does not edit the
+opt-in. Replace the path with your actual checkout; Tigo does not edit the
 compositor configuration automatically:
 
 ```ini
-exec-once = "/absolute/path/to/Codex-jarvis-gui/gui/.venv/bin/python" -m jarvis_gui --background
+exec-once = "/absolute/path/to/Tigo/gui/.venv/bin/python" -m tigo_gui --background
 ```
 
 Manual background start after setup:
 
 ```bash
-bash scripts/jarvis-gui-linux.sh --background
+bash scripts/tigo-gui-linux.sh --background
 ```
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\jarvis-gui-windows.ps1 -Background
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\tigo-gui-windows.ps1 -Background
 ```
 
 Without saved opt-in, `--background` exits without opening a microphone. A second
@@ -88,7 +88,7 @@ the window rather than forcibly transferring keyboard focus.
 
 ## Spoken replies and microphone coordination
 
-The local wake microphone pauses before JARVIS speaks. Speech waits for the
+The local wake microphone pauses before Tigo speaks. Speech waits for the
 worker's pause acknowledgment and resumes listening after a 300 ms audio-tail
 cooldown. Manual push-to-talk interrupts output and waits for quiet before
 recording. This prevents ordinary self-activation; it is not full-duplex echo
@@ -116,7 +116,7 @@ seconds, only the wake worker is killed before releasing the mic, then reloaded
 after manual voice finishes.
 
 An eight-second cooldown limits repeated activations. Tolerant matching accepts
-known variants, one small edit/transposition and split-name tokens; it can cause
+explicit Tigo transcription variants and split-name tokens; it can cause
 false activations. Exact mode accepts only whole English/Russian name tokens.
 Neither guarantees recognition of every utterance. Select the actual language,
 check the microphone and try `base`/`small` if names are missed. If CPU inference

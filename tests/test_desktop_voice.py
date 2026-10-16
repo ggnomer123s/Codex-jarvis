@@ -9,7 +9,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gui"))
-from jarvis_gui import voice
+from tigo_gui import voice
 
 
 class AudioArray:

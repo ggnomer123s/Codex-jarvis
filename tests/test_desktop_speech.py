@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'gui'))
-from jarvis_gui.speech_text import spoken_text,MAX_SPEECH_CHARS
+from tigo_gui.speech_text import spoken_text,MAX_SPEECH_CHARS
 
 
 class TestSpeechText(unittest.TestCase):

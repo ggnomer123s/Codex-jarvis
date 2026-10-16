@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-LAUNCHER = ROOT / "scripts" / "jarvis-full-launcher.sh"
+LAUNCHER = ROOT / "scripts" / "tigo-full-launcher.sh"
 
 
 @unittest.skipIf(not hasattr(os, "geteuid") or os.geteuid() == 0,
@@ -26,8 +26,8 @@ class TestFullLauncher(unittest.TestCase):
         codex = self.bin / "codex"
         codex.write_text(
             '#!/usr/bin/env bash\n'
-            'printf "%s\\n" "$@" > "$JARVIS_TEST_ARGS_FILE"\n'
-            'printf "%s\\n" "$CODEX_HOME" > "$JARVIS_TEST_HOME_FILE"\n',
+            'printf "%s\\n" "$@" > "$TIGO_TEST_ARGS_FILE"\n'
+            'printf "%s\\n" "$CODEX_HOME" > "$TIGO_TEST_HOME_FILE"\n',
             encoding="utf-8",
         )
         codex.chmod(0o755)
@@ -38,8 +38,8 @@ class TestFullLauncher(unittest.TestCase):
             "HOME": str(self.base),
             "CODEX_HOME": str(self.base / "chosen-codex-home"),
             "PATH": str(self.bin) + os.pathsep + env.get("PATH", ""),
-            "JARVIS_TEST_ARGS_FILE": str(self.argsfile),
-            "JARVIS_TEST_HOME_FILE": str(self.homefile),
+            "TIGO_TEST_ARGS_FILE": str(self.argsfile),
+            "TIGO_TEST_HOME_FILE": str(self.homefile),
         })
         return subprocess.run(
             ["bash", str(LAUNCHER), *args],

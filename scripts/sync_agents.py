@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synchronize only the JARVIS-owned AGENTS.md marker block; preserve user text."""
+"""Synchronize only the TIGO-owned AGENTS.md marker block; preserve user text."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -10,8 +10,8 @@ import stat
 import sys
 import tempfile
 
-START = "<!-- JARVIS-CODEX RULES START -->"
-END = "<!-- JARVIS-CODEX RULES END -->"
+START = "<!-- TIGO-CODEX RULES START -->"
+END = "<!-- TIGO-CODEX RULES END -->"
 
 
 def sync(target: Path, template: Path) -> bool:
@@ -23,16 +23,29 @@ def sync(target: Path, template: Path) -> bool:
     if target.is_symlink():
         raise ValueError("Refusing to replace a symlinked AGENTS.md")
     original = target.read_text(encoding="utf-8") if target.exists() else ""
-    if original.count(START) != original.count(END):
-        raise ValueError("Unpaired JARVIS markers in AGENTS.md; refusing to overwrite")
-    if original.count(START) > 1:
-        raise ValueError("Duplicate JARVIS blocks in AGENTS.md; refusing to overwrite")
-    if START in original:
-        left = original.index(START)
-        right = original.index(END) + len(END)
-        updated = original[:left] + replacement.rstrip("\n") + original[right:]
-    else:
-        updated = original.rstrip("\n") + ("\n\n" if original else "") + replacement
+    # Validate every owned block before writing, including pre-rename markers.
+    for brand in ('TIGO', 'JARVIS'):
+        for kind in ('RULES', 'MEMORY'):
+            begin, end = (f'<!-- {brand}-CODEX {kind} {edge} -->' for edge in ('START', 'END'))
+            if original.count(begin) != original.count(end) or original.count(begin) > 1:
+                raise ValueError('Unpaired or duplicate managed markers; refusing to overwrite')
+            if begin in original and original.index(begin) > original.index(end):
+                raise ValueError('Malformed managed marker order')
+    updated = original
+    for kind in ('RULES', 'MEMORY'):
+        begin, end = (f'<!-- TIGO-CODEX {kind} {edge} -->' for edge in ('START', 'END'))
+        if begin not in replacement:
+            continue
+        block = replacement[replacement.index(begin):replacement.index(end) + len(end)]
+        found = False
+        for brand in ('TIGO', 'JARVIS'):
+            old_begin, old_end = (f'<!-- {brand}-CODEX {kind} {edge} -->' for edge in ('START', 'END'))
+            if old_begin in updated:
+                left, right = updated.index(old_begin), updated.index(old_end) + len(old_end)
+                updated = updated[:left] + ('' if found else block) + updated[right:]
+                found = True
+        if not found:
+            updated = updated.rstrip('\n') + ('\n\n' if updated else '') + block + '\n'
     if updated == original:
         print("[ok] AGENTS.md managed rules are current")
         return False
@@ -47,7 +60,7 @@ def sync(target: Path, template: Path) -> bool:
             backup = backup.with_name(backup.name + f"-{idx}")
         shutil.copy2(target, backup)
         print(f"[backup] {backup}")
-    fd, tmp = tempfile.mkstemp(prefix=".jarvis-agents-", dir=target.parent)
+    fd, tmp = tempfile.mkstemp(prefix=".tigo-agents-", dir=target.parent)
     try:
         if hasattr(os, "fchmod"):
             os.fchmod(fd, stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600)

@@ -1,8 +1,8 @@
-# JARVIS character and local neural speech
+# Tigo character and local neural speech
 
-Updating the GUI installer refreshes `jarvis-desktop/SKILL.md` and the managed
+Updating the GUI installer refreshes `tigo-desktop/SKILL.md` and the managed
 Codex `AGENTS.md` block, preserving personal instructions. Start a new
-conversation to load them. JARVIS treats the user as mentor: calm, respectful,
+conversation to load them. Tigo treats the user as mentor: calm, respectful,
 concise and occasionally dryly witty, using the user's language.
 
 ## New default in 0.7.0
@@ -42,17 +42,17 @@ k2-fsa/sherpa-onnx GitHub release, checking pinned size and SHA-256 before bound
 extraction. Interrupted or invalid downloads are replaced on the next attempt.
 Cached voices need no network for subsequent synthesis.
 
-- Linux cache: `${XDG_CACHE_HOME:-~/.cache}/jarvis/voices`.
-- Windows cache: `%LOCALAPPDATA%\jarvis\voices`.
+- Linux cache: `${XDG_CACHE_HOME:-~/.cache}/tigo/voices`.
+- Windows cache: `%LOCALAPPDATA%\tigo\voices`.
 
 To download default voices from a prepared checkout, in Bash or PowerShell:
 
 ```bash
-uv run --project gui --frozen --extra voice python -m jarvis_gui.speech_models
+uv run --project gui --frozen --extra voice python -m tigo_gui.speech_models
 ```
 
 Append a model ID, such as `ru_RU-denis-medium`, to download only that voice.
-With JARVIS closed, removing a voice cache directory forces a new verified
+With Tigo closed, removing a voice cache directory forces a new verified
 download. Model cards remain alongside weights. See [voice notices](voice-notices.md).
 
 ## Controls

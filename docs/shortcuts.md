@@ -1,13 +1,13 @@
 # Keyboard shortcuts and focus-safe desktop automation
 
-JARVIS can send **keyboard shortcuts**, but the correct method depends on the graphical session and the application. This is especially important with multi-monitor and multi-workspace desktops.
+Tigo can send **keyboard shortcuts**, but the correct method depends on the graphical session and the application. This is especially important with multi-monitor and multi-workspace desktops.
 
-## JARVIS window shortcuts
+## Tigo window shortcuts
 
 Ctrl+N starts a new conversation; Ctrl+H opens history; Ctrl+Shift+F toggles full
 chat; Ctrl+O attaches files; Ctrl+Shift+V pastes a clipboard image. Enter sends
 and Shift+Enter inserts a newline. Escape stops active work or closes a popup.
-These control JARVIS itself. See [conversation controls](gui-conveniences.md).
+These control Tigo itself. See [conversation controls](gui-conveniences.md).
 
 ## Hyprland: two different kinds of shortcuts
 
@@ -35,7 +35,7 @@ Using the MCP, the exact keyboard parameter names must come from its advertised 
 
 ## X11
 
-Bundled `jarvis-x11` now accepts:
+Bundled `tigo-x11` now accepts:
 
 ```text
 key(key_sequence="ctrl+s", window_id="0x01234567")
@@ -43,7 +43,7 @@ key(key_sequence="ctrl+shift+t", window_id="0x01234567")
 key(key_sequence="Alt_L+Tab")
 ```
 
-For a provided `window_id`, JARVIS requests focus and checks the active window ID before sending the keystroke. If a dialog takes focus or activation fails, it refuses input rather than typing into the wrong application. The shortcut tool is available **only after X11 GUI input is opted in**.
+For a provided `window_id`, Tigo requests focus and checks the active window ID before sending the keystroke. If a dialog takes focus or activation fails, it refuses input rather than typing into the wrong application. The shortcut tool is available **only after X11 GUI input is opted in**.
 
 X11 WM shortcuts can behave differently depending on window manager; treat desktop binds as distinct from the target application's own shortcuts. The `window_id` argument may be omitted when it is genuinely appropriate to target the already-focused window, but using an explicit verified window is more reliable for automation.
 
@@ -57,4 +57,4 @@ Use native application APIs when available for complex editing, rather than simu
 
 Never replay a web page or chat's suggested keystrokes uncritically. Some shortcuts can close tabs, delete selected objects or trigger application-specific destructive commands, so treat text from external sources as untrusted data.
 
-Sources: [Hypruse upstream](https://github.com/IlyasKhallouki/hypruse) and [JARVIS GUI navigation](gui-navigation.md).
+Sources: [Hypruse upstream](https://github.com/IlyasKhallouki/hypruse) and [Tigo GUI navigation](gui-navigation.md).

@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'gui'))
-from jarvis_gui.history import History
+from tigo_gui.history import History
 
 
 class TestConversationHistory(unittest.TestCase):

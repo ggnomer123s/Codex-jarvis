@@ -1,6 +1,6 @@
 # Shared Codex profile and Full Access
 
-JARVIS uses **one Codex home**, login and MCP configuration on Linux and Windows
+Tigo uses **one Codex home**, login and MCP configuration on Linux and Windows
 11: the current `CODEX_HOME`, or `~/.codex` if it is unset. The desktop app,
 ordinary CLI and compatibility full launchers all reuse it. No credentials are
 copied and no extra profile is created.
@@ -9,14 +9,14 @@ copied and no extra profile is created.
 
 Full Access is on by default. In **Preferences > Access**, uncheck **Enable Full
 Access** to select the retained read-only or workspace-edit sandbox. This choice
-persists after restart and is shared with regular `jarvis fast|normal|deep`.
+persists after restart and is shared with regular `tigo fast|normal|deep`.
 Checking it again changes runtime permissions without installation or sign-in.
 The active mode remains visible in the window.
 
 The shared preference is stored at:
 
-- Linux: `~/.local/share/jarvis-codex/access-mode`.
-- Windows: `%LOCALAPPDATA%\jarvis-codex\access-mode`.
+- Linux: `~/.local/share/tigo-codex/access-mode`.
+- Windows: `%LOCALAPPDATA%\tigo-codex\access-mode`.
 
 Missing preference means `full-access`; valid restricted values are `read-only`
 and `workspace-write`. Invalid/unreadable preferences select read-only. Installers
@@ -28,7 +28,7 @@ or `--dangerously-bypass-approvals-and-sandbox` for CLI launches. This grants
 access available to the current user, not root/Administrator elevation or a
 bypass of OS authentication, locked sessions or MCP-specific guards. Switching
 GUI access restarts its owned app-server and clears context in the same home.
-Run JARVIS as a normal user. Existing desktop backend restrictions are preserved.
+Run Tigo as a normal user. Existing desktop backend restrictions are preserved.
 
 ## Windows desktop ownership
 
@@ -43,7 +43,7 @@ No additional always-own-the-desktop checkbox is provided.
 2. Read the observed state and remaining wait. This is a snapshot; it does not
    acquire control or keep polling. Clicking the button is itself physical input,
    so seeing an idle wait immediately afterward is expected.
-3. Ask JARVIS to continue, then leave the mouse and keyboard idle for the service's
+3. Ask Tigo to continue, then leave the mouse and keyboard idle for the service's
    configured interval, normally 10 seconds. Physical input restarts that wait.
    The updated Skill explains waiting and checking ownership with ControlStatus
    before a fresh observation; the tool check itself does not simulate input.
@@ -80,17 +80,17 @@ are left untouched and unused; authentication is not automatically migrated.
 If your usual Codex home is not signed in, run `codex login` once or use
 **Sign in to Codex** in Access settings.
 
-`jarvis-full` and `jarvis full` remain explicit Full Access aliases using this
+`tigo-full` and `tigo full` remain explicit Full Access aliases using this
 same home. They intentionally request Full Access even if the regular launcher's
 saved preference is restricted. Their `fast`, `normal`, `deep`, `login`, `status`
 and `help` commands remain supported; no automatic startup task is submitted.
 
 | Command | Reasoning | Access |
 |---|---|---|
-| `jarvis` / `jarvis fast` | Low | Saved access; initially Full Access |
-| `jarvis normal` | Configured default | Saved access |
-| `jarvis deep` | High | Saved access |
-| `jarvis-full fast` / `normal` / `deep` | Low / configured default / high | Explicit Full Access, same home |
+| `tigo` / `tigo fast` | Low | Saved access; initially Full Access |
+| `tigo normal` | Configured default | Saved access |
+| `tigo deep` | High | Saved access |
+| `tigo-full fast` / `normal` / `deep` | Low / configured default / high | Explicit Full Access, same home |
 
 The Windows installer scopes a non-terminating error policy to the expected
 `mcp get windows-mcp` existence probe. A missing server triggers registration

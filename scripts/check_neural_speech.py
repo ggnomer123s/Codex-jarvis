@@ -3,8 +3,8 @@
 import json
 import time
 import numpy as np
-from jarvis_gui.neural_worker import chunks, load_voice
-from jarvis_gui.speech_models import DEFAULTS
+from tigo_gui.neural_worker import chunks, load_voice
+from tigo_gui.speech_models import DEFAULTS
 
 
 def main():

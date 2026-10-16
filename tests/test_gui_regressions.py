@@ -24,31 +24,31 @@ def load_module(name, path):
 class TestManagedAgents(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.module = load_module("jarvis_sync_agents_test", ROOT / "scripts" / "sync_agents.py")
+        cls.module = load_module("tigo_sync_agents_test", ROOT / "scripts" / "sync_agents.py")
 
     def test_upgrades_old_block_and_preserves_unmanaged_text(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             agents = root / "AGENTS.md"
-            agents.write_text("My custom preference\n\n<!-- JARVIS-CODEX RULES START -->\nold text\n<!-- JARVIS-CODEX RULES END -->\n\nOther custom instructions\n")
-            self.assertTrue(self.module.sync(agents, ROOT / "config" / "jarvis-agents.md"))
+            agents.write_text("My custom preference\n\n<!-- TIGO-CODEX RULES START -->\nold text\n<!-- TIGO-CODEX RULES END -->\n\nOther custom instructions\n")
+            self.assertTrue(self.module.sync(agents, ROOT / "config" / "tigo-agents.md"))
             text = agents.read_text()
             self.assertIn("My custom preference", text)
             self.assertIn("Other custom instructions", text)
-            self.assertIn("JARVIS computer operator", text)
+            self.assertIn("Tigo computer operator", text)
             self.assertIn("ACTUALLY", text)
             self.assertNotIn("old text", text)
-            self.assertFalse(self.module.sync(agents, ROOT / "config" / "jarvis-agents.md"))
+            self.assertFalse(self.module.sync(agents, ROOT / "config" / "tigo-agents.md"))
             self.assertEqual(len(list(root.glob("AGENTS.md.backup.*"))), 1)
 
     def test_broken_markers_refuse_to_write(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             agents = root / "AGENTS.md"
-            original = "<!-- JARVIS-CODEX RULES START -->\nUnterminated"
+            original = "<!-- TIGO-CODEX RULES START -->\nUnterminated"
             agents.write_text(original)
             with self.assertRaises(ValueError):
-                self.module.sync(agents, ROOT / "config" / "jarvis-agents.md")
+                self.module.sync(agents, ROOT / "config" / "tigo-agents.md")
             self.assertEqual(agents.read_text(), original)
 
 
@@ -76,7 +76,7 @@ class TestX11Shortcuts(unittest.TestCase):
             "mcp.server": types.ModuleType("mcp.server"),
             "mcp.server.fastmcp": fast,
         }):
-            cls.backend = load_module("jarvis_x11_test", ROOT / "scripts" / "x11_mcp.py")
+            cls.backend = load_module("tigo_x11_test", ROOT / "scripts" / "x11_mcp.py")
 
     def test_shortcut_targets_verified_window(self):
         mod = self.backend

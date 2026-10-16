@@ -1,10 +1,10 @@
 # High-accuracy GUI navigation (desktop computer use)
 
-This guide describes how to get **reliable clicks and navigation**, not merely faster mouse automation. JARVIS prefers native window state and accessibility semantics to guessed screenshot coordinates. The [JARVIS Skill](../skills/jarvis-desktop/SKILL.md) encodes this workflow for Codex.
+This guide describes how to get **reliable clicks and navigation**, not merely faster mouse automation. Tigo prefers native window state and accessibility semantics to guessed screenshot coordinates. The [Tigo Skill](../skills/tigo-desktop/SKILL.md) encodes this workflow for Codex.
 
 ## Pointer animation versus actual accuracy
 
-**Hypruse's normal pointer move is an immediate compositor cursor move**, not a human-style animation. Its built-in drag has 12 intermediate position steps with short pauses. This is implemented in the [Hypruse input code](https://github.com/IlyasKhallouki/hypruse/blob/main/src/hypruse/input.py). Neither JARVIS nor this repository currently patches Hypruse to animate all moves.
+**Hypruse's normal pointer move is an immediate compositor cursor move**, not a human-style animation. Its built-in drag has 12 intermediate position steps with short pauses. This is implemented in the [Hypruse input code](https://github.com/IlyasKhallouki/hypruse/blob/main/src/hypruse/input.py). Neither Tigo nor this repository currently patches Hypruse to animate all moves.
 
 Artificial mouse smoothing is **not necessary** for accuracy; indiscriminately generating extra cursor moves may trigger Hyprland focus-follows-mouse or conflict with safety guards. Do not implement a smoothing workaround outside the MCP authorization/confinement layer.
 
@@ -64,11 +64,11 @@ For a full test, start a normal GTK/Qt app such as a file manager and ask Codex 
 
 Only after that succeeds:
 
-> Open a disposable text editor window through the desktop MCP. Identify its text-entry area, type JARVIS_GUI_TEST using that window's GUI controls, and verify the visible or accessible result. No files saved.
+> Open a disposable text editor window through the desktop MCP. Identify its text-entry area, type TIGO_GUI_TEST using that window's GUI controls, and verify the visible or accessible result. No files saved.
 
 ## Other desktop environments
 
-**X11:** The bundled `jarvis-x11` backend uses `wmctrl` for window lists, `maim` for screenshots and `xdotool` for pointer/keyboard. It does **not** yet provide Hypruse-equivalent `ui` / `click_ui` semantics; input is enabled for new registrations, while existing permissions are retained. Use per-window metadata and current screenshots, verify every input, and avoid fragile hardcoded coordinates.
+**X11:** The bundled `tigo-x11` backend uses `wmctrl` for window lists, `maim` for screenshots and `xdotool` for pointer/keyboard. It does **not** yet provide Hypruse-equivalent `ui` / `click_ui` semantics; input is enabled for new registrations, while existing permissions are retained. Use per-window metadata and current screenshots, verify every input, and avoid fragile hardcoded coordinates.
 
 **GNOME, KDE Plasma and other Wayland:** The generic Wayland MCP is experimental. Ask for `describe_environment` to confirm whether screenshots and portal-mediated remote input are actually available. Compositor-specific extensions may offer better native accessibility on compatible versions; see the [MCP backend guide](mcp-and-skills.md).
 
@@ -84,7 +84,7 @@ Only after that succeeds:
 
 ## FAST MODE: fewer screenshots, quicker UI decisions
 
-JARVIS ships with an updated `jarvis-desktop` Skill that favors **semantic-first, event-driven navigation**.
+Tigo ships with an updated `tigo-desktop` Skill that favors **semantic-first, event-driven navigation**.
 
 For simple reversible actions:
 1. Query `desktop` once to identify the window and workspace.

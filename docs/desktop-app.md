@@ -1,4 +1,4 @@
-# JARVIS desktop application
+# Tigo desktop application
 
 A native Qt Quick window for Linux and Windows 11, with an animated cyan core,
 a streaming conversation panel, model/workspace selection, reasoning presets and
@@ -7,14 +7,14 @@ timings, scoped conversation resume and checked desktop workflows. The same inte
 launchers and menu installers are provided. This is a source distribution,
 not a signed standalone EXE, AppImage, DEB or RPM release.
 
-![JARVIS desktop command center](images/jarvis-desktop.png)
+![Tigo desktop command center](images/tigo-desktop.png)
 
 The conversation pane now has a draggable divider, full-chat mode, Markdown,
 code/message copying, reviewed file/image attachments, searchable pinned local
 history and an activity/time/error card. See [GUI controls](gui-conveniences.md)
 for usage, shortcuts and storage behavior.
 
-## JARVIS character and spoken replies
+## Tigo character and spoken replies
 
 The installed Skill and managed Codex instructions now describe a composed,
 respectful assistant who treats the user as mentor, uses their language and
@@ -46,7 +46,7 @@ pixels. The change applies immediately to existing and incoming requests,
 responses and status messages, and is saved for the next launch. It works while
 an answer streams and preserves the conversation, connection and unsent draft.
 
-![Larger text in the conversation panel](images/jarvis-conversation-size.png)
+![Larger text in the conversation panel](images/tigo-conversation-size.png)
 
 ## Animated activity core
 
@@ -55,7 +55,7 @@ Its bundled still artwork was generated for this project; Qt Canvas draws the
 moving filaments, particles, trails and state effects locally. It works with the
 software renderer and requires no new dependency or network request.
 
-![Activity-core animation with simulated runtime states](images/jarvis-core.gif)
+![Activity-core animation with simulated runtime states](images/tigo-core.gif)
 
 | Activity | Visual behavior |
 |---|---|
@@ -90,7 +90,7 @@ They cover Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11.
   and [Codex CLI](https://github.com/openai/codex).
 - Run `codex login` in your normal terminal before sending requests.
 - Python 3.11 through 3.14 is supported. uv can provision a compatible Python.
-- For actual desktop operations, set up the normal JARVIS desktop MCP using
+- For actual desktop operations, set up the normal Tigo desktop MCP using
   the existing [Linux](linux.md) or [Windows](windows11.md) instructions.
   The frontend uses existing Codex authentication, instructions and MCP entries;
   it does not register or change them.
@@ -100,11 +100,11 @@ They cover Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11.
 From the repository root:
 
 ```bash
-bash scripts/jarvis-gui-linux.sh
+bash scripts/tigo-gui-linux.sh
 ```
 
 The first launch installs the locked Qt and voice dependencies in `gui/.venv`.
-For a launcher in your application menu and a `~/.local/bin/jarvis-gui` command:
+For a launcher in your application menu and a `~/.local/bin/tigo-gui` command:
 
 ```bash
 bash scripts/install-gui-linux.sh
@@ -114,9 +114,9 @@ Keep the checkout at its current path: the menu entry points to it. Re-run the
 installer if you move it. It installs current-user launchers, menu entries and
 the shared Codex desktop configuration. Unmanaged launchers/menu entries with the same
 names are refused. Remove the two generated GUI launcher/menu files
-to uninstall the menu entry; existing CLI JARVIS configuration is unaffected.
+to uninstall the menu entry; existing CLI Tigo configuration is unaffected.
 
-The GUI installer updates the ordinary JARVIS backend and launchers in your
+The GUI installer updates the ordinary Tigo backend and launchers in your
 current Codex profile. Existing sign-in and MCP settings are reused. Full Access
 is on by default; disable it in Preferences > Access for a saved sandbox mode.
 
@@ -127,7 +127,7 @@ Typical Debian/Ubuntu packages are `libegl1`, `libopengl0`, `libxcb-cursor0`,
 `libxcb`, `xcb-util-cursor`, `libxkbcommon-x11` and `portaudio`; Arch uses
 `mesa`, `libxcb`, `xcb-util-cursor`, `libxkbcommon-x11` and `portaudio`.
 Package names vary by release. If a Wayland session fails to select its Qt
-platform plugin, try `QT_QPA_PLATFORM=wayland bash scripts/jarvis-gui-linux.sh`;
+platform plugin, try `QT_QPA_PLATFORM=wayland bash scripts/tigo-gui-linux.sh`;
 use `xcb` only when an X display is available.
 
 The UI is designed for Linux distributions supported by Qt, rather than tied
@@ -139,7 +139,7 @@ MCP's capabilities. Every distribution/compositor combination has not been teste
 Open a normal PowerShell window at the repository root:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\jarvis-gui-windows.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\tigo-gui-windows.ps1
 ```
 
 For a Start menu shortcut that opens the window without a console:
@@ -149,7 +149,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-gui-wi
 ```
 
 The shortcut uses the project's virtual-environment `pythonw.exe`. Keep the
-checkout in place. Remove `JARVIS.lnk` from your current-user Start menu to remove
+checkout in place. Remove `Tigo.lnk` from your current-user Start menu to remove
 the shortcut. No Administrator session or global execution-policy changes are
 required. The npm `codex.cmd` installation is launched through its Node entry
 point, avoiding shell interpolation of paths or requests.
@@ -195,7 +195,7 @@ backend is used in the GUI.
 Full Access is enabled by default. **Preferences > Access > Enable Full Access**
 can turn it off or on without an installer or a separate login. Turning it off
 selects the retained read-only/workspace-edit sandbox. Your choice survives
-restart and is shared with regular `jarvis` CLI launchers.
+restart and is shared with regular `tigo` CLI launchers.
 
 All modes use the current `CODEX_HOME` (default `~/.codex`), existing Codex login,
 model catalog, Skills and MCP configuration. **Sign in to Codex** is only needed
@@ -208,9 +208,9 @@ Full Access sets `danger-full-access` and `approvalPolicy=never`. It can change
 user-accessible files and execute commands without Codex command approvals.
 It does not elevate the OS account or bypass native/backend authentication.
 Existing MCP confinement/input settings are retained independently of the shell
-sandbox. Launch JARVIS as a normal user, not root/Administrator.
+sandbox. Launch Tigo as a normal user, not root/Administrator.
 
-![Full Access settings](images/jarvis-access-settings.png)
+![Full Access settings](images/tigo-access-settings.png)
 
 ## Composer model and reasoning controls
 
@@ -235,25 +235,25 @@ faster-whisper defaults to CPU int8 with the multilingual `base` model;
 Russian and other languages are detected automatically. The first voice use
 loads/downloads the model; subsequent recordings reuse it for five idle minutes. Internet access to the Hugging Face model/CDN
 hosts is needed for that download; a configured local model directory can be
-supplied through `JARVIS_VOICE_MODEL` for offline use. Audio is held in memory
+supplied through `TIGO_VOICE_MODEL` for offline use. Audio is held in memory
 and is not saved or uploaded by the voice worker.
 
 The transcript is placed in the composer and **never submitted automatically**.
 Review/edit it, then press Send to submit its text to Codex. Cancel is available
 during microphone startup, recording, downloading and transcription. Request
 microphone permission in Windows Privacy settings or your Linux desktop when
-necessary. Before the first launch, `JARVIS_VOICE_LANGUAGE` (for example `ru`)
-and `JARVIS_VOICE_MODEL` seed these preferences. Later changes can be made in
+necessary. Before the first launch, `TIGO_VOICE_LANGUAGE` (for example `ru`)
+and `TIGO_VOICE_MODEL` seed these preferences. Later changes can be made in
 the Voice tab and are retained in user settings.
 
 For text-only use, without the voice packages:
 
 ```bash
-bash scripts/jarvis-gui-linux.sh --no-voice
+bash scripts/tigo-gui-linux.sh --no-voice
 ```
 
 ```powershell
-.\scripts\jarvis-gui-windows.ps1 -NoVoice
+.\scripts\tigo-gui-windows.ps1 -NoVoice
 ```
 
 ## Development and validation
@@ -268,7 +268,7 @@ Headless Linux smoke test (does not send a Codex request or access a microphone)
 
 ```bash
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
-  uv run --project gui --frozen --extra speech jarvis-gui --smoke-test --screenshot /tmp/jarvis.png
+  uv run --project gui --frozen --extra speech tigo-gui --smoke-test --screenshot /tmp/tigo.png
 ```
 
 `gui/uv.lock` pins the dependencies. An isolated QML test exercises the real
@@ -291,7 +291,7 @@ profile/workspace/model-scoped thread pointers and status for explicit resume.
 Quitting the app stops its workers, including idle processes.
 With voice activation enabled, the window close button keeps the app listening
 in the tray/minimized; use Quit or disable voice activation to stop it.
-`JARVIS_GUI_CODEX` can point to an alternative Codex executable for development;
+`TIGO_GUI_CODEX` can point to an alternative Codex executable for development;
 it is a path, not a shell command.
 
 ## Local speech languages and models
@@ -307,12 +307,12 @@ The model picker offers `tiny`, `base`, `small`, and `medium`. Larger models use
 more memory and computation. Other official multilingual Whisper sizes or a
 local converted model folder can be entered manually. English-only `.en` model
 names are not accepted. The saved model is supplied when the persistent worker starts; language is
-supplied per recording. Existing `JARVIS_VOICE_*` variables seed the initial
+supplied per recording. Existing `TIGO_VOICE_*` variables seed the initial
 preferences. CPU/CUDA, beam size, microphone and optional provisional-text
 controls are described in [the runtime guide](runtime.md). Recordings remain capped at 60 seconds and are never submitted
 automatically.
 
-![Local voice preferences](images/jarvis-voice-settings.png)
+![Local voice preferences](images/tigo-voice-settings.png)
 
 The settings window now uses dark controls and tabs. The main screen shows the
 selected Codex model, reasoning, voice language/model and active access level.

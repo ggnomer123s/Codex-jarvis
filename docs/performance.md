@@ -1,4 +1,4 @@
-# JARVIS performance tuning
+# Tigo performance tuning
 
 **Problem:** A GUI request takes minutes because an agent repeatedly captures screenshots, thinks about each tiny action, and calls tools one by one.
 
@@ -9,15 +9,15 @@
 After pulling the latest version and rerunning the installer, use:
 
 ```sh
-jarvis           # Fast mode is the default: low reasoning effort
-jarvis fast      # Same fast mode explicitly
-jarvis normal    # Respect your existing Codex model/reasoning defaults
-jarvis deep      # High reasoning effort for difficult or uncertain problems
+tigo           # Fast mode is the default: low reasoning effort
+tigo fast      # Same fast mode explicitly
+tigo normal    # Respect your existing Codex model/reasoning defaults
+tigo deep      # High reasoning effort for difficult or uncertain problems
 ```
 
-JARVIS uses `codex --config model_reasoning_effort=low` for its default fast mode. This is a **per-launch override**, not a rewrite of `~/.codex/config.toml`, and it does not change the model. Model support for reasoning values varies; use `jarvis normal` if the selected model rejects `low`.
+Tigo uses `codex --config model_reasoning_effort=low` for its default fast mode. This is a **per-launch override**, not a rewrite of `~/.codex/config.toml`, and it does not change the model. Model support for reasoning values varies; use `tigo normal` if the selected model rejects `low`.
 
-**Important:** Lower reasoning effort can make an agent faster but less reliable on complicated troubleshooting. Use `jarvis deep` or `jarvis normal` if accuracy suffers.
+**Important:** Lower reasoning effort can make an agent faster but less reliable on complicated troubleshooting. Use `tigo deep` or `tigo normal` if accuracy suffers.
 
 The launcher no longer sends an initial auto-executed "inspect the desktop" prompt. You can type your actual task first.
 
@@ -53,7 +53,7 @@ If a short GUI task still takes unusually long:
 1. Check if there is an MCP approval prompt before **every** low-risk observation call. Approve read-only tools individually in your Codex UI where appropriate; don't grant unrestricted desktop/system control.
 2. Ask the agent to report a **count** of `desktop`, `ui`, `screenshot`, `sequence`, `click_ui` and other MCP calls on its last task, based on actually available logs, without inventing numbers.
 3. Check whether the target app exposes an accessibility tree. Some terminals, games and Electron views may force screenshot fallback.
-4. If Codex model deliberation is the bottleneck, try `jarvis` (low) versus `jarvis normal` on the **same low-risk task**.
+4. If Codex model deliberation is the bottleneck, try `tigo` (low) versus `tigo normal` on the **same low-risk task**.
 5. Verify `HYPRUSE_CONFINE` is not preventing the action. **Never bypass a refusal by switching tools**.
 6. Restart Codex after changing Skills or MCP registrations.
 

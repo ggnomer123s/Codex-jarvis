@@ -9,7 +9,7 @@ import unittest
 from PySide6.QtCore import QSettings
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
-from jarvis_gui.backend import Backend
+from tigo_gui.backend import Backend
 
 APP = QApplication.instance() or QApplication([])
 

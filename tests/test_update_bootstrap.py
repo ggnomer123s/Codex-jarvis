@@ -15,7 +15,7 @@ SCRIPT = ROOT/'scripts/update-cachyos.sh'
 @unittest.skipUnless(os.name != 'nt' and shutil.which('bash'), 'CachyOS shell fixture')
 class TestCachyBootstrap(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='jarvis updater ')
+        self.temp = tempfile.TemporaryDirectory(prefix='tigo updater ')
         self.addCleanup(self.temp.cleanup)
         self.base = Path(self.temp.name)
         self.bin = self.base/'tools'
@@ -29,15 +29,15 @@ class TestCachyBootstrap(unittest.TestCase):
         (self.repo/'gui').mkdir()
         self.log = self.base/'calls.jsonl'
         self.env = dict(os.environ, PATH=str(self.bin)+os.pathsep+os.environ['PATH'],
-                        HOME=str(self.home), JARVIS_TEST_REPO=str(self.repo),
-                        JARVIS_TEST_LOG=str(self.log))
+                        HOME=str(self.home), TIGO_TEST_REPO=str(self.repo),
+                        TIGO_TEST_LOG=str(self.log))
         for tool in ('pacman','sudo','git','uv','uvx','python3','node','npm','codex'):
             self.tool(tool)
-        launcher = self.home/'.local/bin/jarvis-gui'
+        launcher = self.home/'.local/bin/tigo-gui'
         launcher.parent.mkdir(parents=True)
         self.tool('launcher', launcher)
         installer = self.repo/'scripts/install-gui-linux.sh'
-        installer.write_text('#!/usr/bin/env bash\nexec "'+sys.executable+'" -c \'import os; from pathlib import Path; Path(os.environ["JARVIS_TEST_LOG"]).open("a").write("{\\"tool\\":\\"installer\\",\\"args\\":[]}\\n")\'\n')
+        installer.write_text('#!/usr/bin/env bash\nexec "'+sys.executable+'" -c \'import os; from pathlib import Path; Path(os.environ["TIGO_TEST_LOG"]).open("a").write("{\\"tool\\":\\"installer\\",\\"args\\":[]}\\n")\'\n')
 
     def tool(self, name, path=None):
         target = path or self.bin/name
@@ -45,18 +45,18 @@ class TestCachyBootstrap(unittest.TestCase):
 from pathlib import Path
 tool=Path(sys.argv[0]).name
 args=sys.argv[1:]
-with Path(os.environ['JARVIS_TEST_LOG']).open('a') as log:log.write(json.dumps({'tool':tool,'args':args})+'\\n')
+with Path(os.environ['TIGO_TEST_LOG']).open('a') as log:log.write(json.dumps({'tool':tool,'args':args})+'\\n')
 if tool=='git':
- if 'rev-parse' in args:print(os.environ['JARVIS_TEST_REPO'])
- elif 'get-url' in args:print(os.environ.get('JARVIS_TEST_ORIGIN','https://github.com/ggnomer123s/Codex-jarvis.git'))
- elif 'symbolic-ref' in args:print(os.environ.get('JARVIS_TEST_BRANCH','main'))
- elif 'status' in args:print(os.environ.get('JARVIS_TEST_DIRTY',''),end='')
+ if 'rev-parse' in args:print(os.environ['TIGO_TEST_REPO'])
+ elif 'get-url' in args:print(os.environ.get('TIGO_TEST_ORIGIN','https://github.com/ggnomer123s/Codex-jarvis.git'))
+ elif 'symbolic-ref' in args:print(os.environ.get('TIGO_TEST_BRANCH','main'))
+ elif 'status' in args:print(os.environ.get('TIGO_TEST_DIRTY',''),end='')
 if tool=='codex' and args==['login','status']:
- code=int(os.environ.get('JARVIS_TEST_LOGIN_NEEDED','0'))
+ code=int(os.environ.get('TIGO_TEST_LOGIN_NEEDED','0'))
  if code:print('Not logged in' if code==1 else 'Configuration error',file=sys.stderr)
  sys.exit(code)
-if tool=='sudo':sys.exit(int(os.environ.get('JARVIS_TEST_PACKAGE_EXIT','0')))
-if tool=='node':sys.exit(int(os.environ.get('JARVIS_TEST_OLD_NODE','0')))
+if tool=='sudo':sys.exit(int(os.environ.get('TIGO_TEST_PACKAGE_EXIT','0')))
+if tool=='node':sys.exit(int(os.environ.get('TIGO_TEST_OLD_NODE','0')))
 ''')
         target.chmod(0o755)
 
@@ -81,37 +81,37 @@ if tool=='node':sys.exit(int(os.environ.get('JARVIS_TEST_OLD_NODE','0')))
         self.assertTrue(any(x['tool']=='uv' and x['args']==['python','install','3.12'] for x in calls))
         self.assertTrue(any(x['tool']=='uv' and '--python' in x['args'] and '--frozen' in x['args'] for x in calls))
         self.assertEqual(sum(x['tool']=='installer' for x in calls),1)
-        self.assertEqual(calls[-1]['tool'],'jarvis-gui')
+        self.assertEqual(calls[-1]['tool'],'tigo-gui')
         self.assertNotIn(['login','--device-auth'],[x['args'] for x in calls if x['tool']=='codex'])
 
     @unittest.skipIf(hasattr(os,'geteuid') and os.geteuid()==0, 'Bootstrap deliberately rejects root')
     def test_failed_packages_do_not_update_or_launch(self):
-        result = self.run_script(JARVIS_TEST_PACKAGE_EXIT='23')
+        result = self.run_script(TIGO_TEST_PACKAGE_EXIT='23')
         self.assertNotEqual(result.returncode,0)
-        self.assertFalse(any(x['tool'] in ('git','installer','jarvis-gui') for x in self.calls()))
+        self.assertFalse(any(x['tool'] in ('git','installer','tigo-gui') for x in self.calls()))
 
     @unittest.skipIf(hasattr(os,'geteuid') and os.geteuid()==0, 'Bootstrap deliberately rejects root')
     def test_login_runs_only_for_missing_authentication(self):
-        result=self.run_script(JARVIS_TEST_LOGIN_NEEDED='1')
+        result=self.run_script(TIGO_TEST_LOGIN_NEEDED='1')
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertIn(['login','--device-auth'],[x['args'] for x in self.calls() if x['tool']=='codex'])
 
     @unittest.skipIf(hasattr(os,'geteuid') and os.geteuid()==0, 'Bootstrap deliberately rejects root')
     def test_unknown_login_error_does_not_start_reauthentication(self):
-        result=self.run_script(JARVIS_TEST_LOGIN_NEEDED='2')
+        result=self.run_script(TIGO_TEST_LOGIN_NEEDED='2')
         self.assertNotEqual(result.returncode,0)
         self.assertNotIn(['login','--device-auth'],[x['args'] for x in self.calls() if x['tool']=='codex'])
-        self.assertFalse(any(x['tool']=='jarvis-gui' for x in self.calls()))
+        self.assertFalse(any(x['tool']=='tigo-gui' for x in self.calls()))
 
     @unittest.skipIf(hasattr(os,'geteuid') and os.geteuid()==0, 'Bootstrap deliberately rejects root')
     def test_old_shadowing_node_stops_before_checkout_changes(self):
-        result=self.run_script(JARVIS_TEST_OLD_NODE='1')
+        result=self.run_script(TIGO_TEST_OLD_NODE='1')
         self.assertNotEqual(result.returncode,0)
         self.assertIn('nodejs',next(x for x in self.calls() if x['tool']=='sudo')['args'])
         self.assertFalse(any(x['tool']=='git' for x in self.calls()))
 
     def test_dirty_or_wrong_repository_is_not_pulled(self):
-        for option,value in [('JARVIS_TEST_DIRTY',' M README.md\n'),('JARVIS_TEST_ORIGIN','https://example.com/other.git'),('JARVIS_TEST_BRANCH','custom')]:
+        for option,value in [('TIGO_TEST_DIRTY',' M README.md\n'),('TIGO_TEST_ORIGIN','https://example.com/other.git'),('TIGO_TEST_BRANCH','custom')]:
             with self.subTest(option=option):
                 self.log.unlink(missing_ok=True)
                 command=['bash','-c','source "$1"; prepare_checkout "$2"','fixture',str(SCRIPT),str(self.repo)]
@@ -123,19 +123,19 @@ if tool=='node':sys.exit(int(os.environ.get('JARVIS_TEST_OLD_NODE','0')))
 @unittest.skipUnless(os.name=='nt' and shutil.which('powershell.exe'), 'Windows PowerShell 5 bootstrap fixture')
 class TestWindowsBootstrap(unittest.TestCase):
     def test_native_stderr_probe_and_exit_codes_without_installing(self):
-        with tempfile.TemporaryDirectory(prefix='jarvis bootstrap ') as directory:
+        with tempfile.TemporaryDirectory(prefix='tigo bootstrap ') as directory:
             path=Path(directory)
             fake=path/'probe.cmd'
             fake.write_text('@echo off\necho Expected probe error 1>&2\nexit /b 9\n')
             fixture=path/'fixture.ps1'
             fixture.write_text('''param([string]$source,[string]$probe)
 . $source
-if (Test-JarvisNative $probe @('login','status')) { throw 'Expected probe failure' }
+if (Test-TigoNative $probe @('login','status')) { throw 'Expected probe failure' }
 $caught = $false
-try { Invoke-JarvisNative $probe @('test') } catch { $caught = $true }
+try { Invoke-TigoNative $probe @('test') } catch { $caught = $true }
 if (-not $caught) { throw 'Required native command failure was ignored' }
 $caught = $false
-try { Test-JarvisLoginNeeded $probe } catch { $caught = $true }
+try { Test-TigoLoginNeeded $probe } catch { $caught = $true }
 if (-not $caught) { throw 'Unknown status error triggered a new sign-in' }
 Write-Output 'Native probe passed'
 ''')
@@ -145,7 +145,7 @@ Write-Output 'Native probe passed'
             self.assertIn('Native probe passed',result.stdout)
 
     def test_checkout_with_spaces_is_protected_without_network(self):
-        with tempfile.TemporaryDirectory(prefix='jarvis checkout ') as directory:
+        with tempfile.TemporaryDirectory(prefix='tigo checkout ') as directory:
             path=Path(directory)
             repo=path/'repo with spaces'
             subprocess.run(['git','init','-b','main',str(repo)],check=True,capture_output=True)
@@ -155,7 +155,7 @@ Write-Output 'Native probe passed'
             fixture.write_text('''param([string]$source,[string]$repo)
 . $source
 $caught = $false
-try { Update-JarvisCheckout $repo } catch {
+try { Update-TigoCheckout $repo } catch {
  if ($_.Exception.Message -notlike 'Local changes found*') { throw }
  $caught = $true
 }

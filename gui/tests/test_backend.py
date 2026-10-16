@@ -11,14 +11,14 @@ from PySide6.QtCore import QSettings
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from jarvis_gui.backend import Backend
+from tigo_gui.backend import Backend
 
 APP = QApplication.instance() or QApplication([])
 
 
 class TestBackend(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix="jarvis-ui-test-")
+        self.temp = tempfile.TemporaryDirectory(prefix="tigo-ui-test-")
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.settings = QSettings(str(self.root / "settings.ini"), QSettings.Format.IniFormat)
@@ -180,7 +180,7 @@ for line in sys.stdin:
         backend.savePreferences("low", "read-only", "", "ru", "medium")
         received = []
         backend.transcriptReady.connect(received.append)
-        with mock.patch("jarvis_gui.backend.dependencies_available", return_value=True):
+        with mock.patch("tigo_gui.backend.dependencies_available", return_value=True):
             pid = None
             for _ in range(2):
                 backend.toggleVoice()
@@ -196,7 +196,7 @@ for line in sys.stdin:
 
     def test_missing_voice_dependency_does_not_start_recording(self):
         backend = self.backend("pass")
-        with mock.patch("jarvis_gui.backend.dependencies_available", return_value=False):
+        with mock.patch("tigo_gui.backend.dependencies_available", return_value=False):
             backend.toggleVoice()
         self.assertEqual(backend.voiceState, "idle")
         self.assertIn("Voice packages are missing", backend.messages[-1]["text"])
@@ -213,7 +213,7 @@ for line in sys.stdin:
         self.wait(lambda: not backend.busy)
         normal_pid=backend.process.processId()
         backend._thread_id = "normal-context"
-        with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+        with mock.patch("tigo_gui.backend.elevated", return_value=False):
             self.assertTrue(backend.setFullAccess(True))
             self.assertEqual(backend._thread_id, "")
             self.assertFalse(backend.serverReady)
@@ -255,8 +255,8 @@ for line in sys.stdin:
     def test_workflow_alias_does_not_use_model_and_verifies_each_step(self):
         backend = self.server_backend()
         workflow=[{"name":"Focus editor","aliases":["focus editor"],"steps":[
-            {"call":{"server":"jarvis-x11","tool":"focus_window","arguments":{"window_id":"1"}},
-             "after":{"call":{"server":"jarvis-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}}]}]
+            {"call":{"server":"tigo-x11","tool":"focus_window","arguments":{"window_id":"1"}},
+             "after":{"call":{"server":"tigo-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}}]}]
         self.assertTrue(backend.saveRuntimePreferences(json.dumps(workflow),False,"cpu",3,False,""))
         backend.send("FOCUS EDITOR")
         self.wait(lambda: not backend.busy)
@@ -267,8 +267,8 @@ for line in sys.stdin:
 
     def test_changed_precondition_stops_before_mutating_action(self):
         backend = self.server_backend("bad-check")
-        observe={"call":{"server":"jarvis-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}
-        workflow=[{"name":"Focus","aliases":["focus"],"steps":[{"call":{"server":"jarvis-x11","tool":"focus_window","arguments":{}},"before":observe,"after":observe}]}]
+        observe={"call":{"server":"tigo-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}
+        workflow=[{"name":"Focus","aliases":["focus"],"steps":[{"call":{"server":"tigo-x11","tool":"focus_window","arguments":{}},"before":observe,"after":observe}]}]
         backend.saveRuntimePreferences(json.dumps(workflow),False,"cpu",3,False,"")
         backend.send("focus")
         self.wait(lambda: not backend.busy)
@@ -278,8 +278,8 @@ for line in sys.stdin:
 
     def test_failed_postcondition_does_not_repeat_the_action(self):
         backend=self.server_backend("bad-check")
-        check={"call":{"server":"jarvis-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}
-        workflow=[{"name":"Focus","aliases":["focus"],"steps":[{"call":{"server":"jarvis-x11","tool":"focus_window","arguments":{}},"after":check,"timeoutMs":500}]}]
+        check={"call":{"server":"tigo-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}
+        workflow=[{"name":"Focus","aliases":["focus"],"steps":[{"call":{"server":"tigo-x11","tool":"focus_window","arguments":{}},"after":check,"timeoutMs":500}]}]
         backend.saveRuntimePreferences(json.dumps(workflow),False,"cpu",3,False,"")
         backend.send("focus")
         self.wait(lambda:not backend.busy)
@@ -290,8 +290,8 @@ for line in sys.stdin:
 
     def test_mcp_refusal_is_reported_and_does_not_switch_tools(self):
         backend=self.server_backend("refusal")
-        check={"call":{"server":"jarvis-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}
-        workflow=[{"name":"Focus","aliases":["focus"],"steps":[{"call":{"server":"jarvis-x11","tool":"focus_window","arguments":{}},"after":check}]}]
+        check={"call":{"server":"tigo-x11","tool":"windows","arguments":{}},"contains":"Editor ready"}
+        workflow=[{"name":"Focus","aliases":["focus"],"steps":[{"call":{"server":"tigo-x11","tool":"focus_window","arguments":{}},"after":check}]}]
         backend.saveRuntimePreferences(json.dumps(workflow),False,"cpu",3,False,"")
         backend.send("focus")
         self.wait(lambda:not backend.busy)
@@ -321,7 +321,7 @@ for line in sys.stdin:
     def test_full_access_refuses_elevated_execution(self):
         backend = self.backend("pass")
         self.prepare_profile(backend)
-        with mock.patch("jarvis_gui.backend.elevated", return_value=True):
+        with mock.patch("tigo_gui.backend.elevated", return_value=True):
             self.assertFalse(backend.setFullAccess(True))
         self.assertFalse(backend.fullAccess)
 
@@ -346,7 +346,7 @@ for line in sys.stdin:
 
     def test_access_checkbox_never_installs_another_profile(self):
         backend = self.backend("pass")
-        with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+        with mock.patch("tigo_gui.backend.elevated", return_value=False):
             self.assertTrue(backend.setFullAccess(True))
         self.assertTrue(backend.fullAccess)
         self.assertEqual(backend.profile.process.processId(), 0)
@@ -369,7 +369,7 @@ for line in sys.stdin:
         backend = self.backend("pass")
         self.prepare_profile(backend)
         backend.configure("low", "workspace-write")
-        with mock.patch("jarvis_gui.backend.elevated", return_value=False):
+        with mock.patch("tigo_gui.backend.elevated", return_value=False):
             backend.setFullAccess(True)
         self.assertTrue(backend.fullAccess)
         self.assertEqual(backend.normalAccess, "workspace-write")

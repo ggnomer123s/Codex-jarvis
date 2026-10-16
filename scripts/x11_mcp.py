@@ -8,8 +8,8 @@ import subprocess
 import time
 from mcp.server.fastmcp import FastMCP, Image
 
-mcp = FastMCP("jarvis-x11")
-ALLOW_INPUT = os.getenv("JARVIS_X11_ALLOW_INPUT", "0") == "1"
+mcp = FastMCP("tigo-x11")
+ALLOW_INPUT = os.getenv("TIGO_X11_ALLOW_INPUT", os.getenv("JARVIS_X11_ALLOW_INPUT", "0")) == "1"
 
 
 def _run(*args: str, text: bool = True, timeout: int = 12):
@@ -240,7 +240,7 @@ def scroll(direction: str, steps: int = 3) -> str:
 
 if __name__ == "__main__":
     if os.getenv("XDG_SESSION_TYPE") not in ("x11", None, ""):
-        raise SystemExit("jarvis-x11 only supports native X11, not XWayland")
+        raise SystemExit("tigo-x11 only supports native X11, not XWayland")
     if not os.getenv("DISPLAY"):
         raise SystemExit("DISPLAY is missing")
     mcp.run()

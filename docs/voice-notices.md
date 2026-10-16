@@ -2,12 +2,12 @@
 
 Voice assets download separately rather than being committed as binaries.
 The catalog and pinned archive sizes/SHA-256 values live in
-`gui/jarvis_gui/speech_models.py`.
+`gui/tigo_gui/speech_models.py`.
 
 - [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx): Apache-2.0 runtime;
   [official TTS models](https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models).
 - [Piper](https://github.com/rhasspy/piper): source voice architecture and model
-  collection. Current Piper implementations have separate licensing; JARVIS
+  collection. Current Piper implementations have separate licensing; Tigo
   uses sherpa-onnx inference rather than the `piper-tts` Python package.
 - Dmitri, Denis and Joe model cards identify
   [Nabu Casa voice datasets](https://github.com/NabuCasa/voice-datasets) and state

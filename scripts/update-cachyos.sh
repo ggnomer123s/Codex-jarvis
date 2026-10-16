@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JARVIS-CODEX MANAGED - dependency-aware CachyOS/Arch bootstrap and update
+# TIGO-CODEX MANAGED - dependency-aware CachyOS/Arch bootstrap and update
 set -Eeuo pipefail
 
 fail() { echo "[error] $*" >&2; exit 1; }
@@ -10,7 +10,7 @@ prepare_checkout() {
         origin="$(git -C "$repo_dir" remote get-url origin)"
         case "$origin" in
             https://github.com/ggnomer123s/Codex-jarvis|https://github.com/ggnomer123s/Codex-jarvis.git|git@github.com:ggnomer123s/Codex-jarvis.git) ;;
-            *) fail 'The existing checkout origin is not the JARVIS repository.' ;;
+            *) fail 'The existing checkout origin is not the Tigo repository.' ;;
         esac
         branch="$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD)" || fail 'Detached checkout; select main manually first.'
         [[ "$branch" == main ]] || fail 'The checkout is not on main; save your work and switch branches manually.'
@@ -28,7 +28,7 @@ main() {
     command -v sudo >/dev/null || fail 'sudo is required to install system dependencies.'
     (( $# <= 1 )) || fail 'Usage: bash update-cachyos.sh [checkout-path]'
     local repo_dir packages login_output login_code=0
-    repo_dir="$(realpath -m -- "${1:-$HOME/Codex-jarvis-gui}")"
+    repo_dir="$(realpath -m -- "${1:-$HOME/Tigo}")"
     packages=(git curl uv python portaudio libpulse speech-dispatcher espeak-ng
               grim wtype xdotool wmctrl maim mesa libglvnd libxcb libxkbcommon-x11
               xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil)
@@ -36,7 +36,7 @@ main() {
         packages+=(nodejs)
     fi
     command -v npm >/dev/null || packages+=(npm)
-    echo 'Quit JARVIS before updating, including its background listener.'
+    echo 'Quit Tigo before updating, including its background listener.'
     echo 'Checking system dependencies with pacman. This includes the normal full rolling-release update.'
     sudo pacman -Syu --needed --noconfirm "${packages[@]}"
     export PATH="$HOME/.local/bin:$PATH"
@@ -60,9 +60,9 @@ main() {
         echo 'Codex is not signed in. Complete device login in the existing home.'
         codex login --device-auth
     fi
-    uv run --project "$repo_dir/gui" --frozen --extra voice python -m jarvis_gui.speech_models
-    echo 'JARVIS updated. Whisper models download on first voice use; saved settings and login are reused.'
-    exec "$HOME/.local/bin/jarvis-gui"
+    uv run --project "$repo_dir/gui" --frozen --extra voice python -m tigo_gui.speech_models
+    echo 'Tigo updated. Whisper models download on first voice use; saved settings and login are reused.'
+    exec "$HOME/.local/bin/tigo-gui"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

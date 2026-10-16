@@ -1,4 +1,4 @@
-# JARVIS-CODEX MANAGED - current-user Windows 11 Start menu shortcut
+# TIGO-CODEX MANAGED - current-user Windows 11 Start menu shortcut
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
@@ -18,20 +18,27 @@ if ($LASTEXITCODE -ne 0) { throw 'Shared profile installation failed; inspect th
 $python = Join-Path $project '.venv\Scripts\pythonw.exe'
 if (-not (Test-Path $python)) { throw 'GUI Python runtime was not created.' }
 $menu = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'
-$shortcutPath = Join-Path $menu 'JARVIS.lnk'
+$shortcutPath = Join-Path $menu 'Tigo.lnk'
 $shell = New-Object -ComObject WScript.Shell
 if (Test-Path $shortcutPath) {
   $existing = $shell.CreateShortcut($shortcutPath)
-  if ($existing.Description -ne 'JARVIS-CODEX MANAGED') { throw 'Refusing to replace an unrelated JARVIS shortcut.' }
+  if ($existing.Description -ne 'TIGO-CODEX MANAGED') { throw 'Refusing to replace an unrelated Tigo shortcut.' }
 }
 New-Item -ItemType Directory -Path $menu -Force | Out-Null
 $shortcut = $shell.CreateShortcut($shortcutPath)
 $shortcut.TargetPath = $python
-$shortcut.Arguments = '-m jarvis_gui'
+$shortcut.Arguments = '-m tigo_gui'
 $shortcut.WorkingDirectory = $root
-$shortcut.IconLocation = (Join-Path $project 'jarvis_gui\ui\icon.ico') + ',0'
-$shortcut.Description = 'JARVIS-CODEX MANAGED'
+$shortcut.IconLocation = (Join-Path $project 'tigo_gui\ui\icon.ico') + ',0'
+$shortcut.Description = 'TIGO-CODEX MANAGED'
 $shortcut.Save()
-Write-Host 'Installed JARVIS in your Start menu. Keep this checkout in place.'
+$oldShortcutPath = Join-Path $menu 'JARVIS.lnk'
+if (Test-Path $oldShortcutPath) {
+  $oldShortcut = $shell.CreateShortcut($oldShortcutPath)
+  if ($oldShortcut.Description -eq 'JARVIS-CODEX MANAGED') { Remove-Item -LiteralPath $oldShortcutPath }
+}
+& $uv.Source run --no-project python (Join-Path $PSScriptRoot 'migrate_brand.py')
+if ($LASTEXITCODE -ne 0) { throw 'Compatibility entry point migration failed.' }
+Write-Host 'Installed Tigo in your Start menu. Keep this checkout in place.'
 Write-Host 'Full Access is on by default. Disable it in Preferences > Access if desired.'
 Write-Host 'Local neural speech is on by default. Russian/English models download on first use; Preferences > Speech selects voices. No Windows voice component is needed.'

@@ -1,6 +1,8 @@
-# JARVIS-CODEX MANAGED — optional read-only Windows Application event monitor
+# TIGO-CODEX MANAGED — optional read-only Windows Application event monitor
 $ErrorActionPreference = 'Stop'
-$state = Join-Path $env:LOCALAPPDATA 'jarvis-codex'
+$state = Join-Path $env:LOCALAPPDATA 'tigo-codex'
+$legacyState = Join-Path $env:LOCALAPPDATA 'jarvis-codex'
+if ((Test-Path $legacyState) -and -not (Test-Path (Join-Path $state 'reports'))) { $state = $legacyState }
 $reports = Join-Path $state 'reports'
 New-Item -ItemType Directory -Path $reports -Force | Out-Null
 $marker = Join-Path $state 'last-event-record-id.txt'

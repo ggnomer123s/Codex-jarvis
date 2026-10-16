@@ -10,22 +10,24 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'gui'))
-from jarvis_gui.wake import contains_wake_name, PhraseBuffer, WakeListener
-from jarvis_gui.autostart import set_autostart, MARKER, RUN_NAME
+from tigo_gui.wake import contains_wake_name, PhraseBuffer, WakeListener
+from tigo_gui.autostart import set_autostart, MARKER, RUN_NAME
 
 
 class TestWakeName(unittest.TestCase):
     def test_exact_russian_english_case_punctuation(self):
-        for text in ['Hey, JARVIS!', '\u0414\u0436\u0430\u0440\u0432\u0438\u0441, open the app', 'hello jarvis please']:
+        for text in ['Hey, TIGO!', '\u0422\u0438\u0433\u043e, open the app', 'hello tigo please', '\uff34\uff49\uff47\uff4f']:
             self.assertTrue(contains_wake_name(text, False), text)
 
     def test_similar_names_and_split_words(self):
-        for text in ['jervis', 'jarivs', 'jarves', 'jar vis', '\u0436\u0430\u0440\u0432\u0438\u0441', '\u0434\u0436\u0430\u0440\u0432\u0438\u0441\u0443']:
+        for text in ['teego', 'tiggo', 'tygo', 'ti go', '\u0442\u0438 \u0433\u043e', '\u0442\u0438\u0433\u0433\u043e']:
             self.assertTrue(contains_wake_name(text), text)
             self.assertFalse(contains_wake_name(text, False), text)
 
     def test_unrelated_words_and_substrings_do_not_wake(self):
-        for text in ['', 'hello there', 'service', '\u0441\u0435\u0440\u0432\u0438\u0441', 'ajarviscode', 'jar', 'javascript']:
+        for text in ['', 'hello there', 'service', 'time', 'taco', 'togo', 'tiger', 'atigocode',
+                     '\u0442\u043e\u0433\u043e', '\u0442\u0438\u0445\u043e', 'jarvis',
+                     '\u0434\u0436\u0430\u0440\u0432\u0438\u0441', 'javascript']:
             self.assertFalse(contains_wake_name(text), text)
 
 
@@ -61,7 +63,7 @@ class TestWakeWorker(unittest.TestCase):
     def worker(self):
         events = []
         model = mock.Mock()
-        model.transcribe.return_value = ([types.SimpleNamespace(text='hey jarvis')], None)
+        model.transcribe.return_value = ([types.SimpleNamespace(text='hey tigo')], None)
         np = types.SimpleNamespace(frombuffer=lambda *a, **k: Audio(), int16=int, float32=float)
         with mock.patch.dict(sys.modules, {'numpy': np, 'sounddevice': types.SimpleNamespace()}):
             worker = WakeListener('base', 'ru', model_factory=mock.Mock(return_value=model),
@@ -92,7 +94,7 @@ class TestWakeWorker(unittest.TestCase):
         entered, release = threading.Event(), threading.Event()
         def infer(*args, **kwargs):
             entered.set(); release.wait(2)
-            return [types.SimpleNamespace(text='jarvis')], None
+            return [types.SimpleNamespace(text='tigo')], None
         model.transcribe.side_effect = infer
         worker.jobs.put((0, bytes(16000)))
         thread = threading.Thread(target=worker._infer)
@@ -129,8 +131,8 @@ class TestWakeWorker(unittest.TestCase):
 class TestWakeAutostart(unittest.TestCase):
     def test_linux_enable_update_disable_and_quoted_paths(self):
         with tempfile.TemporaryDirectory(prefix='wake with spaces ') as folder:
-            path = Path(folder) / 'autostart/jarvis-voice.desktop'
-            command = ['/path with spaces/100%/python', '-m', 'jarvis_gui', '--background']
+            path = Path(folder) / 'autostart/tigo-voice.desktop'
+            command = ['/path with spaces/100%/python', '-m', 'tigo_gui', '--background']
             set_autostart(True, command, platform='linux', config_home=folder)
             text = path.read_text()
             self.assertIn(MARKER, text)
@@ -140,9 +142,21 @@ class TestWakeAutostart(unittest.TestCase):
             set_autostart(False, command, platform='linux', config_home=folder)
             self.assertFalse(path.exists())
 
+    def test_owned_legacy_startup_is_replaced_but_unrelated_file_is_preserved(self):
+        with tempfile.TemporaryDirectory() as folder:
+            old = Path(folder) / 'autostart/jarvis-voice.desktop'
+            old.parent.mkdir()
+            old.write_text('# JARVIS-CODEX MANAGED: voice activation\nExec=old\n')
+            set_autostart(True, ['/new/python', '-m', 'tigo_gui', '--background'], platform='linux', config_home=folder)
+            self.assertFalse(old.exists())
+            self.assertTrue((old.parent / 'tigo-voice.desktop').exists())
+            old.write_text('unrelated application')
+            set_autostart(False, platform='linux', config_home=folder)
+            self.assertEqual(old.read_text(), 'unrelated application')
+
     def test_linux_unmanaged_files_and_symlinks_are_preserved(self):
         with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / 'autostart/jarvis-voice.desktop'
+            path = Path(folder) / 'autostart/tigo-voice.desktop'
             path.parent.mkdir()
             path.write_text('unrelated application')
             for enabled in (True, False):
@@ -154,12 +168,25 @@ class TestWakeAutostart(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     set_autostart(True, platform='linux', config_home=folder)
 
+    def test_windows_legacy_startup_is_retired_after_registering_tigo(self):
+        def query(key, name):
+            if name == 'JarvisVoiceActivation':
+                return ('pythonw.exe -m jarvis_gui --background', 1)
+            raise FileNotFoundError
+        registry = types.SimpleNamespace(HKEY_CURRENT_USER='current-user', REG_SZ=1,
+                                         CreateKey=mock.MagicMock(), QueryValueEx=mock.Mock(side_effect=query),
+                                         SetValueEx=mock.Mock(), DeleteValue=mock.Mock())
+        with mock.patch.dict(sys.modules, {'winreg': registry}):
+            set_autostart(True, ['pythonw.exe', '-m', 'tigo_gui', '--background'], platform='win32')
+        self.assertEqual(registry.SetValueEx.call_args.args[1], RUN_NAME)
+        self.assertEqual(registry.DeleteValue.call_args.args[-1], 'JarvisVoiceActivation')
+
     def test_windows_registers_only_current_user_and_removes_owned_value(self):
         registry = types.SimpleNamespace(HKEY_CURRENT_USER='current-user', REG_SZ=1,
                                          CreateKey=mock.MagicMock(), QueryValueEx=mock.Mock(side_effect=FileNotFoundError),
                                          SetValueEx=mock.Mock(), DeleteValue=mock.Mock())
         with mock.patch.dict(sys.modules, {'winreg': registry}):
-            set_autostart(True, ['C:\\Program Files\\Python\\pythonw.exe', '-m', 'jarvis_gui', '--background'], platform='win32')
+            set_autostart(True, ['C:\\Program Files\\Python\\pythonw.exe', '-m', 'tigo_gui', '--background'], platform='win32')
             self.assertEqual(registry.CreateKey.call_args.args[0], 'current-user')
             self.assertIn('"C:\\Program Files\\Python\\pythonw.exe"', registry.SetValueEx.call_args.args[-1])
             registry.QueryValueEx.side_effect = None

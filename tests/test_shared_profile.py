@@ -11,7 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'gui'))
-from jarvis_gui.access import codex_home, read_access, write_access
+from tigo_gui.access import codex_home, read_access, write_access
 
 
 class TestSharedAccess(unittest.TestCase):
@@ -30,8 +30,8 @@ class TestSharedAccess(unittest.TestCase):
 @unittest.skipUnless(os.name != 'nt' and shutil.which('bash'), 'Linux installer integration')
 class TestSharedLinuxInstaller(unittest.TestCase):
     def test_all_session_paths_reuse_codex_home_and_cli_obeys_gui_preference(self):
-        for session, desktop, server in [('unknown','unknown',None), ('x11','XFCE','jarvis-x11'),
-                                          ('wayland','Hyprland','hypruse'), ('wayland','GNOME','jarvis-wayland')]:
+        for session, desktop, server in [('unknown','unknown',None), ('x11','XFCE','tigo-x11'),
+                                          ('wayland','Hyprland','hypruse'), ('wayland','GNOME','tigo-wayland')]:
             with self.subTest(session=session, desktop=desktop), tempfile.TemporaryDirectory(prefix='shared install ') as folder:
                 base = Path(folder)
                 home, shared, tools = base / 'home', base / 'current codex', base / 'tools'
@@ -54,19 +54,19 @@ class TestSharedLinuxInstaller(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertTrue((shared / 'AGENTS.md').exists())
                 self.assertFalse((home / '.codex').exists())
-                self.assertFalse((home / '.local/share/jarvis-codex/full-codex-home').exists())
+                self.assertFalse((home / '.local/share/tigo-codex/full-codex-home').exists())
                 calls = [json.loads(x) for x in log.read_text().splitlines()] if log.exists() else []
                 self.assertTrue(all(x['home'] == str(shared) for x in calls))
                 registrations = [x['args'] for x in calls if x['args'][:2] == ['mcp','add']]
                 self.assertEqual([x[2] for x in registrations], [server] if server else [])
                 if server == 'hypruse': self.assertFalse(any('HYPRUSE_CONFINE' in x for x in registrations[0]))
-                if server == 'jarvis-x11': self.assertIn('JARVIS_X11_ALLOW_INPUT=1', registrations[0])
+                if server == 'tigo-x11': self.assertIn('TIGO_X11_ALLOW_INPUT=1', registrations[0])
                 # GUI writes this exact shared preference; normal CLI reads it.
-                flag = home / '.local/share/jarvis-codex/access-mode'
+                flag = home / '.local/share/tigo-codex/access-mode'
                 for mode, expected in [('full-access','--dangerously-bypass-approvals-and-sandbox'),
                                         ('read-only','--sandbox'), ('workspace-write','--sandbox')]:
                     write_access(flag, mode)
-                    result = subprocess.run([str(home / '.local/bin/jarvis'), 'normal'], env=env,
+                    result = subprocess.run([str(home / '.local/bin/tigo'), 'normal'], env=env,
                                             capture_output=True, text=True, timeout=8)
                     if hasattr(os, 'geteuid') and os.geteuid() == 0 and mode == 'full-access':
                         self.assertNotEqual(result.returncode, 0)
@@ -87,17 +87,17 @@ class TestWindowsMissingMcp(unittest.TestCase):
             script = r'''
 $ErrorActionPreference = 'Stop'
 $tokens = $null; $errors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseFile($env:JARVIS_TEST_INSTALLER, [ref]$tokens, [ref]$errors)
+$ast = [System.Management.Automation.Language.Parser]::ParseFile($env:TIGO_TEST_INSTALLER, [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw 'Installer syntax error' }
-$probe = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Test-JarvisMcp' }, $true)
+$probe = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Test-TigoMcp' }, $true)
 if (-not $probe) { throw 'MCP probe helper missing' }
 Invoke-Expression $probe.Extent.Text
-if (Test-JarvisMcp $env:JARVIS_TEST_CODEX 'windows-mcp') { throw 'Missing MCP was not detected' }
+if (Test-TigoMcp $env:TIGO_TEST_CODEX 'windows-mcp') { throw 'Missing MCP was not detected' }
 if ($ErrorActionPreference -ne 'Stop') { throw 'Probe changed the caller error policy' }
 Write-Output 'PASS: missing native MCP is a normal probe result'
 '''
             encoded = base64.b64encode(script.encode('utf-16le')).decode('ascii')
-            env = dict(os.environ, JARVIS_TEST_INSTALLER=str(ROOT / 'scripts/install-windows.ps1'), JARVIS_TEST_CODEX=str(fake))
+            env = dict(os.environ, TIGO_TEST_INSTALLER=str(ROOT / 'scripts/install-windows.ps1'), TIGO_TEST_CODEX=str(fake))
             result = subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',encoded],
                                     env=env,capture_output=True,text=True,timeout=15)
             self.assertEqual(result.returncode,0,result.stdout + result.stderr)

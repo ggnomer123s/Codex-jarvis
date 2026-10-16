@@ -1,8 +1,8 @@
 # Security and permission model
 
-JARVIS connects a powerful AI agent to external GUI MCP servers. A screenshot may contain passwords, chats, notifications or personal documents. GUI input can modify the system even when Codex itself is launched with a **read-only shell sandbox**. The shell sandbox is **not a security boundary for mouse/keyboard MCP tools**.
+Tigo connects a powerful AI agent to external GUI MCP servers. A screenshot may contain passwords, chats, notifications or personal documents. GUI input can modify the system even when Codex itself is launched with a **read-only shell sandbox**. The shell sandbox is **not a security boundary for mouse/keyboard MCP tools**.
 
-JARVIS defaults to Full Access in the existing Codex profile. Disable it in
+Tigo defaults to Full Access in the existing Codex profile. Disable it in
 Preferences > Access to save a sandbox mode; the regular CLI follows that saved
 choice. No extra login or global Codex sandbox setting is created.
 
@@ -18,9 +18,9 @@ choice. No extra login or global Codex sandbox setting is created.
 
 ## Platform-specific risk
 
-**Hyprland / Hypruse:** new registrations allow all windows without a `HYPRUSE_CONFINE` filter and use `HYPRUSE_STRICT=1`, `HYPRUSE_AUTH_GUARD=strict`, `HYPRUSE_JOURNAL=1`, and `HYPRUSE_MARK=0`. `jarvis stop` asks Hypruse to stop. It does not govern arbitrary Codex shell commands or other tools.
+**Hyprland / Hypruse:** new registrations allow all windows without a `HYPRUSE_CONFINE` filter and use `HYPRUSE_STRICT=1`, `HYPRUSE_AUTH_GUARD=strict`, `HYPRUSE_JOURNAL=1`, and `HYPRUSE_MARK=0`. `tigo stop` asks Hypruse to stop. It does not govern arbitrary Codex shell commands or other tools.
 
-**Native X11 (GNOME Xorg, Plasma X11, XFCE, Cinnamon, i3, etc.):** new registrations enable input in the bundled `jarvis-x11` MCP. The legacy `--enable-gui-input` option remains accepted. Existing registrations are retained. X11 lacks the application isolation expected from modern Wayland portals; a GUI agent may be able to interact with other apps on the same display.
+**Native X11 (GNOME Xorg, Plasma X11, XFCE, Cinnamon, i3, etc.):** new registrations enable input in the bundled `tigo-x11` MCP. The legacy `--enable-gui-input` option remains accepted. Existing registrations are retained. X11 lacks the application isolation expected from modern Wayland portals; a GUI agent may be able to interact with other apps on the same display.
 
 **GNOME/KDE/other Wayland:** generic Wayland MCP tries supported screenshots and the `org.freedesktop.portal.RemoteDesktop` portal, depending on compositor. It is configured with `WAYLAND_MCP_NO_PERSIST=1` for fresh portal permission prompts (if a portal is used). Do **not** change `/dev/input` to `0666`, add permissive udev rules, run privileged input daemons unnecessarily, or install NOPASSWD sudoers entries. KWin or GNOME-specific MCP servers may bypass portal prompts through their own interfaces. Read their security documentation.
 
@@ -28,7 +28,7 @@ choice. No extra login or global Codex sandbox setting is created.
 
 ## Monitoring
 
-On Linux (where `systemd --user` exists) JARVIS inspects **failed user services**. It reads limited recent journal entries, then may send them to Codex for a textual report. On Windows, enabling the optional Scheduled Task watches **Application Error** events. These are **not** all crashes or errors, and they do not authorize self-repair.
+On Linux (where `systemd --user` exists) Tigo inspects **failed user services**. It reads limited recent journal entries, then may send them to Codex for a textual report. On Windows, enabling the optional Scheduled Task watches **Application Error** events. These are **not** all crashes or errors, and they do not authorize self-repair.
 
 Reports, screenshots and event logs should **never be committed** to a public repository without reviewing secrets, home paths and personal data.
 
@@ -48,7 +48,7 @@ listener remains active after closing the window; Quit stops it and disabling
 also removes its user-level login startup registration. See
 [voice activation](voice-activation.md) for controls, matching and resource limits.
 
-**Memory** is user-managed: `jarvis memory add` requires a verified repair and YES, and `jarvis memory forget <id>` requires DELETE. The JSON database is local to the user's machine, not public GitHub or ChatGPT saved memory. When Codex reads repair history, the note text may be sent to the AI provider. Avoid putting personal data or secrets in it; treat older memory notes as untrusted historical descriptions.
+**Memory** is user-managed: `tigo memory add` requires a verified repair and YES, and `tigo memory forget <id>` requires DELETE. The JSON database is local to the user's machine, not public GitHub or ChatGPT saved memory. When Codex reads repair history, the note text may be sent to the AI provider. Avoid putting personal data or secrets in it; treat older memory notes as untrusted historical descriptions.
 
 ## Conversation history and explicit attachments
 

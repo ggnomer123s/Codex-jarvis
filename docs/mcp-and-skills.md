@@ -1,6 +1,6 @@
 # Desktop MCP backends, Skills and Codex instructions
 
-This project has **one JARVIS command** and different GUI MCP implementations. The graphics **session**, not the Linux distribution, determines which input/screenshot APIs exist.
+This project has **one Tigo command** and different GUI MCP implementations. The graphics **session**, not the Linux distribution, determines which input/screenshot APIs exist.
 
 ## Overview
 
@@ -34,13 +34,13 @@ New registrations have no confinement filter. An existing `HYPRUSE_CONFINE=launc
 The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `screenshot`, `screenshot_region`, `user_select_screenshot`, `focus_window`, `click`, `drag`, `key`, `type_text` and `scroll`. `drag` (application selection or moving objects) requires GUI input to be enabled in its registration; `screenshot_region` is read-only; `user_select_screenshot` waits for the human to draw a capture rectangle. The X11 drag always attempts to release its button, even after a failed movement.
 
 ~~~sh
-codex mcp get jarvis-x11
+codex mcp get tigo-x11
 ~~~
 
 The installer registers:
 
 ~~~sh
-codex mcp add jarvis-x11 --env JARVIS_X11_ALLOW_INPUT=1 -- uv run --no-project --with mcp python "$HOME/.local/share/jarvis-codex/x11_mcp.py"
+codex mcp add tigo-x11 --env TIGO_X11_ALLOW_INPUT=1 -- uv run --no-project --with mcp python "$HOME/.local/share/tigo-codex/x11_mcp.py"
 ~~~
 
 New registrations enable input; existing read-only registrations remain unchanged. To update one deliberately, follow [Linux instructions](linux.md#enable-x11-gui-input). X11 MCP **does not** work on Wayland merely because XWayland is running.
@@ -50,9 +50,9 @@ New registrations enable input; existing read-only registrations remain unchange
 The generic backend is [kurojs/wayland-mcp](https://github.com/kurojs/wayland-mcp):
 
 ~~~sh
-codex mcp get jarvis-wayland
+codex mcp get tigo-wayland
 # If missing:
-codex mcp add jarvis-wayland --env WAYLAND_MCP_NO_PERSIST=1 -- uvx wayland-mcp-kurojs
+codex mcp add tigo-wayland --env WAYLAND_MCP_NO_PERSIST=1 -- uvx wayland-mcp-kurojs
 ~~~
 
 In your agent session ask for the MCP's `describe_environment` tool. It reports available capture/input methods. Full functionality is **not** guaranteed. GNOME and KDE commonly provide `org.freedesktop.portal.RemoteDesktop`, while many wlroots compositors do **not**. Portals may display an OS consent prompt and can require PyGObject.
@@ -62,17 +62,17 @@ In your agent session ask for the MCP's `describe_environment` tool. It reports 
 Your distro `python3-gi` may not be importable from `uvx`. A user-level Python environment with system packages visible is an option:
 
 ~~~sh
-mkdir -p "$HOME/.local/share/jarvis-codex"
-uv venv --system-site-packages "$HOME/.local/share/jarvis-codex/wayland-venv"
-uv pip install --python "$HOME/.local/share/jarvis-codex/wayland-venv/bin/python" wayland-mcp-kurojs
+mkdir -p "$HOME/.local/share/tigo-codex"
+uv venv --system-site-packages "$HOME/.local/share/tigo-codex/wayland-venv"
+uv pip install --python "$HOME/.local/share/tigo-codex/wayland-venv/bin/python" wayland-mcp-kurojs
 ~~~
 
-After checking that the installed environment has the required portal runtime, point the `jarvis-wayland` Codex MCP command at `$HOME/.local/share/jarvis-codex/wayland-venv/bin/wayland-mcp-kurojs`. Remove/re-add an old registration **only deliberately**, because that changes a security boundary:
+After checking that the installed environment has the required portal runtime, point the `tigo-wayland` Codex MCP command at `$HOME/.local/share/tigo-codex/wayland-venv/bin/wayland-mcp-kurojs`. Remove/re-add an old registration **only deliberately**, because that changes a security boundary:
 
 ~~~sh
-codex mcp get jarvis-wayland
-codex mcp remove jarvis-wayland
-codex mcp add jarvis-wayland --env WAYLAND_MCP_NO_PERSIST=1 -- "$HOME/.local/share/jarvis-codex/wayland-venv/bin/wayland-mcp-kurojs"
+codex mcp get tigo-wayland
+codex mcp remove tigo-wayland
+codex mcp add tigo-wayland --env WAYLAND_MCP_NO_PERSIST=1 -- "$HOME/.local/share/tigo-codex/wayland-venv/bin/wayland-mcp-kurojs"
 ~~~
 
 Do not run upstream legacy scripts that give world-writable access to `/dev/input`, install permissive udev rules or NOPASSWD sudoers changes.
@@ -91,9 +91,9 @@ This targets the **real desktop**; use virtual mode for isolated tests when appr
 
 **Sway / River / Niri / COSMIC:** Portal support, screenshot backends and input vary; no single universal compositor-specific tool is assumed. Use `describe_environment` and test screenshots before attempting input.
 
-## JARVIS Skill and AGENTS.md
+## Tigo Skill and AGENTS.md
 
-The installer copies `skills/jarvis-desktop/SKILL.md` to `~/.agents/skills/jarvis-desktop/SKILL.md`. On Windows, the analogous path is under `%USERPROFILE%`.
+The installer copies `skills/tigo-desktop/SKILL.md` to `~/.agents/skills/tigo-desktop/SKILL.md`. On Windows, the analogous path is under `%USERPROFILE%`.
 
 It also appends a managed block to `CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill now routes requests involving real app interactions to the GUI backend automatically, including drag selection and region screenshots. For exact workflows, see [GUI Operator](gui-operator.md). The managed `AGENTS.md` block is refreshed safely on reinstall, preserving personal instructions.
 
@@ -101,8 +101,8 @@ Open a **fresh Codex session** after changing MCPs or Skills:
 
 ~~~sh
 codex mcp list
-jarvis status
-jarvis
+tigo status
+tigo
 ~~~
 
 Upstream references: [Codex MCP](https://developers.openai.com/codex/mcp), [Codex Skills](https://developers.openai.com/codex/skills), [Hypruse](https://github.com/IlyasKhallouki/hypruse), [Wayland MCP](https://github.com/kurojs/wayland-mcp), [GNOME Desktop MCP](https://github.com/sbuysse/gnome-desktop-mcp), [kwin-mcp](https://github.com/isac322/kwin-mcp).

@@ -1,7 +1,7 @@
-# JARVIS: current project context for an AI maintainer
+# Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-16**, GUI **0.7.0**. Repository:
-[ggnomer123s/Codex-jarvis](https://github.com/ggnomer123s/Codex-jarvis).
+Last reconciled: **2026-10-16**, GUI **0.8.0**. Repository:
+[Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
 product and its constraints, rather than every past proposal. Then inspect the
@@ -19,20 +19,20 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** GUI 0.7.0 replaces disliked system speech with local CPU
-Piper/VITS neural voices: Dmitri (Russian default), Denis (Russian alternative),
-Joe (English). The user briefly selected online speech, then explicitly reversed
-that choice: **local speech, no further tests; the user will check it**. No online
-TTS dependency or text-upload path was added. Publish this change with `[skip ci]`;
-do not start further local/CI runs unless the user requests them. Earlier local
-CPU synthesis and 72 simulated Qt tests completed before this instruction;
-later small hardening/CLI/docs changes were not rerun. No Windows/audio hardware
-or subjective voice-quality check is claimed. No test process is left running.
-Preserve the original user
-goal when the conversation continues; do not restart development from scratch
-or implement older declined proposals just because they appear in the history.
+**Current state:** GUI 0.8.0 is renamed **Tigo** throughout the application,
+CLI, source package (`tigo_gui`), Skill, installers, icons and documentation.
+Wake-name matching uses **Tigo** / its Russian spelling, with a small explicit
+set of transcription variants and split words. The old wake name is no longer
+accepted. Local neural speech from 0.7.0 is retained. See [the rename guide](docs/rename.md)
+for upgrade compatibility: old private history/attachments/repair memory and
+verified voice caches remain in place, existing access choices and MCP grants
+are retained, and Qt preferences migrate once without replacing Tigo settings.
+The source repository URL remains unchanged until its owner renames it on GitHub.
+The previous stop-testing request concerned the 0.7.0 speech publication; this
+new rename request includes relevant regression and GUI checks. Fresh results
+belong in the newest `changes.md` entry; older CI reports remain historical.
 
-**Previous unresolved live-machine issue:** the user reports that JARVIS on Windows said the
+**Previous unresolved live-machine issue:** the user reports that Tigo on Windows said the
 screen service was temporarily unavailable because control belonged to the
 user. They requested permanent control and a default-on checkbox. The existing
 Full Access checkbox already defaults on. Version 0.6.1 adds read-only ownership
@@ -58,7 +58,7 @@ Quick navigation:
 
 ## 1. What the project is for
 
-JARVIS is a personal computer assistant for **Linux and Windows 11**, built
+Tigo is a personal computer assistant for **Linux and Windows 11**, built
 around **OpenAI Codex CLI**. Users type a request or dictate and review it;
 Codex reasons about the task and uses authorized shell, application API or
 desktop MCP tools to complete it. The intended tasks include programming,
@@ -68,10 +68,10 @@ video-editing workflows. Verify actual outcomes, not just that input was sent.
 The repository supplies a native desktop interface, terminal launchers,
 installers, MCP integration, Skills, local speech features and diagnostics.
 Codex supplies the reasoning model. This is an independent community project,
-not an official OpenAI product or a separately trained JARVIS model. General
+not an official OpenAI product or a separately trained Tigo model. General
 desktop tools do not establish a reliable autonomous video editor.
 
-The desired experience is a responsive JARVIS-inspired assistant: calm,
+The desired experience is a responsive Tigo-inspired assistant: calm,
 competent, respectful, concise and occasionally dryly witty. The user is the
 mentor and decision-maker. Match their language, including natural Russian,
 and preferred form of address. Accept corrections and disagree thoughtfully.
@@ -87,7 +87,7 @@ not claim fictional identity or consciousness and does not widen permissions.
   `CODEX_HOME`, or `~/.codex` by default. Older separate full-access homes and
   second-login flows are obsolete. Compatibility names still exist.
 - **Full Access defaults on.** The settings checkbox can disable it and saves
-  the chosen sandbox mode for GUI and regular JARVIS CLI launchers. Do not
+  the chosen sandbox mode for GUI and regular Tigo CLI launchers. Do not
   restore the old typed confirmation phrase or a separate account profile.
 - **Human-reviewed voice requests.** Push-to-talk fills the draft; the user
   presses Send. Wake-name activation restores the window without submitting
@@ -113,7 +113,7 @@ Typed request / reviewed push-to-talk transcript / reviewed local attachments
        -> successful final answer -> optional local neural text-to-speech
 
 Optional local wake listener -> matching wake name -> restore existing window
-Terminal jarvis launchers -> interactive Codex CLI in the same Codex home
+Terminal tigo launchers -> interactive Codex CLI in the same Codex home
 ```
 
 The GUI initializes app-server, starts/resumes a thread, then starts a turn.
@@ -192,7 +192,7 @@ multilingual model IDs and converted local directories are also accepted.
 Capture is bounded to 60 seconds. Audio callbacks enqueue bounded PCM data;
 inference runs separately. Audio remains in RAM. Optional provisional text is
 chunk/pause processing, not true online decoding. Final transcription goes to
-the draft and requires review and Send. The CLI `jarvis voice` instead asks
+the draft and requires review and Send. The CLI `tigo voice` instead asks
 for explicit YES before starting Codex with the transcript.
 
 **Preferences > Wake** separately enables continuous local capture/transcription
@@ -220,7 +220,7 @@ worker alive, while Stop kills an active worker and rejects late IDs. Playback
 uses in-memory PCM, with no TTS text upload or saved audio. `speech_models.py`
 downloads official GitHub archives (about 67 MB each), verifies pinned SHA-256
 and size, locks concurrent writers, bounds extraction and atomically installs
-under Linux XDG cache or Windows LOCALAPPDATA `jarvis/voices`.
+under Linux XDG cache or Windows LOCALAPPDATA `tigo/voices`.
 
 The first 0.7.0 launch migrates old voice/rate/pitch to Automatic/neutral while
 preserving automatic Speech off and volume. Selected engine/voice persists
@@ -264,11 +264,11 @@ read-only Codex diagnostic reports; it is not unattended automatic repair.
 | State | Location / meaning |
 |---|---|
 | Codex login/config/MCP and managed instructions | Existing `CODEX_HOME`, default `~/.codex`; managed `AGENTS.md` block preserves personal text and makes backups. |
-| Installed JARVIS Skill | `~/.agents/skills/jarvis-desktop/SKILL.md`, under the Windows user profile as applicable. |
-| GUI preferences/checkpoints | `QSettings("Jarvis", "Desktop")`; checkpoints store scoped thread/status metadata, not transcript text. |
-| Shared saved access | Linux `~/.local/share/jarvis-codex/access-mode`; Windows `%LOCALAPPDATA%\jarvis-codex\access-mode`. |
+| Installed Tigo Skill | `~/.agents/skills/tigo-desktop/SKILL.md`, under the Windows user profile as applicable. |
+| GUI preferences/checkpoints | `QSettings("Tigo", "Desktop")`; checkpoints store scoped thread/status metadata, not transcript text. |
+| Shared saved access | Linux `~/.local/share/tigo-codex/access-mode`; Windows `%LOCALAPPDATA%\tigo-codex\access-mode`. |
 | Conversation history | `conversations.sqlite3` beside the access file; stores message text, titles, pins and attachment metadata. Scope includes the Codex home. |
-| Repair memory | `memory/confirmed-fixes.json` under that per-user JARVIS data directory; only explicitly recorded fixes. |
+| Repair memory | `memory/confirmed-fixes.json` under that per-user Tigo data directory; only explicitly recorded fixes. |
 | Metrics | Bounded content-free timing/tool-count records; distinct from history and repair memory. |
 
 History can retain private clipboard-image copies. Selected original files are
@@ -297,18 +297,18 @@ See [installation/update recipes](docs/install-desktop.md),
 
 | Location | Responsibility |
 |---|---|
-| `gui/jarvis_gui/app.py`, `activation.py`, `autostart.py` | App lifecycle, tray, same-user instance activation and per-user startup. |
-| `gui/jarvis_gui/backend.py` | Qt properties/slots, requests, context, workers, history and microphone coordination. |
-| `gui/jarvis_gui/app_server.py`, `core.py` | Owned JSON-RPC process, protocol/launch policy, bounded requests and cleanup. |
-| `gui/jarvis_gui/ui/` | Production Qt Quick window, artwork, chat cards, previews, history and speech settings. |
-| `messages.py`, `presentation.py`, `attachments.py`, `history.py` under `gui/jarvis_gui/` | Chat model, inert Markdown rendering, reviewed local files and SQLite persistence. |
-| `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py`, `neural_speech.py`, `neural_worker.py`, `speech_models.py` under `gui/jarvis_gui/` | Local transcription, acknowledged wake/mic ownership, speech lifecycle, warm neural worker and verified model assets. |
-| `runtime.py`, `workflows.py`, `access.py`, `profiles.py`, `preferences.py`, `desktop_control.py` under `gui/jarvis_gui/` | Timings/checkpoints, checked aliases, shared access/login, model/language settings and read-only ownership diagnostics. |
-| `skills/jarvis-desktop/SKILL.md`, `config/jarvis-agents.md` | Installed conversation persona and instruction-based GUI routing. |
+| `gui/tigo_gui/app.py`, `activation.py`, `autostart.py` | App lifecycle, tray, same-user instance activation and per-user startup. |
+| `gui/tigo_gui/backend.py` | Qt properties/slots, requests, context, workers, history and microphone coordination. |
+| `gui/tigo_gui/app_server.py`, `core.py` | Owned JSON-RPC process, protocol/launch policy, bounded requests and cleanup. |
+| `gui/tigo_gui/ui/` | Production Qt Quick window, artwork, chat cards, previews, history and speech settings. |
+| `messages.py`, `presentation.py`, `attachments.py`, `history.py` under `gui/tigo_gui/` | Chat model, inert Markdown rendering, reviewed local files and SQLite persistence. |
+| `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py`, `neural_speech.py`, `neural_worker.py`, `speech_models.py` under `gui/tigo_gui/` | Local transcription, acknowledged wake/mic ownership, speech lifecycle, warm neural worker and verified model assets. |
+| `runtime.py`, `workflows.py`, `access.py`, `profiles.py`, `preferences.py`, `desktop_control.py` under `gui/tigo_gui/` | Timings/checkpoints, checked aliases, shared access/login, model/language settings and read-only ownership diagnostics. |
+| `skills/tigo-desktop/SKILL.md`, `config/tigo-agents.md` | Installed conversation persona and instruction-based GUI routing. |
 | `scripts/sync_agents.py` | Safe managed AGENTS block upgrades/backups; preserve unrelated text. |
-| `scripts/install-*.sh`, `scripts/install-*.ps1`, `scripts/jarvis-*.sh`, `scripts/jarvis-*.ps1` | OS installation and launch/compatibility helpers. |
+| `scripts/install-*.sh`, `scripts/install-*.ps1`, `scripts/tigo-*.sh`, `scripts/tigo-*.ps1` | OS installation and launch/compatibility helpers. |
 | `scripts/x11_mcp.py`, `scripts/hypruse-access.sh` | Bundled X11 tools and explicit Hypruse access configuration helper. |
-| `scripts/jarvis_memory.py`, `scripts/jarvis_voice.py`, `scripts/watch-*` | Confirmed repairs, terminal dictation and optional read-only monitors. |
+| `scripts/tigo_memory.py`, `scripts/tigo_voice.py`, `scripts/watch-*` | Confirmed repairs, terminal dictation and optional read-only monitors. |
 | `tests/`, `gui/tests/`, `.github/workflows/validate.yml` | Standard-library tests, Qt/process/QML integration tests and Linux/Windows CI. |
 
 ## 7. Development and validation
@@ -326,7 +326,7 @@ For a local development/test environment, from the repository root:
 uv sync --project gui --frozen --extra speech
 python3 -m unittest discover -s tests -v
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen --extra speech python scripts/check_desktop_ui.py
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen --extra speech jarvis-gui --smoke-test
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen --extra speech tigo-gui --smoke-test
 uv lock --project gui --check --offline
 git diff --check
 ```
@@ -405,7 +405,7 @@ voice samples and GUI/test strings can appear where appropriate.
 
 The user's priorities, established across the work:
 
-- A beautiful, responsive native JARVIS experience on Linux and Windows 11.
+- A beautiful, responsive native Tigo experience on Linux and Windows 11.
   CachyOS is a priority Linux distribution; the earlier reported desktop was
   Hyprland with fish. Do not infer the user's current desktop from cloud variables.
 - Practical computer operation, including creative/editor workflows, not just
@@ -442,7 +442,7 @@ shared desktop input; no such orchestration is implemented now.
 
 ## 10. Latest Windows incident: what is known and what is not
 
-The reported task involved preparing application settings for transfer. JARVIS
+The reported task involved preparing application settings for transfer. Tigo
 continued file-related work but said GUI verification was unavailable because
 the screen-control service reported that the user owned control. The user had
 no raw tool result or tool name available when asked. Do not keep requesting
@@ -637,28 +637,28 @@ skips. These validate flow/guards without real pacman/winget/UAC installation.
 Use the full [OS recipes](docs/install-desktop.md) for fresh installations.
 Do not run `git pull` in the user's home directory without specifying the
 checkout, and do not assume `scripts/` exists in the current shell directory.
-The usual user checkout name is `Codex-jarvis-gui`; change paths if it differs.
-Close through **Quit JARVIS** first: closing the window can leave wake listening
+The usual user checkout name is `Tigo`; change paths if it differs.
+Close through **Quit Tigo** first: closing the window can leave wake listening
 and the old process alive. Stop if Git/update/installation fails.
 
 CachyOS/Linux update in Bash:
 
 ```bash
-repo_dir="$HOME/Codex-jarvis-gui"
+repo_dir="$HOME/Tigo"
 git -C "$repo_dir" pull --ff-only &&
 bash "$repo_dir/scripts/install-gui-linux.sh" &&
-"$HOME/.local/bin/jarvis-gui"
+"$HOME/.local/bin/tigo-gui"
 ```
 
 Windows 11 update in a normal PowerShell window:
 
 ```powershell
-$repoPath = Join-Path $env:USERPROFILE 'Codex-jarvis-gui'
+$repoPath = Join-Path $env:USERPROFILE 'Tigo'
 git -C $repoPath pull --ff-only
 if ($LASTEXITCODE -ne 0) { throw 'Git update failed; stop here.' }
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'scripts\install-gui-windows.ps1')
 if ($LASTEXITCODE -ne 0) { throw 'Installation failed; inspect the error above.' }
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'scripts\jarvis-gui-windows.ps1')
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repoPath 'scripts\tigo-gui-windows.ps1')
 ```
 
 `C:\Users\...>` is normally CMD, not PowerShell; enter `powershell` before
@@ -680,7 +680,7 @@ conversation to load it. Keep using the existing Codex login.
 
 ## 14. Development environment and CI investigation
 
-Observed cloud checkout: `/workspace/Codex-jarvis`, local branch `work`, remote
+Observed cloud checkout: `/workspace/Tigo`, local branch `work`, remote
 `origin` points to this repository. Do not assume a future task restores the
 same branch, cached files or running processes. Inspect actual status first.
 Use the existing checkout; do not create an extra worktree unless requested.
@@ -692,7 +692,7 @@ In this cloud, writable cache directories under `/tmp` avoided cache permission
 problems. A previously exercised invocation was:
 
 ```bash
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_CACHE_HOME=/tmp/jarvis-cache UV_CACHE_DIR=/tmp/uv-cache uv run --project gui --frozen --extra speech python scripts/check_desktop_ui.py
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_CACHE_HOME=/tmp/tigo-cache UV_CACHE_DIR=/tmp/uv-cache uv run --project gui --frozen --extra speech python scripts/check_desktop_ui.py
 ```
 
 The GUI environment is `gui/.venv`; root tests mostly use the standard library.
@@ -704,7 +704,7 @@ There is no running web service or localhost preview required by this project.
 Some temporary schema/source files existed under `/tmp` during development;
 they are not part of the repository or a reproducible dependency. Inspect the
 installed Codex schema/version when changing protocol assumptions. Importing
-`jarvis_gui.backend` needs Qt; pure helpers can be tested without Qt. A missing
+`tigo_gui.backend` needs Qt; pure helpers can be tested without Qt. A missing
 native speech plugin in this headless machine does not mean Windows lacks voices.
 
 The managed cloud uses a policy-controlled proxy. Use its runtime/setup Skills
@@ -733,7 +733,7 @@ private data, session tokens or credentials into reports.
 
 ## 15. Research background and documentation map
 
-Earlier research examined Jarvis/Codex/OpenCode projects and visual agents. It
+Earlier research examined Tigo/Codex/OpenCode projects and visual agents. It
 informed mechanisms, not a wholesale code import or a transport migration.
 
 | Reference | Relevant takeaway / boundary |
@@ -772,7 +772,7 @@ schemas and official source before adopting additional code/dependencies.
 2. Inspect the real checkout/agent instructions, `git status`, recent commits and
    current remote before editing. Do not reset another contributor's changes.
 3. Read the newest `changes.md` entries and relevant source/tests. The latest
-   runtime is 0.7.0; a later documentation commit does not require version bumps
+   runtime is 0.8.0; a later documentation commit does not require version bumps
    or mean another feature remains to implement.
 4. Continue the actual requested task. If the user says to continue Windows
    troubleshooting, distinguish unknown live diagnostics from already-completed

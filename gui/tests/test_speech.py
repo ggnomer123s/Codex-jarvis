@@ -11,8 +11,8 @@ from PySide6.QtCore import QSettings
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 from PySide6.QtTextToSpeech import QTextToSpeech
-from jarvis_gui.backend import Backend
-from jarvis_gui.speech import Speech
+from tigo_gui.backend import Backend
+from tigo_gui.speech import Speech
 from fake_speech import Engine
 
 APP = QApplication.instance() or QApplication([])
@@ -20,7 +20,7 @@ APP = QApplication.instance() or QApplication([])
 
 class TestSpeech(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='jarvis speech ')
+        self.temp = tempfile.TemporaryDirectory(prefix='tigo speech ')
         self.root = Path(self.temp.name)
         self.settings = QSettings(str(self.root/'ui.ini'),QSettings.Format.IniFormat)
         self.settings.setValue('folder',str(self.root))
@@ -133,7 +133,7 @@ for line in sys.stdin:
 ''',encoding='utf-8')
         backend._voice_command=[sys.executable,'-u',str(voice)]
         backend.speaker.read('Ready, mentor.')
-        with mock.patch('jarvis_gui.backend.dependencies_available',return_value=True):
+        with mock.patch('tigo_gui.backend.dependencies_available',return_value=True):
             backend.toggleVoice()
         self.assertEqual(backend.voice.processId(),0)
         self.assertTrue(backend.speaker.active)
@@ -172,7 +172,7 @@ for line in sys.stdin:
 ''',encoding='utf-8')
         backend.wake_control.command=[sys.executable,'-u',str(script)]
         backend.wake_control.register=lambda _:None
-        with mock.patch('jarvis_gui.wake_control.dependencies_available',return_value=True):
+        with mock.patch('tigo_gui.wake_control.dependencies_available',return_value=True):
             self.assertTrue(backend.wake_control.configure(True,False,'base','ru','',True))
         self.wait(lambda:backend.wake.state=='listening')
         backend.speaker.read('Готово, наставник.')
@@ -188,7 +188,7 @@ for line in sys.stdin:
     def test_cancel_manual_recording_during_speech_cannot_start_late_capture(self):
         backend=self.backend()
         backend.speaker.read('Hello, mentor.')
-        with mock.patch('jarvis_gui.backend.dependencies_available',return_value=True):
+        with mock.patch('tigo_gui.backend.dependencies_available',return_value=True):
             backend.toggleVoice()
         self.assertEqual(backend.voiceState,'starting')
         self.assertTrue(backend.speaker.active)
@@ -238,7 +238,7 @@ def without_speech(name,*args,**kwargs):
  if name=='PySide6.QtTextToSpeech': raise ImportError('libpulse.so.0 is missing')
  return original(name,*args,**kwargs)
 builtins.__import__=without_speech
-from jarvis_gui.backend import Backend
+from tigo_gui.backend import Backend
 with tempfile.TemporaryDirectory() as directory:
  settings=QSettings(str(Path(directory)/'ui.ini'),QSettings.IniFormat)
  backend=Backend(settings,codex_home_override=Path(directory)/'codex')

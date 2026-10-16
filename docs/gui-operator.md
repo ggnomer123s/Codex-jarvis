@@ -1,6 +1,6 @@
-# JARVIS GUI Operator: intent routing, visual grounding, region tools
+# Tigo GUI Operator: intent routing, visual grounding, region tools
 
-JARVIS uses the requested outcome to decide **when to actually control the desktop**. This avoids a common failure mode: a user asks the agent to operate a visible program, but it only explains how to do it. The `jarvis-desktop` Skill and the managed `AGENTS.md` block now explicitly ask Codex to use an authorized GUI MCP when the request calls for visible app interaction.
+Tigo uses the requested outcome to decide **when to actually control the desktop**. This avoids a common failure mode: a user asks the agent to operate a visible program, but it only explains how to do it. The `tigo-desktop` Skill and the managed `AGENTS.md` block now explicitly ask Codex to use an authorized GUI MCP when the request calls for visible app interaction.
 
 ## Three distinct region operations
 
@@ -22,7 +22,7 @@ The upstream Hypruse MCP already implements these tools.
 
 These are example **MCP arguments**, not executable Python code. The live tool schema is authoritative. Global Hyprland logical coordinates must be derived from the screenshot's `geometry` and `scale`: `global = origin + image_pixel / scale`. The source of the request is never permission to bypass a seat or authentication refusal.
 
-### Native X11 / bundled jarvis-x11
+### Native X11 / bundled tigo-x11
 
 The bundled X11 MCP now includes these independent tools:
 
@@ -35,7 +35,7 @@ screenshot_region(x=300, y=180, width=600, height=300)
 user_select_screenshot()
 ```
 
-- `drag` presses, interpolates movement and releases the mouse in a `finally` block. Use a `window_id` when possible to activate and verify the intended application. It requires opt-in `JARVIS_X11_ALLOW_INPUT=1`.
+- `drag` presses, interpolates movement and releases the mouse in a `finally` block. Use a `window_id` when possible to activate and verify the intended application. It requires opt-in `TIGO_X11_ALLOW_INPUT=1`.
 - `screenshot_region` uses the documented `maim -g WxH+X+Y` geometry syntax, with numeric bounds and a maximum 4096-by-4096 region. Supports negative monitor coordinates.
 - `user_select_screenshot` uses `maim -s` and waits up to 45 seconds for the **human** to draw the rectangle on an X11 display. It is a read-only operation; press Escape to cancel. This may require the system's `slop` support used by `maim`.
 - `key(...,window_id=...)` uses the existing focus verification before sending app shortcuts.
@@ -59,13 +59,13 @@ The generic Wayland backend is experimental. Examine its advertised capabilities
 
 ## How to test without altering valuable documents
 
-**Visual route selection:** ask JARVIS to open a disposable text editor, identify its document area through its GUI MCP and type `GUI_ROUTE_TEST`, without saving.
+**Visual route selection:** ask Tigo to open a disposable text editor, identify its document area through its GUI MCP and type `GUI_ROUTE_TEST`, without saving.
 
 **Drag test:** open an empty drawing canvas or select an otherwise disposable rectangular area. Ask it to identify two on-screen points, use the platform-native `drag` to draw a selection and confirm the selected bounds. Don't try this first on a production Premiere timeline.
 
 **Region test:** ask it to capture only the top-right 500x250 area of the active app and summarize visible controls. It should call a *region screenshot*, **not** a drag action.
 
-**Multi-app route:** ask JARVIS to focus one existing app, perform a reversible visual action, switch to another app and confirm the final focus. During this scenario, watch which tool it chose.
+**Multi-app route:** ask Tigo to focus one existing app, perform a reversible visual action, switch to another app and confirm the final focus. During this scenario, watch which tool it chose.
 
 No code-path test alone proves live drag accuracy on a Hyprland or Windows machine. Success depends on monitor layouts, compositor rules, application focus and upstream MCP versions.
 
@@ -73,7 +73,7 @@ No code-path test alone proves live drag accuracy on a Hyprland or Windows machi
 
 We examined their current public source/documentation as inspiration, but **did not copy their source or claim better benchmark results**.
 
-| Project | Approach | JARVIS design decision |
+| Project | Approach | Tigo design decision |
 |---|---|---|
 | [Microsoft UFO](https://github.com/microsoft/UFO) | HostAgent chooses the app; AppAgent handles target; native API + UI Automation and batched actions | Use a lightweight task router in the Skill rather than adding a costly second agent for every tiny task |
 | [Agent-S](https://github.com/simular-ai/Agent-S) | Visual grounding agent and action reasoning, with a bounded visual trajectory | Separate reasoning from reliable target coordinates; zoom/crop only when accessibility can't resolve controls |

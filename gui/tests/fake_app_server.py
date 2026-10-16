@@ -50,7 +50,7 @@ for line in sys.stdin:
             continue
         result = {'thread': {'id': params.get('threadId', 'session-123'), 'turns': []}}
     elif method == 'mcpServerStatus/list':
-        result = {'data': [{'name': 'jarvis-x11', 'tools': {}}], 'nextCursor': None}
+        result = {'data': [{'name': 'tigo-x11', 'tools': {}}], 'nextCursor': None}
         if scenario.startswith('windows-control'):
             tools = {} if scenario == 'windows-control-missing' else {'ControlStatus': {'name': 'ControlStatus'}}
             result = {'data': [{'name': 'windows-mcp', 'tools': tools}], 'nextCursor': None}

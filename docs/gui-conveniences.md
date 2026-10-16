@@ -19,7 +19,7 @@ fetch external images. HTTP(S) links open only when clicked. User requests and
 file previews remain plain text. Scroll up to read earlier messages without
 streaming pulling you down; **Latest** restores following the answer.
 
-![Conversation with Markdown, code and attachment](images/jarvis-conveniences.png)
+![Conversation with Markdown, code and attachment](images/tigo-conveniences.png)
 
 ## Message actions
 
@@ -60,8 +60,8 @@ with pinned entries first; this is a display limit, not automatic deletion.
 
 Conversations are saved in a local SQLite database:
 
-- Linux: `~/.local/share/jarvis-codex/conversations.sqlite3`.
-- Windows: `%LOCALAPPDATA%\jarvis-codex\conversations.sqlite3`.
+- Linux: `~/.local/share/tigo-codex/conversations.sqlite3`.
+- Windows: `%LOCALAPPDATA%\tigo-codex\conversations.sqlite3`.
 
 The database stores conversation text, attachment metadata/previews, title,
 workspace/model/access, and the Codex thread pointer. Clipboard image copies
@@ -80,7 +80,7 @@ A missing workspace/thread is reported. A transcript with no saved thread says
 that its next request starts a new Codex session. Each saved transcript is
 limited to 8 MB; errors are shown without discarding the active conversation.
 
-![Searchable, pinned local conversations](images/jarvis-history.png)
+![Searchable, pinned local conversations](images/tigo-history.png)
 
 ## Work status and shortcuts
 

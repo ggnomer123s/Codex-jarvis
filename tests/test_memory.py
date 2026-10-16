@@ -1,4 +1,4 @@
-"""Stdlib-only tests for JARVIS opt-in memory (no Codex, mic, or network)."""
+"""Stdlib-only tests for Tigo opt-in memory (no Codex, mic, or network)."""
 import json
 import os
 from pathlib import Path
@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "scripts" / "jarvis_memory.py"
+CLI = ROOT / "scripts" / "tigo_memory.py"
 
 
 class TestMemory(unittest.TestCase):
@@ -16,7 +16,7 @@ class TestMemory(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.directory = Path(self.tmp.name) / "private-memory"
-        self.env = dict(os.environ, JARVIS_MEMORY_DIR=str(self.directory))
+        self.env = dict(os.environ, TIGO_MEMORY_DIR=str(self.directory))
 
     def call(self, *args, input_text=None):
         return subprocess.run(

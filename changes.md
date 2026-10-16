@@ -1,4 +1,4 @@
-# JARVIS change report
+# Tigo change report
 
 This tracked report records implemented changes, their source commits and the
 verification actually performed. Add a dated entry for every subsequent change,
@@ -8,11 +8,50 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-16 — Rename the assistant and application to Tigo (GUI 0.8.0)
+
+- Renamed the Qt application, message authors, tray/preferences/wake text,
+  monogram and SVG/Windows icons to Tigo. Renamed the Python package to
+  `tigo_gui`, distribution to `tigo-desktop-ui`, CLI/GUI/full launchers to
+  `tigo`/`tigo-gui`/`tigo-full`, Skill to `tigo-desktop`, managed instructions,
+  installer assets, test imports, CI commands and documentation/image paths.
+  The frozen dependency versions remain unchanged. Documentation screenshots
+  and the animated preview were rendered again from the actual QML with
+  isolated synthetic content rather than editing old screenshots.
+- Wake recognition now accepts Tigo and its Russian spelling. Explicit
+  tolerant aliases and split syllables are supported; arbitrary edit-distance
+  matching was removed for this short name to avoid everyday-word triggers.
+  The former product name no longer activates the listener. Review-before-send,
+  local-only audio processing, cooldown and cancellation behavior are retained.
+- Added one-time Qt preference migration, reuse of existing private history,
+  absolute clipboard references, repair-memory and verified speech-cache paths,
+  old environment-option fallback and existing desktop MCP/workflow IDs.
+  Saved restricted access remains shared with CLI; login and desktop grants
+  are not replaced. Managed old rules/memory guidance upgrade with a backup;
+  owned old launchers forward to Tigo and owned menu/Skill/startup entries move
+  to the new identity. Personal/unmanaged files are preserved. See
+  [rename compatibility](docs/rename.md) for intentional legacy identifiers.
+- Retained real GitHub clone/origin/commit/CI URLs and names of third-party
+  projects. The remote repository itself was not renamed or published.
+- Verification: 87 root tests discovered, 84 passed and three Windows-only
+  tests skipped on Linux; 73 Qt/process/QML tests passed. Fixtures cover
+  old/new settings precedence, private data/cache reuse, access persistence,
+  managed-marker migration, old launcher backups/startup cleanup, Tigo/Russian
+  wake tokens, rejecting the old name and common short-word false positives,
+  and production-window title/monogram/message controls. Bash/Python syntax,
+  frozen lock, English docs/scripts, local links and whitespace checks passed.
+- Installed from this checkout on the user's Linux/Hyprland desktop. Quit the
+  old application through its UI, launched the Tigo menu launcher and visually
+  verified the new title, monogram and text. The saved model, font, voice/wake
+  settings were retained and the new local wake worker is running. Real spoken
+  wake accuracy and Windows installation/input were not tested; no authenticated
+  model turn, new audio-model download or GitHub CI run was performed.
+
 ## 2026-10-16 — Local neural voices replace system speech (GUI 0.7.0)
 
-Implementation: [speech controller](gui/jarvis_gui/speech.py),
-[worker](gui/jarvis_gui/neural_worker.py),
-[verified assets](gui/jarvis_gui/speech_models.py) and
+Implementation: [speech controller](gui/tigo_gui/speech.py),
+[worker](gui/tigo_gui/neural_worker.py),
+[verified assets](gui/tigo_gui/speech_models.py) and
 [update recipes](docs/install-desktop.md).
 
 - Replaced default OS TTS with CPU Piper/VITS through locked sherpa-onnx and
@@ -66,7 +105,7 @@ Implementation: [speech controller](gui/jarvis_gui/speech.py),
   are copied and saved Full Access/MCP settings remain under ordinary installers.
 - Windows checks Russian SAPI voices and can install the official Russian TTS
   OS capability through a separate UAC process. Failed/canceled optional voice
-  setup warns; JARVIS itself never runs elevated. Whisper/MCP package downloads
+  setup warns; Tigo itself never runs elevated. Whisper/MCP package downloads
   can still occur on first use; CUDA/editor SDKs and OS/portal permission dialogs
   are outside the default CPU dependency setup.
 - Checkouts are validated for expected origin/root/main and clean state; updates
@@ -160,7 +199,7 @@ Implementation: [speech controller](gui/jarvis_gui/speech.py),
 ## 2026-10-15 — Consolidated AI project overview
 
 - Added root `readmeai.md` as the first-read context for another AI maintainer:
-  project purpose, JARVIS mentor character, app-server/MCP architecture and
+  project purpose, Tigo mentor character, app-server/MCP architecture and
   lifecycle, current GUI/voice/speech/workflow features, local state, access,
   installation, source map, development checks and known regression paths.
 - Recorded decisions to preserve: one existing Codex home/login, app-server-only
@@ -177,9 +216,9 @@ Implementation: [speech controller](gui/jarvis_gui/speech.py),
   test run is implied. The commit skips CI; the preceding runtime verification
   remains recorded below.
 
-## 2026-10-15 — JARVIS mentor character and local speech (GUI 0.6.0)
+## 2026-10-15 — Tigo mentor character and local speech (GUI 0.6.0)
 
-- Updated the installed `jarvis-desktop` Skill and managed AGENTS instructions:
+- Updated the installed `tigo-desktop` Skill and managed AGENTS instructions:
   composed, respectful mentor-oriented conversation in the user's language,
   concise results, restrained wit and thoughtful disagreement. The persona
   does not change tool authorization or claim fictional identity. Existing
@@ -315,8 +354,8 @@ Implementation: [speech controller](gui/jarvis_gui/speech.py),
   requirements; old full installers delegate to the standard installers.
   Existing private home directories are not deleted or imported.
 - Full Access defaults on. The Access checkbox saves a small shared preference
-  for the GUI and regular `jarvis` command, including sandbox selection across
-  restarts. Explicit `jarvis-full` aliases still request Full Access in the same
+  for the GUI and regular `tigo` command, including sandbox selection across
+  restarts. Explicit `tigo-full` aliases still request Full Access in the same
   home. A corrupt preference falls back to read-only. Access changes close the
   owned app-server and clear context; Codex app-server remains the sole transport.
 - Fixed Windows PowerShell 5 native-stderr handling for an absent `windows-mcp`:
@@ -405,7 +444,7 @@ Implementation: [speech controller](gui/jarvis_gui/speech.py),
 
 ## 2026-10-15 — Activity-reactive artwork replaces the central J
 
-- Added original generated artwork in `gui/jarvis_gui/ui/energy-core.png`.
+- Added original generated artwork in `gui/tigo_gui/ui/energy-core.png`.
   Rebuilt `Orb.qml` with woven filaments, orbital particles, breathing,
   audio-level response and activity-specific motion instead of a central letter.
 - Mapped preparation, recording, transcription, planning, action, verification,
@@ -477,7 +516,7 @@ Behavior and configuration: [runtime guide](docs/runtime.md).
 
 ### Codex connection and chat
 
-- Added `gui/jarvis_gui/app_server.py`: an owned, persistent local stdio
+- Added `gui/tigo_gui/app_server.py`: an owned, persistent local stdio
   JSON-RPC connection to Codex app-server, initialization, thread start/resume,
   model and MCP discovery, task dispatch and protocol interruption.
 - Updated `backend.py` and `core.py` to use app-server as the GUI's only model
@@ -532,8 +571,8 @@ Behavior and configuration: [runtime guide](docs/runtime.md).
   response and ripple effects; animation pauses when minimized.
 - Bumped `gui/pyproject.toml` and `gui/uv.lock` to GUI version 0.2.0 without adding
   dependencies.
-- Added [the source review](docs/related-projects.md) of jarvis-codex,
-  opencode-jarvis, opencode-voice, qwen-audio-agent and stable-jarvis, plus earlier
+- Added [the source review](docs/related-projects.md) of tigo-codex,
+  opencode-tigo, opencode-voice, qwen-audio-agent and stable-tigo, plus earlier
   references including PolyCast5. Recorded commit snapshots, useful mechanisms
   and adopted scope. No external source/assets were copied and no OpenCode
   runtime was introduced.

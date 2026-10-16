@@ -12,9 +12,9 @@ from unittest import mock
 from PySide6.QtCore import QProcess, QSettings
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
-from jarvis_gui.neural_speech import NeuralEngine
-from jarvis_gui.speech import Speech
-from jarvis_gui.speech_models import VOICES, ensure_voice, unpack
+from tigo_gui.neural_speech import NeuralEngine
+from tigo_gui.speech import Speech
+from tigo_gui.speech_models import VOICES, ensure_voice, unpack
 
 APP = QApplication.instance() or QApplication([])
 
@@ -38,7 +38,7 @@ for line in sys.stdin:
 
 class TestNeuralSpeech(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='jarvis neural ')
+        self.temp = tempfile.TemporaryDirectory(prefix='tigo neural ')
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.settings = QSettings(str(self.root/'ui.ini'), QSettings.IniFormat)

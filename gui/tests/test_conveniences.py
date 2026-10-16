@@ -9,15 +9,15 @@ from PySide6.QtCore import QSettings,QUrl
 from PySide6.QtGui import QImage,QGuiApplication
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
-from jarvis_gui.backend import Backend
-from jarvis_gui.presentation import message_blocks
+from tigo_gui.backend import Backend
+from tigo_gui.presentation import message_blocks
 
 APP = QApplication.instance() or QApplication([])
 
 
 class TestConveniences(unittest.TestCase):
     def setUp(self):
-        self.temp = tempfile.TemporaryDirectory(prefix='jarvis conversation ')
+        self.temp = tempfile.TemporaryDirectory(prefix='tigo conversation ')
         self.root = Path(self.temp.name)
         self.backends=[]
         self.settings=QSettings(str(self.root/'ui.ini'),QSettings.Format.IniFormat)

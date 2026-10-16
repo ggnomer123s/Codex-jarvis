@@ -1,12 +1,12 @@
-# Using JARVIS
+# Using Tigo
 
-JARVIS provides a **single `jarvis` launcher** for Codex CLI with desktop-context instructions. Desktop MCPs and installed Skills are discovered in the Codex session.
+Tigo provides a **single `tigo` launcher** for Codex CLI with desktop-context instructions. Desktop MCPs and installed Skills are discovered in the Codex session.
 
 ## Launch speed modes
 
-- `jarvis` and `jarvis fast`: **low reasoning effort** and no auto-executed screen-inspection prompt. Recommended for short GUI tasks.
-- `jarvis normal`: use your ordinary Codex model/reasoning defaults.
-- `jarvis deep`: **high reasoning effort**, useful for complicated troubleshooting.
+- `tigo` and `tigo fast`: **low reasoning effort** and no auto-executed screen-inspection prompt. Recommended for short GUI tasks.
+- `tigo normal`: use your ordinary Codex model/reasoning defaults.
+- `tigo deep`: **high reasoning effort**, useful for complicated troubleshooting.
 
 These per-launch settings do not overwrite your Codex config file. Reasoning support varies by model. See [Performance](performance.md).
 
@@ -14,14 +14,14 @@ These per-launch settings do not overwrite your Codex config file. Reasoning sup
 
 | Command | Linux | Windows 11 |
 |---|---|---|
-| `jarvis` / `jarvis fast` | Low-reasoning responsive GUI mode | Low-reasoning responsive GUI mode |
-| `jarvis normal` / `jarvis deep` | Default / high reasoning modes | Default / high reasoning modes |
-| `jarvis status` | GUI backend & monitor | Windows-MCP & monitor |
-| `jarvis reports` | Saved diagnostics | Saved diagnostics |
-| `jarvis gui-check` | Inspect backend, optional AT-SPI/marks helpers | Check registered Windows-MCP |
-| `jarvis monitor on/off` | Start/stop systemd user watcher (when available) | Toggle optional Scheduled Task |
-| `jarvis test` | Trigger synthetic failed user service | Not available |
-| `jarvis stop` | Hyprland: stops Hypruse; other desktops: exit Codex | Exit Codex with Ctrl+C or /exit |
+| `tigo` / `tigo fast` | Low-reasoning responsive GUI mode | Low-reasoning responsive GUI mode |
+| `tigo normal` / `tigo deep` | Default / high reasoning modes | Default / high reasoning modes |
+| `tigo status` | GUI backend & monitor | Windows-MCP & monitor |
+| `tigo reports` | Saved diagnostics | Saved diagnostics |
+| `tigo gui-check` | Inspect backend, optional AT-SPI/marks helpers | Check registered Windows-MCP |
+| `tigo monitor on/off` | Start/stop systemd user watcher (when available) | Toggle optional Scheduled Task |
+| `tigo test` | Trigger synthetic failed user service | Not available |
+| `tigo stop` | Hyprland: stops Hypruse; other desktops: exit Codex | Exit Codex with Ctrl+C or /exit |
 
 ## Suggested prompts
 
@@ -29,20 +29,20 @@ These per-launch settings do not overwrite your Codex config file. Reasoning sup
 
 **Diagnose a problem:** “My application behaves incorrectly. Observe the UI, collect non-destructive diagnostics, explain the most likely cause, and ask permission before making changes.”
 
-**Hyprland GUI test:** “Launch a fresh terminal with Hypruse, type `echo JARVIS_ONLINE` via GUI, execute it and verify the output.”
+**Hyprland GUI test:** “Launch a fresh terminal with Hypruse, type `echo TIGO_ONLINE` via GUI, execute it and verify the output.”
 
-**X11 GUI test:** Once explicitly enabled: “Open a text editor manually, then click its editable area, type `JARVIS_ONLINE` via jarvis-x11 and verify the result with a screenshot. Do not save.”
+**X11 GUI test:** Once explicitly enabled: “Open a text editor manually, then click its editable area, type `TIGO_ONLINE` via tigo-x11 and verify the result with a screenshot. Do not save.”
 
 **GNOME/KDE/general Wayland test:** “Use the GUI MCP's `describe_environment` first. Confirm screenshot and input availability. If a portal permission is requested, let me authorize it manually. Do not act if input is unavailable.”
 
-**Windows test:** “Use Windows-MCP to open Notepad, type `JARVIS_ONLINE` and verify with a screenshot. Do not save.”
+**Windows test:** “Use Windows-MCP to open Notepad, type `TIGO_ONLINE` and verify with a screenshot. Do not save.”
 
 ## Memory and voice
 
-- `jarvis memory add` — interactively record a user-confirmed fix; nothing is written until you type YES.
-- `jarvis memory search <keyword>` and `jarvis memory list` — inspect your private, local repair history.
-- `jarvis memory forget <id>` — delete an entry after confirming DELETE.
-- `jarvis voice` — push-to-talk mic capture, local faster-whisper speech recognition, transcript review, then YES to send text to Codex.
+- `tigo memory add` — interactively record a user-confirmed fix; nothing is written until you type YES.
+- `tigo memory search <keyword>` and `tigo memory list` — inspect your private, local repair history.
+- `tigo memory forget <id>` — delete an entry after confirming DELETE.
+- `tigo voice` — push-to-talk mic capture, local faster-whisper speech recognition, transcript review, then YES to send text to Codex.
 
 Audio is not sent to Codex, but the accepted transcript is. Voice requires PortAudio and downloads the Whisper model on first use. Memory is not synced to ChatGPT or GitHub. Detailed steps: [Memory & Voice](memory-and-voice.md).
 
@@ -55,7 +55,7 @@ Audio is not sent to Codex, but the accepted transcript is. Voice requires PortA
 
 ## Troubleshooting checklist
 
-1. Run `jarvis status` and `codex mcp list`.
+1. Run `tigo status` and `codex mcp list`.
 2. Confirm your **actual** desktop session: `echo "$XDG_SESSION_TYPE"` and `echo "$XDG_CURRENT_DESKTOP"`.
 3. On Wayland, ask the MCP for backend capability diagnostics; check screenshot vs input independently.
 4. On X11, ensure `xdotool`, `wmctrl`, `maim` are installed; input is disabled until explicit opt-in.
@@ -64,7 +64,7 @@ Audio is not sent to Codex, but the accepted transcript is. Voice requires PortA
 
 ## Accurate GUI navigation
 
-Run `jarvis gui-check` before the first full GUI test. On Hyprland the assistant should start with `desktop`, then prefer `ui` / `click_ui` or `marks`; when accessibility isn't available, use `screenshot` + `zoom` before `pointer`. After acting, use `then='ui'`, `then='desktop'` or `then='screenshot'` (when supported) to verify the outcome. These tools are not guaranteed on all backends.
+Run `tigo gui-check` before the first full GUI test. On Hyprland the assistant should start with `desktop`, then prefer `ui` / `click_ui` or `marks`; when accessibility isn't available, use `screenshot` + `zoom` before `pointer`. After acting, use `then='ui'`, `then='desktop'` or `then='screenshot'` (when supported) to verify the outcome. These tools are not guaranteed on all backends.
 
 Hypruse normal cursor movements are immediate, not animated. Built-in dragging already interpolates; avoid bypassing the MCP's guardrails solely for visual smoothing.
 
