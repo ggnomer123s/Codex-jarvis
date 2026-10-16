@@ -9,6 +9,7 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 class Instance(QObject):
     activated = Signal()
+    controlRequested = Signal()
 
     def __init__(self, parent=None, *, namespace=None):
         super().__init__(parent)
@@ -20,12 +21,12 @@ class Instance(QObject):
         self.server.setSocketOptions(QLocalServer.UserAccessOption)
         self.server.newConnection.connect(self._incoming)
 
-    def contact(self, activate=True):
+    def contact(self, activate=True, *, takeover=False):
         socket = QLocalSocket()
         socket.connectToServer(self.name)
         if not socket.waitForConnected(400):
             return False
-        socket.write(b'activate\n' if activate else b'ping\n')
+        socket.write(b'take-control\n' if takeover else (b'activate\n' if activate else b'ping\n'))
         socket.waitForBytesWritten(400)
         # Windows named-pipe data can be lost when the writer disconnects before
         # the owner reads it. Do not treat connection alone as delivery.
@@ -68,7 +69,9 @@ class Instance(QObject):
                     buffer.clear()
                     if message == b'activate\n':
                         self.activated.emit()
-                    if message in (b'activate\n', b'ping\n'):
+                    elif message == b'take-control\n':
+                        self.controlRequested.emit()
+                    if message in (b'activate\n', b'ping\n', b'take-control\n'):
                         socket.write(b'ok\n')
                         socket.flush()
                     socket.disconnectFromServer()

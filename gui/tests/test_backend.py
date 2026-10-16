@@ -108,6 +108,21 @@ class TestBackend(unittest.TestCase):
         self.assertEqual(backend.process.processId(), pid)
         self.assertIn("turn/interrupt", [x["request"].get("method") for x in self.requests(backend)])
 
+    def test_human_takeover_closes_real_owned_worker_and_does_not_resume(self):
+        backend = self.server_backend('slow')
+        backend.send('Synthetic task that waits for cancellation')
+        self.wait(lambda: bool(backend._turn_id))
+        self.assertGreater(backend.process.processId(), 0)
+        backend.screen_activity.handle_item('item/started', {'type': 'mcpToolCall', 'id': 'desktop',
+                                                           'server': 'hypruse', 'tool': 'pointer'})
+        backend.takeControl()
+        self.wait(lambda: backend.process.state() == backend.process.ProcessState.NotRunning)
+        self.assertFalse(backend.busy)
+        self.assertFalse(backend.screen_activity.active)
+        self.assertEqual(backend.stage, 'stopped')
+        QTest.qWait(150)
+        self.assertEqual(backend.process.processId(), 0)
+
     def test_late_completed_turn_cannot_finish_or_write_into_next_task(self):
         backend = self.server_backend("late")
         backend.send("first")

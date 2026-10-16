@@ -77,7 +77,7 @@ class AppServer(QObject):
     def _initialize(self):
         if self._closing:
             return
-        self.request("initialize", {"clientInfo": {"name": "tigo_desktop", "title": "Tigo", "version": "0.9.0"},
+        self.request("initialize", {"clientInfo": {"name": "tigo_desktop", "title": "Tigo", "version": "0.10.0"},
                                     "capabilities": {"experimentalApi": False}}, self._initialized)
 
     def _initialized(self, result, error):

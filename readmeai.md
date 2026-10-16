@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-16**, GUI **0.9.0**. Repository:
+Last reconciled: **2026-10-16**, GUI **0.10.0**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -19,7 +19,12 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** GUI 0.9.0 adds male/female local and explicit online speech;
+**Current state:** GUI 0.10.0 adds a screen activity border/banner and human
+task-stop button/shortcut for recognized desktop MCP events and workflows.
+This is an activity indicator, not an OS ownership grant or input lock. Preserve
+native MCP takeover guards. Hyprland uses a GTK4 layer-shell helper with system
+Python bindings; Windows/X11 use Qt. See [screen control](docs/screen-control.md)
+for shortcuts, dependencies and verification limits. GUI 0.9.0 adds male/female local and explicit online speech;
 see [speech-output.md](docs/speech-output.md). Local remains the default; online
 Microsoft speech sends spoken text only when selected. Separate provider voice
 choices, bounded workers and microphone handoff are retained. GUI 0.8.0 renamed

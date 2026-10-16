@@ -51,6 +51,11 @@ tolerant matching, microphone/model/language settings and per-user login startup
 The microphone stays on while enabled; ordinary transcripts are discarded and
 waking opens the window without submitting a task. See [voice activation](docs/voice-activation.md).
 
+**Visible screen activity:** the GUI shows a cyan/violet screen border and a
+Return control banner during desktop MCP calls. Click the button, or use
+**Ctrl+Alt+Shift+F10** when offered, to stop the current Tigo task. Existing native
+desktop takeover guards remain active. See [screen activity and takeover](docs/screen-control.md).
+
 ![Tigo desktop app](docs/images/tigo-desktop.png)
 
 The central letter has been replaced with an energy sculpture: filament orbits,

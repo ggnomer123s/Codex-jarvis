@@ -74,7 +74,7 @@ dependencies are already prepared.
 ## CachyOS, Arch, Manjaro, EndeavourOS
 
 ```bash
-sudo pacman -Syu --needed git uv python nodejs npm portaudio libpulse speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+sudo pacman -Syu --needed git uv python gtk4 gtk4-layer-shell python-gobject nodejs npm portaudio libpulse speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
 "$HOME/.local/bin/codex" login
@@ -207,6 +207,27 @@ git -C "$env:USERPROFILE\Tigo" pull --ff-only
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Tigo\scripts\install-gui-windows.ps1"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Tigo\scripts\tigo-gui-windows.ps1"
 ```
+
+## Screen activity indicator prerequisites
+
+The GUI now shows a screen-edge indicator and Return control button during
+recognized desktop MCP calls. On Hyprland/Wayland the separate layer-shell
+helper requires distribution packages `gtk4`, `gtk4-layer-shell` and
+`python-gobject` (PyGObject), available to `/usr/bin/python3`. The CachyOS updater
+and Arch-family recipe above install them. Existing Arch/CachyOS installations
+can add them with:
+
+```bash
+sudo pacman -Syu --needed gtk4 gtk4-layer-shell python-gobject
+```
+
+Other Wayland distributions need the corresponding GTK4, PyGObject and
+Gtk4LayerShell 1.0 typelib packages and a compositor supporting layer-shell.
+Package names/availability vary; GNOME does not provide this protocol. The
+helper reports unavailable rather than claiming a working overlay. These system
+bindings are separate from the locked uv environment; no pip package is added.
+Windows 11 and Linux X11 use the existing Qt dependencies. See
+[screen control and takeover](screen-control.md) for shortcuts and limitations.
 
 ## Spoken replies
 

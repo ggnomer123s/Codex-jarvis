@@ -26,6 +26,7 @@ from .history import History
 from .attachments import inspect_file, validate_files, MAX_FILES
 from .speech import Speech
 from .desktop_control import control_summary
+from .screen_activity import ScreenActivity
 from .compat import desktop_settings, environment, existing_path, LEGACY
 
 
@@ -62,6 +63,7 @@ class Backend(QObject):
         self._conversation_title = 'New conversation'
         self._notice = ''
         self._desktop_control_status = 'Not checked. Full Access and desktop ownership are separate.'
+        self.screen_activity = ScreenActivity(self)
         self._start_hidden = start_hidden
         self._tray_available = tray_available
         self.wake_control = WakeControl(self.settings, self)
@@ -150,6 +152,7 @@ class Backend(QObject):
         self.server.failed.connect(self._server_failed)
         self.server.disconnected.connect(self._disconnected)
         self.runner = WorkflowRunner(self.server, self.profiler, self)
+        self.runner.desktopEvent.connect(self.screen_activity.handle_item)
         self.runner.progress.connect(self._workflow_progress)
         self.runner.finished.connect(self._workflow_finished)
         self.voice = QProcess(self)
@@ -989,6 +992,8 @@ class Backend(QObject):
             return
         if self._cancelled:
             return
+        if method in ('item/started', 'item/completed'):
+            self.screen_activity.handle_item(method, params.get('item'))
         if method == "item/agentMessage/delta":
             item_id, delta = params.get("itemId"), params.get("delta")
             if isinstance(item_id, str) and isinstance(delta, str):
@@ -1051,6 +1056,7 @@ class Backend(QObject):
     def _finish(self, status, error=""):
         if not self._busy:
             return
+        self.screen_activity.clear()
         self._stop_timer.stop()
         self._ui_tick.stop()
         self._flush_text()
@@ -1095,6 +1101,7 @@ class Backend(QObject):
         self.changed.emit()
 
     def _disconnected(self):
+        self.screen_activity.clear()
         self._thread_loaded = False
         self.changed.emit()
 
@@ -1136,10 +1143,21 @@ class Backend(QObject):
         return True
 
     @Slot()
+    def takeControl(self):
+        """Human emergency stop: cancel the owned task, not just its indicator."""
+        self.screen_activity.clear()
+        self.speaker.stop()
+        if self._busy:
+            self._cancelled = True
+            self._force_stop()
+        self._show_notice('Control returned to you. Completed actions have not been undone.')
+
+    @Slot()
     def stop(self):
         if not self._busy:
             return
         self._cancelled = True
+        self.screen_activity.clear()
         self._stage, self._activity = "stopping", "Stopping task"
         if self.runner.running or not self._turn_id:
             self._force_stop()
@@ -1498,6 +1516,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.screen_activity.clear()
         self.speaker.shutdown()
         self._history_timer.stop()
         self.wake_control.shutdown()

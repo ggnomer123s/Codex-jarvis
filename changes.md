@@ -8,6 +8,50 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-16 — Screen activity frame and human task takeover (GUI 0.10.0)
+
+- Added a cyan/violet screen-edge frame, nonactivating banner and Return control
+  button for recognized desktop MCP calls from the GUI and saved workflows.
+  Concurrent calls are tracked by ID with a short gap-hiding tail. Ordinary
+  messages/shell/file work and ControlStatus do not imply screen ownership.
+  Stale/foreign turn events are filtered by the existing backend scope checks.
+- Added Ctrl+Alt+Shift+F10 emergency cancellation through Windows RegisterHotKey
+  or a temporary Hyprland binding. Conflicting user bindings are retained, and
+  unavailable shortcuts are not advertised. Same-user, fixed-message local IPC
+  requests cancellation without starting a second GUI or a task. Return control
+  cancels workflows, closes the owned app-server process tree, stops speech and
+  clears the frame; tasks do not automatically resume or undo completed actions.
+- Hyprland/layer-shell uses a separate system-Python GTK4 helper with four thin
+  edge surfaces and a banner on each monitor/workspace. It takes no keyboard
+  focus and destroys its surfaces on parent-pipe EOF. Windows/X11 use Qt tool
+  windows with input-transparent edges. Existing Windows-MCP/Hypruse ownership,
+  physical-input takeover, authentication and lock-screen guards are preserved.
+  No full-screen input lock or input-suppression hooks were added. Windows text
+  also names the native Ctrl+Alt+Shift+Backspace escape for its ownership gate.
+- Added GTK4, gtk4-layer-shell and PyGObject distribution prerequisites to the
+  CachyOS bootstrap and Arch installation recipe, plus a normal-installer check
+  and [installation guidance](docs/install-desktop.md#screen-activity-indicator-prerequisites).
+  No pip dependency changed; the frozen lock changes only the app version.
+  Updated README, Windows guide and maintainer context; added
+  [screen-control documentation](docs/screen-control.md) including capture,
+  unsupported-compositor, external-process and native Windows escape limitations.
+- Verification: 90 Qt/process/QML tests passed, including real fake-worker
+  termination, scoped activity, overlap/tail cleanup, nonexclusive widgets,
+  same-user IPC, mocked Windows hotkey dispatch and binding conflict/cleanup.
+  Root suite: 93 tests discovered, 90 passed and three Windows-only skips.
+  Installer/bootstrap fixtures passed. A real GTK4 layer-shell preview appeared
+  above another Hyprland workspace; clicking Return control cleared every
+  surface and ended the simulated task. This preview did not execute a model
+  request or desktop automation. Windows hardware, multiple physical monitors
+  and native global-key presses were not tested.
+- Python/Bash syntax, frozen-lock consistency, local Markdown links, English
+  docs/scripts policy, whitespace checks and the production-window smoke test
+  passed. No authenticated model request, package-manager install or CI run was
+  needed for these checks; the local GTK prerequisites were already available.
+- The main installed GUI was not restarted: the shared-seat guard refused a
+  pointer action after cursor/focus changed. No guard was bypassed. Quit Tigo
+  and relaunch normally to load this version and register its shortcut.
+
 ## 2026-10-16 — Smoother core animation
 
 - Replaced the 20/30 Hz timer in [Orb.qml](gui/tigo_gui/ui/Orb.qml) with Qt

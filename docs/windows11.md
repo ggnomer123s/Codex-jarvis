@@ -4,6 +4,10 @@ This guide configures **Codex CLI + Windows-MCP + Tigo Skill + one-command launc
 
 > Windows support is currently **not hardware-tested by this repository**. It integrates the independently maintained [Windows-MCP](https://github.com/CursorTouch/Windows-MCP). Check upstream compatibility and permissions.
 
+The GUI also provides a screen-activity banner with a Return control button and
+its own task-stop shortcut. Windows-MCP retains its native ownership indicator
+and takeover shortcut; see [screen control](screen-control.md#windows-11-ownership-remains-with-windows-mcp).
+
 ## 1. Prepare Windows Terminal / PowerShell
 
 Open a normal, non-administrator PowerShell window. Install Microsoft App Installer if WinGet is unavailable.

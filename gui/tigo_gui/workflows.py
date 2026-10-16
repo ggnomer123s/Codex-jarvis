@@ -98,6 +98,7 @@ def match_workflow(workflows, prompt):
 class WorkflowRunner(QObject):
     progress = Signal(str, int)
     finished = Signal(str, int)
+    desktopEvent = Signal(str, dict)
 
     def __init__(self, server, profiler, parent=None):
         super().__init__(parent)
@@ -130,10 +131,13 @@ class WorkflowRunner(QObject):
         generation = self._generation
         item_id = f"workflow-{generation}-{time.monotonic_ns()}"
         self.profiler.tool_start(item_id, call["tool"])
+        item = {'type': 'mcpToolCall', 'id': item_id, **call}
+        self.desktopEvent.emit('item/started', item)
 
         def returned(result, error):
             if generation != self._generation or not self.running:
                 return
+            self.desktopEvent.emit('item/completed', item)
             self.profiler.tool_end(item_id)
             if not error and isinstance(result, dict) and result.get("isError"):
                 detail = "\n".join(str(x.get("text", "")) for x in (result.get("content") or [])

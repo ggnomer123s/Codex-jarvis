@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
 from .backend import Backend
 from .activation import Instance
+from .screen_overlay import ScreenOverlay
 
 
 def main() -> int:
@@ -69,6 +70,9 @@ def main() -> int:
 
     if not args.smoke_test:
         instance.activated.connect(show_window)
+        instance.controlRequested.connect(backend.takeControl)
+        overlay = ScreenOverlay(backend, app)
+        app.aboutToQuit.connect(overlay.close)
         backend.wake.activated.connect(show_window)
         tray = QSystemTrayIcon(app.windowIcon(), app)
         menu = QMenu()
