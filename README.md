@@ -4,6 +4,8 @@ Implementation history and verification results: [changes.md](changes.md).
 
 **For an AI taking over development:** read [readmeai.md](readmeai.md) first for
 the current product, architecture, constraints, source map and verification steps.
+It also includes a resume card, current Windows incident, implementation history,
+update commands and a checklist for continuing after conversation context rollover.
 
 A community project that connects **OpenAI Codex CLI** to desktop automation via **Model Context Protocol (MCP)**, and adds a simple **`jarvis` command**, reusable Skills, troubleshooting instructions, and optional error monitoring.
 

@@ -6,8 +6,11 @@ and architecture, implemented features, preserved decisions, source map, state
 locations and verification commands. This longer file retains chronological
 investigations: older diagrams, setup instructions and roadmap sections may be
 superseded or declined. Read them with the current overview and newest change
-report, not as a list of work to implement. The new overview was checked against
-GUI 0.6.0 source; this documentation update changes no runtime behavior.
+report, not as a list of work to implement. The overview was checked against
+GUI 0.6.1 source and expanded for context rollover with a resume card, current
+Windows issue/unknowns, user preferences, implementation contracts, commit/CI
+pointers, update commands, cloud workflow and continuation checklist. Read that
+snapshot before using older sections below. This update changes no runtime behavior.
 
 **Windows ownership diagnostics — 2026-10-16 (GUI 0.6.1):** the user reported
 that a screen service says the user owns control, but had no raw tool error.

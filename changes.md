@@ -11,6 +11,30 @@ the source of commit timestamps.
 
 
 
+## 2026-10-16 — Complete context-rollover handover
+
+- Expanded `readmeai.md` with a first-read resume card and navigation, established
+  collaboration/product preferences, the latest Windows incident and remaining
+  live-machine unknowns, source/CI history, cancellation/protocol/audio/storage
+  contracts and defaults, guarded Windows/Linux update commands, cloud/CI
+  investigation notes, competitor-research boundaries and the documentation map.
+- Explicitly recorded that runtime 0.6.1 is implemented/published/verified, no
+  feature backlog is implicitly approved, and the user's actual Windows service
+  has not been remotely diagnosed or repaired. Preserved the distinction between
+  default Full Access and human desktop ownership, including the idle timer
+  restart caused by physical input and the unavailable old raw tool error.
+- Added concrete instructions for continuing after context rollover without
+  redoing completed work, repeating already-answered questions, changing the
+  transport/account model or treating historical declined ideas as new tasks.
+  No credentials, private file contents, transcripts or machine-specific secrets
+  were added. Linked the expanded sections from README and refreshed the long
+  handoff's stale source-version introduction.
+- Verification: reviewed current source constants, paths, contracts, Git history,
+  existing reports and CI definitions; checked Markdown links/anchors, English
+  text, code fences, Bash snippet syntax and `git diff --check`. Documentation
+  only: no runtime version bump, new platform/hardware run or environment setup
+  change. This handover commit skips CI; preceding runtime evidence remains below.
+
 ## 2026-10-16 — Windows desktop ownership diagnostics (GUI 0.6.1)
 
 - Investigated the reported temporary user-control hold against upstream
