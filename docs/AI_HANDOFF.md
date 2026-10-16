@@ -22,6 +22,12 @@ performed in cloud tests. Dirty/wrong-origin/non-main checkouts stop without
 reset/stash; compatible existing Codex and login are retained. See
 [bootstrap commands](install-desktop.md#automatic-dependency-aware-update-cachyos-and-windows-11)
 and the latest change report for evidence and limits. Runtime GUI stays 0.6.1.
+Local root tests: 77 passed, three Windows-only skips. Final
+[CI 38869795642](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38869795642)
+for `9782c67` passed static/root, Ubuntu and Windows desktop, including updater
+helpers. A Windows real-Git fixture found long/8.3 root-path comparison failures;
+validation now uses Git's empty show-prefix instead. No live package manager or
+Windows capability install ran. Result-only reporting skips another CI run.
 
 **Windows ownership diagnostics — 2026-10-16 (GUI 0.6.1):** the user reported
 that a screen service says the user owns control, but had no raw tool error.

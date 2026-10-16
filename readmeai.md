@@ -602,7 +602,11 @@ Whisper/backend packages can still download on first use; custom native Codex,
 Node-manager selection and OS permission issues may require user attention.
 Windows updater root validation uses Git's empty `--show-prefix`, not literal
 path equality: Git/PowerShell may choose different long/8.3 aliases for the same
-directory. The real-Git Windows fixture found this regression during CI.
+directory. The real-Git Windows fixture found this regression during CI. Final updater
+[CI 38869795642](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38869795642)
+for `9782c67` passed static/root and both desktop OS jobs, including the Windows
+updater/native-stderr helpers. Local root tests passed 77 with three Windows-only
+skips. These validate flow/guards without real pacman/winget/UAC installation.
 
 Use the full [OS recipes](docs/install-desktop.md) for fresh installations.
 Do not run `git pull` in the user's home directory without specifying the

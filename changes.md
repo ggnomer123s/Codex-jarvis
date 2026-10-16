@@ -49,7 +49,12 @@ the source of commit timestamps.
   aliases. The updater now checks Git's empty root prefix instead of comparing
   differently normalized directory strings; the existing real-Git/path-spaces
   fixture covers the regression. Native PowerShell 5 error/login probes passed.
-  Final test/CI outcomes are recorded after publication.
+  Final [CI 38869795642](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38869795642)
+  for [9782c67](https://github.com/ggnomer123s/Codex-jarvis/commit/9782c67) passed
+  static/root, Ubuntu desktop and Windows desktop, including both native updater
+  fixtures and the shared-profile probe. Public raw updater sources match the
+  checked-out files; the Bash download wrapper syntax passed. This result-only
+  documentation follow-up skips CI.
   No real pacman, winget, Windows capability install, sign-in or hardware task
   ran in this cloud.
 
