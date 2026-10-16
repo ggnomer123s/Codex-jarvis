@@ -210,6 +210,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Tigo\s
 
 ## Spoken replies
 
+GUI 0.9.0 adds `edge-tts==7.3.1` and PyAV (`av>=14,<20`) to both the `speech`
+and `voice` dependency groups. The GUI installers and dependency-aware updaters
+install the versions resolved in `gui/uv.lock`; rerun the appropriate
+[update commands](#update-an-existing-gui-installation) after pulling this release.
+A Git pull alone does not install the new dependencies. No separate pip command
+or Microsoft API key is required. Online voices need an Internet connection.
+Local Irina and Lessac High model archives download on first use (about 67 MB
+and 116 MB respectively); cached models work offline. See
+[speech setup](speech-output.md) for optional model preparation.
+
 Speech is on by default. **Preferences > Speech** offers local male/female neural
 voices (Dmitri / Irina / Denis for Russian, Joe / Lessac High for English),
 optional online Microsoft voices, rate/volume and Test voice. Online output

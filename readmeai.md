@@ -36,6 +36,13 @@ The previous stop-testing request concerned the 0.7.0 speech publication; this
 new speech request includes relevant regression, synthesis and GUI checks. Fresh results
 belong in the newest `changes.md` entry; older CI reports remain historical.
 
+**Core animation patch:** the core now uses frame-synchronized updates and
+elapsed-time motion/audio smoothing. The masked artwork and static dial are
+cached separately from the moving overlay. Keep rotation continuous across full
+turns and pause hidden/minimized/stopped animation; do not restore per-frame
+image masking or the old 20/30 Hz timer. See [the core guide](docs/desktop-app.md#animated-activity-core)
+and the newest change report for the measured rendering scope and limitations.
+
 **Previous unresolved live-machine issue:** the user reports that Tigo on Windows said the
 screen service was temporarily unavailable because control belonged to the
 user. They requested permanent control and a default-on checkbox. The existing
@@ -103,6 +110,9 @@ not claim fictional identity or consciousness and does not widen permissions.
   existing user configuration and normal-user installation model.
 - Record every change, verification and remaining limitation in
   [changes.md](changes.md). Update this snapshot when behavior changes.
+- When installation dependencies change, update the relevant installation
+  instructions, manifests, lockfiles and installer/update scripts together.
+  Follow the persistent [repository maintenance rules](AGENTS.md).
 
 ## 3. Architecture and request lifecycle
 

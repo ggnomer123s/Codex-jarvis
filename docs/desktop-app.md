@@ -54,9 +54,11 @@ an answer streams and preserves the conversation, connection and unsent draft.
 ## Animated activity core
 
 The central J has been replaced with an original woven-light energy sculpture.
-Its bundled still artwork was generated for this project; Qt Canvas draws the
-moving filaments, particles, trails and state effects locally. It works with the
-software renderer and requires no new dependency or network request.
+Its bundled still artwork was generated for this project. The artwork and its
+radial mask are cached separately from the static dial; Qt Canvas redraws only
+the moving filaments, particles, trails and state effects. Rotation and breathing
+transform the cached artwork. It works with the software renderer and requires
+no new dependency or network request.
 
 ![Activity-core animation with simulated runtime states](images/tigo-core.gif)
 
@@ -77,12 +79,18 @@ software renderer and requires no new dependency or network request.
 Colors transition gently and every state also has a text label. The waveform is
 an amplitude visualization, not an audio oscilloscope. The verification sweep
 indicates the runtime stage, not an additional screen capture. The animation
-targets 20 updates/second in standby and about 30 while active, and pauses when
-the window is minimized. Core size adapts to window height to keep the composer
+uses Qt's [FrameAnimation](https://doc.qt.io/qt-6/qml-qtquick-frameanimation.html)
+to follow animation frames rather than a 20/30 Hz timer. Movement and microphone
+smoothing use elapsed frame time; rotation remains continuous across full turns.
+Actual frame rate depends on the renderer, display and load. The animation pauses
+when the core is hidden, the window is hidden/minimized or the state is stopped.
+Long stalls are bounded to avoid a jump on resume. Core size adapts to window
+height to keep the composer
 and Send button visible at the supported minimum size.
 
 The preview cycles simulated runtime/audio states in the actual QML window.
 It demonstrates rendering rather than real microphone or desktop automation.
+The GIF is a reduced-frame illustration, not a frame-rate recording.
 
 For a fresh installation, use the [complete commands for your operating system](install-desktop.md).
 They cover Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE and Windows 11.
@@ -319,7 +327,7 @@ automatically.
 
 The settings window now uses dark controls and tabs. The main screen shows the
 selected Codex model, reasoning, voice language/model and active access level.
-The core animation is limited to about 30 frames per second and pauses when
+The core animation follows Qt animation frames and pauses when hidden or
 minimized. No model or transcription latency benchmark is claimed.
 
 ## Persistent runtime and new controls

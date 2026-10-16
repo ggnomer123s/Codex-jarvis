@@ -204,7 +204,7 @@ ApplicationWindow {
                         listening: bridge.voiceState === "recording"
                         targetLevel: bridge.audioLevel
                         stage: bridge.fullProfile.busy ? "connecting" : bridge.stage
-                        animate: corePanel.visible && window.visibility !== Window.Minimized
+                        animate: corePanel.visible && window.visible && window.visibility !== Window.Minimized
                     }
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter; spacing: 8

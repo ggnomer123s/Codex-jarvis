@@ -8,6 +8,47 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-16 — Smoother core animation
+
+- Replaced the 20/30 Hz timer in [Orb.qml](gui/tigo_gui/ui/Orb.qml) with Qt
+  FrameAnimation. Motion and microphone smoothing now use elapsed frame time,
+  speed changes ease over 420 ms, and long stalls have a bounded time step.
+  Removed the 360-degree phase reset that snapped fractionally rotated artwork
+  and filament bands back to different orientations.
+- Cached the original woven-light artwork and radial mask in a small retained
+  Canvas, transformed for rotation/breathing. The static dial is cached
+  separately with batched tick paths; only the procedural overlay repaints on
+  animation frames. Preserved all runtime/audio state effects, the original
+  asset and software-renderer support. Hidden, minimized and stopped animation
+  pauses, including windows hidden to the tray.
+- Updated the [core guide](docs/desktop-app.md#animated-activity-core) and
+  maintainer context. No new dependencies or installation steps are required.
+- Verification: all 81 Qt/process/QML tests passed, including three new core
+  regressions for continuous rotation, frame-rate-independent audio smoothing,
+  cached-layer reuse, effect rendering and pause/resume. In an isolated visible
+  Linux/Hyprland OpenGL window with a 360-pixel core and synthetic Acting state,
+  measured overlay paints increased from about 30 to 165 per second; median
+  paint gap fell from 33.08 to 6.06 ms (95th percentile 34.17 to 6.24 ms).
+  Matching offscreen software checks increased from about 30 to 62 paints/sec.
+  These short renderer checks exclude model/voice work and do not establish
+  full-application, Windows or under-load frame rates. The user's reported
+  apparent 5 FPS was not reproduced in this isolated baseline.
+- The installed application's automatic restart was stopped by the shared-seat
+  guard after focus/cursor changed. Its existing process has not loaded this
+  patch; a normal Quit Tigo and relaunch is needed. No guard was bypassed.
+
+## 2026-10-16 — Persistent change-report and installation documentation rules
+
+- Added [AGENTS.md](AGENTS.md) to require a dated report for every implemented
+  change and installation documentation updates whenever dependencies change.
+  Mirrored the requirement in [maintainer context](readmeai.md).
+- Made the 0.9.0 speech dependency changes explicit in the
+  [installation instructions](docs/install-desktop.md#spoken-replies): edge-tts,
+  PyAV, installer/update steps, Internet requirements and female model downloads.
+- Verification: checked the edited local Markdown links, dependency requirements
+  against `gui/pyproject.toml`, and `git diff --check`. Documentation only;
+  application behavior and dependencies are unchanged by this entry.
+
 ## 2026-10-16 — Male/female local and online voices (GUI 0.9.0)
 
 - Added local Russian Irina and English Lessac High female voices, with pinned

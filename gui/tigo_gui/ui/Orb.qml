@@ -1,7 +1,7 @@
 import QtQuick
 
-// Original woven-light artwork with procedural activity layers. One bounded
-// Canvas works with Qt's software renderer; no video decoder or shader plugin.
+// Cache the artwork/mask and dial separately from the moving filaments.
+// Only the light procedural overlay is repainted on animation frames.
 Item {
     id: orb
     objectName: "activityCore"
@@ -14,6 +14,9 @@ Item {
     property real phase: 0
     property real elapsed: 0
     property real stateAge: 0
+    readonly property real radius: Math.min(width, height) * 0.355
+    readonly property real breath: Math.sin(elapsed * (mode === "failed" ? 1.4 : 1.05))
+    readonly property real swell: 1 + breath * 0.018 + level * 0.055
     readonly property string mode: {
         if (listening || stage === "recording") return "listening"
         if (["loading", "starting", "connecting"].indexOf(stage) >= 0) return "connecting"
@@ -37,7 +40,7 @@ Item {
         default: return "READY"
         }
     }
-    readonly property real motionRate: {
+    property real motionRate: {
         switch (mode) {
         case "speaking": return 18
         case "thinking": return 26
@@ -73,31 +76,43 @@ Item {
     implicitHeight: 380
 
     Behavior on accent { enabled: orb.animate; ColorAnimation { duration: 380 } }
+    Behavior on motionRate { enabled: orb.animate; NumberAnimation { duration: 420; easing.type: Easing.InOutQuad } }
     onModeChanged: { stateAge = 0; artwork.requestPaint() }
-    onAccentChanged: artwork.requestPaint()
+    onAccentChanged: { dial.requestPaint(); artwork.requestPaint() }
     onAnimateChanged: artwork.requestPaint()
     onTargetLevelChanged: { if (!clock.running) artwork.requestPaint() }
 
-    Timer {
+    // Fractional rotations must not wrap at 360: that used to snap the image
+    // and filament bands back to unrelated orientations every full turn.
+    function advance(seconds) {
+        // Discard long stalls/resume gaps rather than teleporting the core.
+        let dt = Math.max(0, Math.min(0.05, seconds))
+        elapsed += dt
+        stateAge += dt
+        phase += motionRate * dt
+        let target = listening || mode === "listening" ? Math.max(0, Math.min(1, targetLevel)) : 0
+        let tau = target > level ? 0.045 : 0.17
+        level += (target - level) * (1 - Math.exp(-dt / tau))
+        artwork.requestPaint()
+    }
+
+    FrameAnimation {
         id: clock
-        interval: orb.mode === "idle" || orb.mode === "stopped" ? 50 : 33
-        repeat: true
+        objectName: "coreFrameClock"
         running: orb.visible && orb.animate && orb.width > 0 && orb.height > 0 && orb.mode !== "stopped"
-        onTriggered: {
-            let dt = interval / 1000
-            orb.elapsed += dt
-            orb.stateAge += dt
-            orb.phase = (orb.phase + orb.motionRate * dt) % 360
-            let target = orb.listening || orb.mode === "listening" ? Math.max(0, Math.min(1, orb.targetLevel)) : 0
-            orb.level += (target - orb.level) * (target > orb.level ? 0.62 : 0.18)
-            artwork.requestPaint()
-        }
+        onTriggered: orb.advance(frameTime)
     }
 
     Canvas {
-        id: artwork
-        objectName: "activityArtwork"
-        anchors.fill: parent
+        id: coreTexture
+        objectName: "coreTexture"
+        // A small, retained texture: loading, scaling and the radial mask run
+        // only on load/resize. Rotation and breathing are scene-graph transforms.
+        width: orb.radius * 2.28; height: width
+        x: orb.width / 2 - width / 2; y: orb.height * 0.44 - height / 2
+        rotation: orb.phase * 0.18
+        scale: orb.swell
+        opacity: orb.mode === "stopped" ? 0.38 : (orb.mode === "failed" ? 0.48 : 0.82)
         property url coreSource: Qt.resolvedUrl("energy-core.png")
         Component.onCompleted: loadImage(coreSource)
         onImageLoaded: requestPaint()
@@ -106,13 +121,64 @@ Item {
         onPaint: {
             let ctx = getContext("2d")
             ctx.reset()
+            if (!isImageLoaded(coreSource) || orb.radius <= 0) return
+            ctx.translate(width / 2, height / 2)
+            let r = orb.radius, size = r * 2.48
+            ctx.drawImage(coreSource, -size / 2, -size / 2, size, size)
+            ctx.globalCompositeOperation = "destination-in"
+            let mask = ctx.createRadialGradient(0, 0, r * 0.65, 0, 0, r * 1.12)
+            mask.addColorStop(0, "#ffffff"); mask.addColorStop(1, "rgba(255,255,255,0)")
+            ctx.fillStyle = mask
+            ctx.fillRect(-width / 2, -height / 2, width, height)
+        }
+    }
+
+    Canvas {
+        id: dial
+        objectName: "coreDial"
+        anchors.fill: parent
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onPaint: {
+            let ctx = getContext("2d")
+            ctx.reset()
+            let r = orb.radius
+            if (r <= 0) return
+            ctx.translate(width / 2, height * 0.44)
+            ctx.strokeStyle = orb.accent; ctx.lineWidth = 1
+            ctx.globalAlpha = 0.13
+            ctx.beginPath(); ctx.arc(0, 0, r * 1.17, 0, Math.PI * 2); ctx.stroke()
+            // Group equal-alpha ticks into two paths instead of 60 strokes.
+            for (let group = 0; group < 2; group++) {
+                ctx.globalAlpha = group === 0 ? 0.42 : 0.17
+                ctx.beginPath()
+                for (let i = 0; i < 60; i++) {
+                    if ((i % 5 === 0) !== (group === 0)) continue
+                    let a = i * Math.PI / 30
+                    let outer = group === 0 ? 1.205 : 1.19
+                    ctx.moveTo(Math.cos(a) * r * 1.16, Math.sin(a) * r * 1.16)
+                    ctx.lineTo(Math.cos(a) * r * outer, Math.sin(a) * r * outer)
+                }
+                ctx.stroke()
+            }
+        }
+    }
+
+    Canvas {
+        id: artwork
+        objectName: "activityArtwork"
+        anchors.fill: parent
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onPaint: {
+            let ctx = getContext("2d")
+            ctx.reset()
             let cx = width / 2, cy = height * 0.44
-            let r = Math.min(width, height) * 0.355
+            let r = orb.radius
             if (r <= 0) return
             let t = orb.elapsed, angle = orb.phase * Math.PI / 180
             let mode = orb.mode, audio = orb.level, color = orb.accent
-            let breath = Math.sin(t * (mode === "failed" ? 1.4 : 1.05))
-            let swell = 1 + breath * 0.018 + audio * 0.055
+            let breath = orb.breath, swell = orb.swell
             ctx.translate(cx, cy)
 
             function strokeCircle(radius, alpha, thickness) {
@@ -123,35 +189,6 @@ Item {
             function dot(x, y, size, alpha) {
                 ctx.globalAlpha = alpha; ctx.fillStyle = color
                 ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill()
-            }
-
-            // Fade the still artwork into the transparent GUI instead of
-            // showing its square background. Subsequent paths stay unmasked.
-            if (isImageLoaded(coreSource)) {
-                ctx.save()
-                ctx.rotate(angle * 0.18)
-                let size = r * 2.48 * swell
-                ctx.globalAlpha = mode === "stopped" ? 0.38 : (mode === "failed" ? 0.48 : 0.82)
-                ctx.drawImage(coreSource, -size / 2, -size / 2, size, size)
-                ctx.restore()
-                ctx.save()
-                ctx.globalCompositeOperation = "destination-in"
-                let mask = ctx.createRadialGradient(0, 0, r * 0.65, 0, 0, r * 1.12)
-                mask.addColorStop(0, "#ffffff"); mask.addColorStop(1, "rgba(255,255,255,0)")
-                ctx.fillStyle = mask; ctx.fillRect(-width, -height, width * 2, height * 2)
-                ctx.restore()
-            }
-
-            strokeCircle(r * 1.17, 0.13, 1)
-            for (let i = 0; i < 60; i++) {
-                let a = i * Math.PI / 30
-                let outer = i % 5 === 0 ? 1.205 : 1.19
-                ctx.globalAlpha = i % 5 === 0 ? 0.42 : 0.17
-                ctx.strokeStyle = color; ctx.lineWidth = 1
-                ctx.beginPath()
-                ctx.moveTo(Math.cos(a) * r * 1.16, Math.sin(a) * r * 1.16)
-                ctx.lineTo(Math.cos(a) * r * outer, Math.sin(a) * r * outer)
-                ctx.stroke()
             }
 
             // Project four different, gently deforming filament loops. Their
