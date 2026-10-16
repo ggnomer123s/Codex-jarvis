@@ -11,6 +11,36 @@ the source of commit timestamps.
 
 
 
+## 2026-10-16 — Windows desktop ownership diagnostics (GUI 0.6.1)
+
+- Investigated the reported temporary user-control hold against upstream
+  Windows-MCP `c9a307c`. Full Access already defaults on with its saved checkbox;
+  it controls Codex files/commands and does not grant permanent desktop ownership.
+  The exact tool/error from the user's session was unavailable, so no claim of
+  having fixed or remotely changed that Windows machine is made.
+- Added Access > Check desktop control on Windows and `/desktop-status` through
+  the existing app-server. Checks inventory for windows-mcp/ControlStatus, reads
+  state/policy/remaining idle wait, and shows a labeled snapshot. It sends no
+  model turn, input or backend configuration change. Missing tools, malformed
+  results and refusals fail visibly with no alternate input route or retries.
+  Stop cancels a pending owned check; diagnostic success/failure does not alter
+  the reasoning heuristic's previous task state. Full Access persistence,
+  shared Codex home/login and human takeover protection remain intact.
+- Updated Skill and managed AGENTS guidance: distinguish ownership from sandbox
+  access, report the actual wait, allow an idle interval, recheck before one
+  observation attempt, and pause if still blocked. Unrelated authorized file
+  work may continue; uncertain mutating actions are not automatically repeated.
+- Updated README, readmeai, access/Windows/desktop/runtime guides and handoff;
+  linked pinned upstream ownership/ControlStatus sources. GUI/lock/client is
+  0.6.1; no new dependency or separate profile was added.
+- Verification: 72 root tests discovered (71 passed; native Windows probe skipped
+  locally), 65 passing Qt tests including the production-window diagnostic
+  button, read-only calls with no model turn, missing tools, refusal and Stop.
+  Targeted final regressions, Python syntax, English Markdown, 119 local links/
+  fragments, Access-tab smoke, frozen lock and diff checks passed. Cross-platform
+  CI is recorded after publication below. Real Windows desktop input, service ownership
+  and authenticated model tasks were not exercised in this cloud.
+
 ## 2026-10-15 — Consolidated AI project overview
 
 - Added root `readmeai.md` as the first-read context for another AI maintainer:

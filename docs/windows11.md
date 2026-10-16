@@ -128,6 +128,12 @@ Managed/corporate PCs may prevent creation of user tasks; normal GUI assistance 
 
 **MCP server disconnects**: inspect `codex.cmd mcp get windows-mcp`, verify `uvx --version`, and check upstream Windows-MCP requirements. Python installation and environment paths may be required by the upstream project.
 
+**"User owns control" / temporary screen-control refusal**: Full Access and
+Windows-MCP ownership are separate. Leave physical input idle for the configured
+interval (normally 10 seconds), then use **Preferences > Access > Check desktop
+control** or `/desktop-status`. The result is a read-only snapshot, not an
+automatic lease. See [ownership recovery](full-access.md#windows-desktop-ownership).
+
 **MCP registered but cannot click**: check permissions, tool exclusions and Windows UI Automation support. Do not disable Windows Defender or User Account Control (UAC) to bypass the problem.
 
 **Skill missing**: start a new Codex session, inspect `%USERPROFILE%\.agents\skills\jarvis-desktop\SKILL.md` and `/skills`.

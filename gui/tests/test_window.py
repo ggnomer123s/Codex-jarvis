@@ -6,7 +6,7 @@ import time
 import unittest
 from unittest import mock
 
-from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl, Q_ARG, QPointF, QPoint, Qt, QMimeData
+from PySide6.QtCore import QObject, QMetaObject, QSettings, QUrl, Q_ARG, QPointF, QPoint, Qt, QMimeData, Property
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow
@@ -18,6 +18,12 @@ from fake_speech import Engine
 import jarvis_gui
 
 APP = QApplication.instance() or QApplication([])
+
+
+class WindowsLayoutBackend(Backend):
+    """Render the Windows-only access panel on either CI operating system."""
+    @Property(bool, constant=True)
+    def windowsDesktop(self): return True
 
 
 class TestWindow(unittest.TestCase):
@@ -34,7 +40,7 @@ class TestWindow(unittest.TestCase):
             full_home.mkdir()
             (full_home / "AGENTS.md").write_text("Test full profile")
             (full_home / "backend.txt").write_text("none")
-            backend = Backend(settings, codex_command=[sys.executable, "-u", str(script), "normal", str(root / "requests.jsonl")], codex_home_override=full_home, speech_engine_factory=Engine)
+            backend = WindowsLayoutBackend(settings, codex_command=[sys.executable, "-u", str(script), "windows-control-user", str(root / "requests.jsonl")], codex_home_override=full_home, speech_engine_factory=Engine)
             engine = QQmlApplicationEngine()
             warnings = []
             engine.warnings.connect(lambda items: warnings.extend(str(item) for item in items))
@@ -130,6 +136,14 @@ class TestWindow(unittest.TestCase):
                 backend.speaker.setEnabled(False)
                 tabs.setProperty("currentIndex", 2)
                 QTest.qWait(50)
+                control_check = window.findChild(QObject, 'desktopControlCheckButton')
+                self.assertTrue(control_check.property('visible'))
+                self.assertTrue(QMetaObject.invokeMethod(control_check, 'clicked'))
+                deadline = time.monotonic()+5
+                while backend.busy and time.monotonic()<deadline: QTest.qWait(10)
+                self.assertFalse(backend.busy)
+                self.assertIn('You currently own', backend.desktopControlStatus)
+                self.assertIn('7.5 s', window.findChild(QObject, 'desktopControlStatus').property('text'))
                 toggle = window.findChild(QObject, "fullAccessToggle")
                 self.assertTrue(toggle.property("enabled"))
                 self.assertIsNone(window.findChild(QObject, "fullAcknowledgement"))

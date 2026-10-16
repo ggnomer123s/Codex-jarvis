@@ -82,6 +82,9 @@ GUI and CLI use your current Codex profile and existing sign-in. Full Access is
 on by default. Disable it in **Preferences > Access**; the saved setting also
 applies to the regular `jarvis` CLI. Model and reasoning pickers are at the
 bottom left of the composer.
+On Windows, **Access > Check desktop control** (or `/desktop-status`) reports
+Windows-MCP ownership and idle wait. Full Access does not override a human
+takeover; see [Windows desktop ownership](docs/full-access.md#windows-desktop-ownership).
 For Windows, the [installation instructions](docs/install-desktop.md#windows-11)
 use an explicit checkout path and work from your user directory as well.
 
@@ -89,7 +92,7 @@ use an explicit checkout path and work from your user directory as well.
 
 ## Start here: project handoff for another AI
 
-**Current overview — 2026-10-15, GUI 0.6.0.** Start with
+**Current overview — 2026-10-16, GUI 0.6.1.** Start with
 **[readmeai.md](readmeai.md)** for the project's purpose, implemented features,
 architecture, decisions to preserve, code map, local state and test commands.
 This README is the public usage guide. **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**

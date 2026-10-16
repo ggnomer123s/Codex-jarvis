@@ -594,6 +594,20 @@ ApplicationWindow {
                         Text { Layout.fillWidth: true; text: "One Codex profile, login and MCP configuration for every access mode."; color: "#84b9b0"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                         Text { Layout.fillWidth: true; text: "Full Access is on by default and allows changes to your user files and commands without the Codex sandbox or command approvals. Turn it off above to use the selected sandbox. This setting is saved and shared with the jarvis CLI. OS authentication and root / Administrator protections remain in place."; color: "#dfb987"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                         Text { visible: bridge.fullAccess; text: "FULL ACCESS IS ACTIVE"; color: "#f4c185"; font.pixelSize: 10; font.letterSpacing: 1 }
+                        Text {
+                            visible: bridge.windowsDesktop; Layout.fillWidth: true
+                            text: "Windows desktop control is separate. After sending a task, leave the mouse and keyboard idle for the service interval (usually 10 seconds). Physical input, including Check, restarts that wait. Full Access does not override your control of the screen."
+                            color: "#99bdc5"; font.pixelSize: 11; wrapMode: Text.WordWrap
+                        }
+                        HudButton {
+                            objectName: "desktopControlCheckButton"; visible: bridge.windowsDesktop
+                            text: "Check desktop control"; enabled: !window.locked
+                            onClicked: bridge.checkDesktopControl()
+                        }
+                        Text {
+                            objectName: "desktopControlStatus"; visible: bridge.windowsDesktop; Layout.fillWidth: true
+                            text: bridge.desktopControlStatus; color: "#82c9bc"; font.pixelSize: 11; wrapMode: Text.WordWrap
+                        }
                         RowLayout {
                             HudButton { text: "Sign in to Codex"; enabled: !window.locked; onClicked: bridge.fullProfile.login() }
                             HudButton { text: "Open sign-in page"; visible: bridge.fullProfile.loginUrl.length > 0; onClicked: bridge.fullProfile.openLoginPage() }

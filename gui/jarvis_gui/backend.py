@@ -25,6 +25,7 @@ from .access import codex_home, access_file, read_access, write_access
 from .history import History
 from .attachments import inspect_file, validate_files, MAX_FILES
 from .speech import Speech
+from .desktop_control import control_summary
 
 
 class Backend(QObject):
@@ -59,6 +60,7 @@ class Backend(QObject):
         self._history_query = ''
         self._conversation_title = 'New conversation'
         self._notice = ''
+        self._desktop_control_status = 'Not checked. Full Access and desktop ownership are separate.'
         self._start_hidden = start_hidden
         self._tray_available = tray_available
         self.wake_control = WakeControl(self.settings, self)
@@ -644,8 +646,73 @@ class Backend(QObject):
     def runtimeDetails(self):
         voice = json.dumps(self.profiler.voice, indent=2)
         return (f"Codex app-server: {'connected' if self.server.connected else 'not connected'}\n"
-                f"Desktop MCP: {self._mcp_status}\nTask: {self.profiler.summary()}\n"
+                f"Desktop MCP: {self._mcp_status}\nWindows desktop: {self._desktop_control_status}\nTask: {self.profiler.summary()}\n"
                 f"Verified/completed steps: {self._completed_steps}\nLocal voice timings (ms):\n{voice}")
+
+    @Property(bool, constant=True)
+    def windowsDesktop(self):
+        return os.name == 'nt'
+
+    @Property(str, notify=changed)
+    def desktopControlStatus(self):
+        return self._desktop_control_status
+
+    @Slot()
+    def checkDesktopControl(self):
+        if self._locked():
+            return
+        self._desktop_control_status = 'Checking Windows-MCP ownership (read only)...'
+        self._begin('desktop-check')
+
+        def failed(message):
+            self._finish('failed', message)
+
+        def returned(result, error):
+            if error:
+                failed('Control status unavailable: ' + error)
+                return
+            try:
+                self._desktop_control_status = control_summary(result)
+            except ValueError as exc:
+                failed(str(exc))
+                return
+            self._finish('completed')
+
+        def inventory(cursor=None, pages=0):
+            params = {'threadId': self._thread_id, 'limit': 100}
+            if cursor:
+                params['cursor'] = cursor
+
+            def listed(result, error):
+                if error:
+                    failed('Desktop inventory unavailable: ' + error)
+                    return
+                servers = result.get('data', []) if isinstance(result, dict) else []
+                if not isinstance(servers, list):
+                    failed('Desktop inventory returned an invalid server list.')
+                    return
+                server = next((x for x in servers if isinstance(x, dict) and x.get('name') == 'windows-mcp'), None)
+                if server is None:
+                    cursor = result.get('nextCursor') if isinstance(result, dict) else None
+                    if isinstance(cursor, str) and cursor and pages < 4:
+                        inventory(cursor, pages + 1)
+                    else:
+                        failed('windows-mcp was not reported. Check its registration in your existing Codex profile.')
+                    return
+                tools = server.get('tools', {})
+                available = 'ControlStatus' in tools if isinstance(tools, dict) else (
+                    isinstance(tools, list) and any(isinstance(x, dict) and x.get('name') == 'ControlStatus' for x in tools))
+                if not available:
+                    failed('This windows-mcp does not expose ControlStatus. Check its version and tool exclusions; no fallback input was attempted.')
+                    return
+                self._activity, self._stage = 'Reading Windows desktop ownership', 'verifying'
+                self.changed.emit()
+                self.server.request('mcpServer/tool/call', {'threadId': self._thread_id, 'server': 'windows-mcp',
+                                    'tool': 'ControlStatus', 'arguments': {}}, self._guard(returned), 15000)
+
+            self.server.request('mcpServerStatus/list', params, self._guard(listed), 15000)
+
+        self._ensure_server(lambda: self._ensure_thread(inventory))
 
     @Property(bool, notify=changed)
     def canResume(self):
@@ -989,16 +1056,20 @@ class Backend(QObject):
         self.checkpoints.save(self._checkpoint_key(), self._thread_id, status, self._completed_steps)
         self._busy = False
         self._task_id = ""
+        if self._task_kind == 'desktop-check' and (error or status != 'completed'):
+            self._desktop_control_status = 'Check stopped.' if status == 'interrupted' else 'Check unavailable: ' + (error or status)
         if status == "interrupted":
             self._message("system", "Task stopped. Completed actions have not been undone; inspect before resuming.")
             self._stage, self._activity = "stopped", "Task stopped"
         elif error or status == "failed":
             self._message("error", error or "Codex task failed.")
             self._stage, self._activity = "failed", "Request failed"
-            self._needs_deep = True
+            if self._task_kind != 'desktop-check':
+                self._needs_deep = True
         else:
             self._stage, self._activity = "complete", "Ready when you are"
-            self._needs_deep = False
+            if self._task_kind != 'desktop-check':
+                self._needs_deep = False
         self._save_history()
         if not error and status == 'completed' and self._task_kind in ('codex', 'workflow'):
             commentary_rows = {self._item_rows[item_id] for item_id in self._speech_commentary_ids if item_id in self._item_rows}
@@ -1038,13 +1109,15 @@ class Backend(QObject):
         if not prompt.startswith("/"):
             return False
         commands = {
-            "/help": "Local commands: /status, /metrics, /workflows, /open-workspace, /resume, /new. Exact workflow aliases execute checked desktop steps without model inference.",
+            "/help": "Local commands: /status, /desktop-status, /metrics, /workflows, /open-workspace, /resume, /new. Exact workflow aliases execute checked desktop steps without model inference.",
             "/status": self.runtimeDetails,
             "/metrics": json.dumps(self.profiler.export(), indent=2),
             "/workflows": "\n".join(item["name"] + ": " + ", ".join(item["aliases"]) for item in self._workflows) or "No workflows saved. Add one in Preferences > Automation.",
         }
         if prompt in commands:
             self._message("system", commands[prompt])
+        elif prompt == '/desktop-status':
+            self.checkDesktopControl()
         elif prompt == "/open-workspace":
             accepted = QDesktopServices.openUrl(QUrl.fromLocalFile(self._folder))
             self._message("system" if accepted else "error", "Workspace open request accepted by the desktop." if accepted else "The desktop could not open this workspace.")

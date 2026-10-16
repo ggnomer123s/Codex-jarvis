@@ -88,6 +88,7 @@ These commands execute locally without model inference:
 | Command | Result |
 |---|---|
 | `/help` | List local commands |
+| `/desktop-status` | Read Windows-MCP ownership/idle wait without model inference or input |
 | `/status` | Connection, desktop MCP inventory and voice timing status |
 | `/metrics` | Display content-free timing records |
 | `/workflows` | List saved exact command aliases |

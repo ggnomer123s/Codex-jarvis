@@ -71,6 +71,23 @@ Verify focus/identity before sending input. These observations do not enable inp
 
 **Other Wayland:** check actual portal MCP capabilities; don't assume synthetic dragging is supported. If the tool is absent, state the limitation rather than trying a less-protected workaround.
 
+## Windows desktop ownership
+
+When Windows-MCP says the user owns the desktop, distinguish this from the
+Codex sandbox and Full Access checkbox. Use its read-only `ControlStatus` when
+available. Report the actual `state`, `wait_seconds`, policy and idle interval;
+do not invent them. Physical input restarts the idle timer (normally 10 seconds).
+Let the user leave input idle, then check ownership before one fresh observation
+attempt. If it is still held or unavailable, pause that desktop work and give
+the exact reason. Do not claim all GUI capabilities are permanently missing.
+
+Do not switch off ownership protection, restart the service to clear a takeover,
+send synthetic input or use another tool to bypass a blocked desktop action.
+Do not automatically repeat mutating actions with uncertain outcomes. Unrelated
+authorized file work can continue; describe GUI verification as pending until
+it actually succeeds. The GUI exposes a read-only Check desktop control button
+and `/desktop-status`; these do not grant a lease or change backend settings.
+
 ## Longer tasks and authorization
 
 Take an app-aware approach inspired by UFO: route to the right app first, then operate it with the best supported API/accessibility/vision input. Prefer native API for repetitive media edits, but use GUI for requested visual manipulation and verify saved project/export. Preserve original work and use task checkpoints for long jobs, not repeated full screenshots.

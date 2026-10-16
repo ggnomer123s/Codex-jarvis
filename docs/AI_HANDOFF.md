@@ -1,5 +1,5 @@
 # JARVIS — AI MAINTAINER HANDOFF
-_Last reconciled on 2026-10-15; see the newest entry for current behavior._
+_Last reconciled on 2026-10-16; see the newest entry for current behavior._
 
 **Start with [readmeai.md](../readmeai.md)** for the consolidated current product
 and architecture, implemented features, preserved decisions, source map, state
@@ -8,6 +8,23 @@ investigations: older diagrams, setup instructions and roadmap sections may be
 superseded or declined. Read them with the current overview and newest change
 report, not as a list of work to implement. The new overview was checked against
 GUI 0.6.0 source; this documentation update changes no runtime behavior.
+
+**Windows ownership diagnostics — 2026-10-16 (GUI 0.6.1):** the user reported
+that a screen service says the user owns control, but had no raw tool error.
+Upstream Windows-MCP has a separate ownership gate and normally a ten-second
+physical-input idle interval. The existing Full Access checkbox still defaults
+on and does not override that gate. Access now has Check desktop control on
+Windows; `/desktop-status` invokes the same read-only ControlStatus through
+app-server after checking inventory. No model turn, input, configuration write,
+auto retry or forced lease is performed. Errors/missing tools remain visible;
+Stop cancels the owned diagnostic connection. `desktop_control.py` validates and
+summarizes status; managed instructions explain bounded, guard-respecting
+recovery instead of declaring all GUI access permanently unavailable. Update
+via the normal installer to refresh the Skill/managed AGENTS, then start a new
+conversation. See [ownership](full-access.md#windows-desktop-ownership) and the
+newest [change report](../changes.md) for verification. Real Windows session
+ownership was not observed from this cloud; identifying the user's actual tool
+still requires its diagnostic output.
 
 **JARVIS character and speech update — 2026-10-15 (GUI 0.6.0):** the user
 requested a mentor-oriented JARVIS character and spoken answers. The installed

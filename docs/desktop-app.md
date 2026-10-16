@@ -28,6 +28,14 @@ rate, pitch, volume, refresh and a test. Russian requires an installed Russian
 voice. Wake capture pauses during output; manual recording interrupts output
 before opening the microphone. See [speech output](speech-output.md).
 
+## Windows desktop ownership
+
+**Preferences > Access** retains the default-on Full Access checkbox and adds
+**Check desktop control** on Windows. The local `/desktop-status` command reads
+the same service state. Neither operation acquires desktop ownership or submits
+a model task. If the user owns control, leave physical input idle for the
+reported interval before checking again. See [access and ownership](full-access.md#windows-desktop-ownership).
+
 ## Conversation text size
 
 Use **A- / A+** beside **CONVERSATION** at the top of the right-hand panel to

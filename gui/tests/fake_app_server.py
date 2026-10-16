@@ -51,9 +51,21 @@ for line in sys.stdin:
         result = {'thread': {'id': params.get('threadId', 'session-123'), 'turns': []}}
     elif method == 'mcpServerStatus/list':
         result = {'data': [{'name': 'jarvis-x11', 'tools': {}}], 'nextCursor': None}
+        if scenario.startswith('windows-control'):
+            tools = {} if scenario == 'windows-control-missing' else {'ControlStatus': {'name': 'ControlStatus'}}
+            result = {'data': [{'name': 'windows-mcp', 'tools': tools}], 'nextCursor': None}
     elif method == 'mcpServer/tool/call':
         tool = params['tool']
-        if scenario == 'refusal' and tool == 'focus_window':
+        if tool == 'ControlStatus':
+            if scenario == 'windows-control-slow':
+                continue
+            status = {'state':'user','wait_seconds':7.5,'enabled':True,'policy':'relaxed','idle_timeout_seconds':10}
+            result = {'content': [], 'structuredContent':status, 'isError':False}
+            if scenario == 'windows-control-text':
+                result = {'content':[{'type':'text','text':json.dumps(status)}]}
+            elif scenario == 'windows-control-error':
+                result = {'content':[], 'isError':True}
+        elif scenario == 'refusal' and tool == 'focus_window':
             result = {'content': [{'type': 'text', 'text': 'Not authorized'}], 'isError': True}
         else:
             text = 'missing' if scenario == 'bad-check' else 'Editor ready'

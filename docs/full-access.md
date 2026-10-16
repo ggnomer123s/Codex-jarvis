@@ -30,6 +30,41 @@ bypass of OS authentication, locked sessions or MCP-specific guards. Switching
 GUI access restarts its owned app-server and clears context in the same home.
 Run JARVIS as a normal user. Existing desktop backend restrictions are preserved.
 
+## Windows desktop ownership
+
+The existing **Enable Full Access** checkbox is on by default. It controls
+Codex command/file access. A Windows-MCP message that the user owns the desktop
+is a separate, temporary ownership hold; toggling Full Access does not clear it.
+No additional always-own-the-desktop checkbox is provided.
+
+1. Open **Preferences > Access > Check desktop control**, or enter the local
+   `/desktop-status` command. It reads `ControlStatus` from the configured
+   `windows-mcp`, using the owned app-server without a model turn or input call.
+2. Read the observed state and remaining wait. This is a snapshot; it does not
+   acquire control or keep polling. Clicking the button is itself physical input,
+   so seeing an idle wait immediately afterward is expected.
+3. Ask JARVIS to continue, then leave the mouse and keyboard idle for the service's
+   configured interval, normally 10 seconds. Physical input restarts that wait.
+   The updated Skill explains waiting and checking ownership with ControlStatus
+   before a fresh observation; the tool check itself does not simulate input.
+
+`ready` means no user hold is currently reported, not a guarantee that a future
+action will pass every check. `user`, `takeover_pending` and `unavailable` require
+pausing desktop actions. File work unrelated to the blocked desktop action may
+continue under its existing permissions. Do not repeat actions whose effects
+are uncertain or substitute raw input after a refusal.
+
+If ControlStatus is missing, check the installed Windows-MCP version and tool
+exclusions. The app reports that limitation without changing registrations,
+restarting the service to clear a takeover, or trying an input fallback. Existing
+manual takeover, visible control indication, locks and authentication remain.
+The app cannot diagnose an unknown third-party screen service from a paraphrased
+assistant message alone; these diagnostics apply specifically to Windows-MCP.
+
+Upstream reference checked on 2026-10-16:
+[desktop control and policies](https://github.com/CursorTouch/Windows-MCP/blob/c9a307cd8077b7dec07dbe57df1e18ca135ebde7/README.md#desktop-control),
+[read-only ControlStatus](https://github.com/CursorTouch/Windows-MCP/blob/c9a307cd8077b7dec07dbe57df1e18ca135ebde7/src/windows_mcp/tools/control_status.py).
+
 ## Installation and compatibility
 
 Use the [normal GUI installation/update commands](install-desktop.md).

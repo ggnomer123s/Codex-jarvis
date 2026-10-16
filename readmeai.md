@@ -1,6 +1,6 @@
 # JARVIS: current project context for an AI maintainer
 
-Last reconciled: **2026-10-15**, GUI **0.6.0**. Repository:
+Last reconciled: **2026-10-16**, GUI **0.6.1**. Repository:
 [ggnomer123s/Codex-jarvis](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -101,6 +101,15 @@ inspect the installed schema. A refused MCP action is not permission to bypass
 the guard with raw input. See [GUI operator](docs/gui-operator.md) and
 [shortcuts](docs/shortcuts.md).
 
+On Windows, a user-ownership hold is separate from the Codex sandbox.
+Preferences > Access > Check desktop control, or `/desktop-status`, reads the
+installed `windows-mcp` ControlStatus through the existing app-server. It reports
+state and idle wait, without a model turn, input action, configuration change or
+forced takeover. Full Access remains on by default; the user can still take over.
+Physical input restarts the service's idle timer (normally 10 seconds). The
+installed Skill now explains checking status and resuming only after ownership
+is released; missing tools/refusals do not trigger another input backend.
+
 ## 4. Current user-visible features
 
 ### Conversation and desktop interface
@@ -184,7 +193,7 @@ Runtime/Automation settings support explicitly saved exact aliases with 1-5
 desktop MCP steps, optional prechecks and required postchecks. Actions run
 serially, stop on refusal/failure and use bounded verification. They do not
 register themselves from model output or untrusted files. `/help`, `/status`,
-`/metrics`, `/workflows`, `/open-workspace`, `/resume` and `/new` are local GUI
+`/desktop-status`, `/metrics`, `/workflows`, `/open-workspace`, `/resume` and `/new` are local GUI
 commands; unknown requests go to Codex.
 
 Confirmed repair memory is a separate local JSON database, populated only by
@@ -236,7 +245,7 @@ See [installation/update recipes](docs/install-desktop.md),
 | `gui/jarvis_gui/ui/` | Production Qt Quick window, artwork, chat cards, previews, history and speech settings. |
 | `messages.py`, `presentation.py`, `attachments.py`, `history.py` under `gui/jarvis_gui/` | Chat model, inert Markdown rendering, reviewed local files and SQLite persistence. |
 | `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py` under `gui/jarvis_gui/` | Local transcription, wake detection, acknowledged capture ownership and native speech. |
-| `runtime.py`, `workflows.py`, `access.py`, `profiles.py`, `preferences.py` under `gui/jarvis_gui/` | Timings/checkpoints, checked aliases, shared access/login and model/language settings. |
+| `runtime.py`, `workflows.py`, `access.py`, `profiles.py`, `preferences.py`, `desktop_control.py` under `gui/jarvis_gui/` | Timings/checkpoints, checked aliases, shared access/login, model/language settings and read-only ownership diagnostics. |
 | `skills/jarvis-desktop/SKILL.md`, `config/jarvis-agents.md` | Installed conversation persona and instruction-based GUI routing. |
 | `scripts/sync_agents.py` | Safe managed AGENTS block upgrades/backups; preserve unrelated text. |
 | `scripts/install-*.sh`, `scripts/install-*.ps1`, `scripts/jarvis-*.sh`, `scripts/jarvis-*.ps1` | OS installation and launch/compatibility helpers. |
@@ -287,7 +296,12 @@ frozen unless a requested dependency change requires updating them.
 
 ## 8. Evidence, limitations and handover discipline
 
-Last runtime verification: **67 root tests passed**, one native Windows probe
+GUI 0.6.1 local verification: **71 root tests passed**, one native Windows probe
+skipped, and **65 Qt tests passed**. Ownership diagnostics use simulated
+Windows-MCP status, not the user's live desktop; see the newest change report
+for subsequent CI outcomes.
+
+Preceding GUI 0.6.0 runtime verification: **67 root tests passed**, one native Windows probe
 skipped locally, and **60 Qt tests passed**. Final
 [CI run 38779340998](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38779340998)
 for `f01ecf5` passed static/root checks and Ubuntu/Windows desktop jobs, including
