@@ -97,7 +97,7 @@ function Main {
     Invoke-TigoNative (Get-Command uv.exe).Source @('python','install','3.12')
     Invoke-TigoNative (Get-Command uv.exe).Source @('sync','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','--python','3.12')
     Invoke-TigoNative 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $path 'scripts\install-gui-windows.ps1'))
-    Invoke-TigoNative (Get-Command uv.exe).Source @('run','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','python','-c','import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx; print(PySide6.__version__)')
+    Invoke-TigoNative (Get-Command uv.exe).Source @('run','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','python','-c','import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx, edge_tts, av; print(PySide6.__version__)')
     if (Test-TigoLoginNeeded $codex.Source) {
         Invoke-TigoNative $codex.Source @('login','--device-auth')
     }

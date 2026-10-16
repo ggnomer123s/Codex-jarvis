@@ -500,7 +500,10 @@ class Backend(QObject):
     @Slot()
     def testSpeech(self):
         if not self._locked():
-            self.speaker.read('К вашим услугам, наставник. Системы готовы.' if not self.speaker.voice or self.speaker.voice.startswith('ru_') else 'At your service, mentor. Systems are ready.')
+            voice = self.speaker.voice
+            russian = voice.startswith('ru_') or (voice in ('', 'auto:female') and self._language != 'en')
+            self.speaker.read('Здравствуйте, наставник. Я Тиго. Проверим естественную речь.' if russian
+                              else 'Hello, mentor. I am Tigo. Let us check my voice.')
 
     @Property(QObject, constant=True)
     def wake(self):

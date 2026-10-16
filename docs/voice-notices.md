@@ -24,3 +24,17 @@ The catalog and pinned archive sizes/SHA-256 values live in
 
 These provenance notes do not change project source licensing or grant
 permission to clone a person's identity or voice.
+
+## Additional 0.9.0 voices and online client
+
+- Irina medium's retained model card points to RHVoice and labels its source
+  dataset license **Unknown**. Do not describe it as CC0 or assume unrestricted
+  redistribution; Tigo downloads the upstream asset separately.
+- Lessac High's card points to the [2013 Lessac Blizzard dataset](https://www.cstr.ed.ac.uk/projects/blizzard/2013/lessac_blizzard2013/)
+  and its linked dataset license. Retain the card and review the source terms
+  before redistributing models. The high model is trained from scratch.
+- [edge-tts](https://github.com/rany2/edge-tts) is an LGPL-3.0 client of the
+  Microsoft Edge online service, separate from the Microsoft voice assets and
+  service terms. Tigo does not redistribute Microsoft's voice models.
+- [PyAV](https://github.com/PyAV-Org/PyAV) decodes online MP3 in memory using
+  FFmpeg; its upstream licensing and binary notices remain applicable.

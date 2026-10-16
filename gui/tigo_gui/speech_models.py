@@ -12,19 +12,29 @@ from .compat import existing_path, LEGACY
 
 VOICES = {
     'ru_RU-dmitri-medium': {
-        'name': 'Dmitri Neural', 'locale': 'ru_RU',
+        'name': 'Dmitri Neural', 'locale': 'ru_RU', 'gender': 'Male',
         'sha256': 'c86d0803737de13d441923ff3b3f309482fab8d7af3ec85949942809eb9a3660',
         'size': 67188551,
     },
     'ru_RU-denis-medium': {
-        'name': 'Denis Neural', 'locale': 'ru_RU',
+        'name': 'Denis Neural', 'locale': 'ru_RU', 'gender': 'Male',
         'sha256': 'efa4c18e0b5e32b81d1b6df36b9d312831e5d545200e27848ef926a4cd930300',
         'size': 67190991,
     },
     'en_US-joe-medium': {
-        'name': 'Joe Neural', 'locale': 'en_US',
+        'name': 'Joe Neural', 'locale': 'en_US', 'gender': 'Male',
         'sha256': '261b903a1fb2ce621e2b5b14233cd41223c3b9f9590f896c11daee4df22d9bd3',
         'size': 67169394,
+    },
+    'ru_RU-irina-medium': {
+        'name': 'Irina Neural', 'locale': 'ru_RU', 'gender': 'Female',
+        'sha256': '1fc0f54e5e084fe287c07909f2f6e0ba6d857864cf800e3ab80286a4e8233008',
+        'size': 67153308,
+    },
+    'en_US-lessac-high': {
+        'name': 'Lessac High', 'locale': 'en_US', 'gender': 'Female',
+        'sha256': '8619d204c7005866fe4f420181dfa79622af6a6222389f0b0818d2af31e0db0e',
+        'size': 115545841,
     },
 }
 DEFAULTS = ('ru_RU-dmitri-medium', 'en_US-joe-medium')
@@ -85,9 +95,9 @@ def ensure_voice(key, *, root=None, progress=lambda message: None):
             return target
         archive, staging = root/(key+'.part'), root/(key+'.staging')
         try:
-            progress('Downloading ' + spec['name'] + ' (about 67 MB; first use only).')
+            progress(f'Downloading {spec["name"]} (about {spec["size"]//1_000_000} MB; first use only).')
             digest, size, last = hashlib.sha256(), 0, 0
-            request = urllib.request.Request(BASE_URL+'vits-piper-'+key+'.tar.bz2', headers={'User-Agent': 'Tigo-Desktop/0.8'})
+            request = urllib.request.Request(BASE_URL+'vits-piper-'+key+'.tar.bz2', headers={'User-Agent': 'Tigo-Desktop/0.9'})
             with urllib.request.urlopen(request, timeout=30) as response, archive.open('wb') as out:
                 while block := response.read(256*1024):
                     size += len(block)

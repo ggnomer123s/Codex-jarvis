@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-16**, GUI **0.8.0**. Repository:
+Last reconciled: **2026-10-16**, GUI **0.9.0**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -19,7 +19,11 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** GUI 0.8.0 is renamed **Tigo** throughout the application,
+**Current state:** GUI 0.9.0 adds male/female local and explicit online speech;
+see [speech-output.md](docs/speech-output.md). Local remains the default; online
+Microsoft speech sends spoken text only when selected. Separate provider voice
+choices, bounded workers and microphone handoff are retained. GUI 0.8.0 renamed
+the assistant to **Tigo** throughout the application,
 CLI, source package (`tigo_gui`), Skill, installers, icons and documentation.
 Wake-name matching uses **Tigo** / its Russian spelling, with a small explicit
 set of transcription variants and split words. The old wake name is no longer
@@ -29,7 +33,7 @@ verified voice caches remain in place, existing access choices and MCP grants
 are retained, and Qt preferences migrate once without replacing Tigo settings.
 The source repository URL remains unchanged until its owner renames it on GitHub.
 The previous stop-testing request concerned the 0.7.0 speech publication; this
-new rename request includes relevant regression and GUI checks. Fresh results
+new speech request includes relevant regression, synthesis and GUI checks. Fresh results
 belong in the newest `changes.md` entry; older CI reports remain historical.
 
 **Previous unresolved live-machine issue:** the user reports that Tigo on Windows said the
@@ -110,7 +114,7 @@ Typed request / reviewed push-to-talk transcript / reviewed local attachments
             -> configured desktop MCP -> windows, pointer, keyboard, screenshots
        <- typed events -> streamed chat, activity, verification, final result
        -> local conversation history and content-free timing/checkpoint data
-       -> successful final answer -> optional local neural text-to-speech
+       -> successful final answer -> optional local / explicit online text-to-speech
 
 Optional local wake listener -> matching wake name -> restore existing window
 Terminal tigo launchers -> interactive Codex CLI in the same Codex home
@@ -203,41 +207,34 @@ Closing the window keeps opted-in listening in the tray/minimized; Quit stops
 workers. Per-user XDG autostart / Windows HKCU Run startup is optional. A second
 launch activates the same instance through acknowledged local IPC.
 
-### Local spoken output
+### Spoken output: local and explicit online mode
 
-Automatic speech is **on by default** for the current successful final answer.
-Streamed fragments, explicit commentary, failed/canceled turns and opened
-history stay silent. **Read** speaks an assistant message even with auto off;
-**Speech on/off**, **Stop speech** and **Preferences > Speech** expose control,
-voice selection, rate, pitch, volume, refresh and testing.
+Automatic speech is on by default for the current successful final answer.
+Commentary, failed/canceled turns and opened history stay silent. Read also
+works with auto off; Stop, rate, volume and natural pitch are supported.
+Preferences > Speech offers automatic male/female Russian/English selection,
+explicit voices and independent saved voice preferences per mode.
 
-Default synthesis uses sherpa-onnx CPU Piper/VITS models: Dmitri for Russian,
-Joe for English, with Denis as an explicit Russian alternative. `NeuralEngine`
-adapts a warm owned `neural_worker` subprocess to the speech controller. Downloads,
-model loading, bounded-phrase inference and sounddevice playback stay outside
-the GUI thread. At most two models remain warm; successful output keeps the
-worker alive, while Stop kills an active worker and rejects late IDs. Playback
-uses in-memory PCM, with no TTS text upload or saved audio. `speech_models.py`
-downloads official GitHub archives (about 67 MB each), verifies pinned SHA-256
-and size, locks concurrent writers, bounds extraction and atomically installs
-under Linux XDG cache or Windows LOCALAPPDATA `tigo/voices`.
+Local Piper/VITS CPU voices are Dmitri, Denis, Irina, Joe and Lessac High.
+Verified 67-116 MB model downloads and warm two-model inference remain owned by
+`neural_worker`. Existing private caches are reused. Local output does not upload
+speech text. The legacy OS engine remains explicit for other languages.
 
-The first 0.7.0 launch migrates old voice/rate/pitch to Automatic/neutral while
-preserving automatic Speech off and volume. Selected engine/voice persists
-afterward. Neural pitch stays natural; rate and volume remain adjustable.
-Legacy system mode is explicit: Qt winrt/sapi or speechd/flite enumerates all
-installed locales and sets the chosen locale before voice. Other languages can
-use explicit installed system voices. No actor clone or cloud TTS was added.
-Fenced code, images, raw URLs and Markdown are removed from the
-spoken copy; output is bounded to 6,000 characters. Chat text stays unchanged.
+Online mode is opt-in and sends cleaned spoken text to Microsoft through locked
+edge-tts, without an API key. Andrew/Brian Multilingual, Svetlana, Guy and Aria
+are curated voices. The native Dmitry service voice repeatedly returned no audio
+in live probes and is not offered. `online_worker` bounds network time, MP3 size,
+decoded PCM and prefetching, using locked PyAV for in-memory decoding. It shares
+NeuralEngine process ownership, generation/cancellation and microphone handoff.
+It never silently falls back or retries/replays speech. No runtime audio files
+are saved; online playback remains dependent on the external service.
 
-Speech waits for wake capture to acknowledge pause or exit, then holds the mic
-through playback and a 300 ms cooldown. Manual recording interrupts speech and
-waits for quiet. Cancellation/generation IDs reject stale callbacks. This is
-turn-taking, not full-duplex echo cancellation. Quiet callbacks also wait until
-an interrupted neural process has exited. Missing speech dependencies must leave
-text chat usable with a visible error. Never silently select
-Qt's test/mock speech engine in production.
+Only the speaking copy normalizes Tigo's name in Russian prose. Chat text stays
+unchanged. Spoken text strips code/markup/URLs and is capped at 6,000 characters.
+Wake capture must acknowledge pause or exit before output; manual capture waits
+for the speech worker to exit, including a 300 ms quiet tail. The new utterance
+cannot be started by stale callbacks. See [speech output](docs/speech-output.md)
+for actual privacy, dependency and verification limits.
 
 ### Speed, workflows, diagnostics and repair memory
 
@@ -302,7 +299,7 @@ See [installation/update recipes](docs/install-desktop.md),
 | `gui/tigo_gui/app_server.py`, `core.py` | Owned JSON-RPC process, protocol/launch policy, bounded requests and cleanup. |
 | `gui/tigo_gui/ui/` | Production Qt Quick window, artwork, chat cards, previews, history and speech settings. |
 | `messages.py`, `presentation.py`, `attachments.py`, `history.py` under `gui/tigo_gui/` | Chat model, inert Markdown rendering, reviewed local files and SQLite persistence. |
-| `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py`, `neural_speech.py`, `neural_worker.py`, `speech_models.py` under `gui/tigo_gui/` | Local transcription, acknowledged wake/mic ownership, speech lifecycle, warm neural worker and verified model assets. |
+| `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py`, `neural_speech.py`, `neural_worker.py`, `speech_models.py`, `online_worker.py`, `online_voices.py` under `gui/tigo_gui/` | Local transcription, acknowledged wake/mic ownership, speech lifecycle, warm neural worker and verified model assets. |
 | `runtime.py`, `workflows.py`, `access.py`, `profiles.py`, `preferences.py`, `desktop_control.py` under `gui/tigo_gui/` | Timings/checkpoints, checked aliases, shared access/login, model/language settings and read-only ownership diagnostics. |
 | `skills/tigo-desktop/SKILL.md`, `config/tigo-agents.md` | Installed conversation persona and instruction-based GUI routing. |
 | `scripts/sync_agents.py` | Safe managed AGENTS block upgrades/backups; preserve unrelated text. |
@@ -562,7 +559,7 @@ not establish authenticated model requests, desktop input or image extraction.
 | Wake segmentation | 16 kHz, about 0.65 s silence or 4 s max phrase, short overlap, 8 s wake cooldown. |
 | Wake pause acknowledgment | 1.5 s deadline, then kill only the stalled wake worker before releasing capture ownership. |
 | Warm voice worker | Five idle minutes before unload; model/options changes and shutdown also unload. |
-| Speech | Auto on; local neural Dmitri/Joe, optional Denis; neutral rate/pitch, volume 0.85. |
+| Speech | Auto on; local male/female by default; optional explicit online Microsoft voices; natural pitch, volume 0.85. |
 | Speech timing | 300 ms quiet tail plus interrupted-worker exit; neural preparation 120 s inactivity (progress refreshes), native start 5 s; total 10 min, 6,000-character spoken copy. |
 | Layout | Font 14 px, 12-28 px bounds; normal core shown; full chat initially off. Saved pane width constrained to 420-1000. |
 | History persistence | 750 ms debounce and explicit flushes at completion/context changes/exit; 8,000,000-byte transcript bound. |
@@ -772,7 +769,7 @@ schemas and official source before adopting additional code/dependencies.
 2. Inspect the real checkout/agent instructions, `git status`, recent commits and
    current remote before editing. Do not reset another contributor's changes.
 3. Read the newest `changes.md` entries and relevant source/tests. The latest
-   runtime is 0.8.0; a later documentation commit does not require version bumps
+   runtime is 0.9.0; a later documentation commit does not require version bumps
    or mean another feature remains to implement.
 4. Continue the actual requested task. If the user says to continue Windows
    troubleshooting, distinguish unknown live diagnostics from already-completed

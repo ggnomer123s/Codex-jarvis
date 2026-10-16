@@ -7,6 +7,10 @@ from tigo_gui.speech_text import spoken_text,MAX_SPEECH_CHARS
 
 
 class TestSpeechText(unittest.TestCase):
+    def test_product_name_is_pronounced_in_russian_without_touching_english(self):
+        self.assertEqual(spoken_text('Tigo готов к работе.'), 'Тиго готов к работе.')
+        self.assertEqual(spoken_text('Tigo is ready.'), 'Tigo is ready.')
+
     def test_markdown_is_readable_and_code_links_and_controls_are_removed(self):
         value=spoken_text('# Ready\n\n**Mentor**, see [the result](https://example.com).\n```sh\nsecret command\n```\n- Done.\nhttps://example.com/private\x00')
         self.assertIn('Mentor',value)

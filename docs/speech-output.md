@@ -1,102 +1,93 @@
-# Tigo character and local neural speech
+# Tigo voices: local and online (0.9.0)
 
-Updating the GUI installer refreshes `tigo-desktop/SKILL.md` and the managed
-Codex `AGENTS.md` block, preserving personal instructions. Start a new
-conversation to load them. Tigo treats the user as mentor: calm, respectful,
-concise and occasionally dryly witty, using the user's language.
+Preferences > Speech offers trained **male and female** voices. Local neural
+speech remains the default; online output is an explicit choice. Existing
+Speech off, rate, volume and selected local voice survive the update.
 
-## New default in 0.7.0
+## Voice catalog
 
-Spoken answers now use **Piper/VITS neural voices through sherpa-onnx on CPU**,
-rather than Windows SAPI or Linux eSpeak speech output.
+| Mode | Russian male | Russian female | English male | English female |
+| --- | --- | --- | --- | --- |
+| Local neural | Dmitri; optional Denis | Irina | Joe | Lessac High |
+| Online Microsoft | Andrew Multilingual; optional Brian Multilingual | Svetlana | Guy | Aria |
 
-| Voice | Language | Selection |
-| --- | --- | --- |
-| Dmitri Neural | Russian | Automatic for Russian text |
-| Denis Neural | Russian | Alternate in Preferences > Speech |
-| Joe Neural | English | Automatic for English text |
+Choose **Automatic male** or **Automatic female** to match Russian/English to
+an answer, or select a specific voice. A specific voice uses its selected
+language for the whole answer. Mixed-language pronunciation depends on the
+trained model. Natural pitch is preserved; rate and volume remain adjustable.
+The speaking copy pronounces the product name as its Russian spelling in
+Russian prose, while displayed chat text remains unchanged. No actor clone,
+custom emotion classifier or full-duplex conversation is implied.
 
-These trained voices preserve natural pitch; no actor clone is included.
-Automatic selects one language for the whole reply; mixed-language pronunciation
-depends on that voice. Other languages can use explicitly selected installed
-voices in **System voices (legacy)** mode. Multilingual Whisper transcription
-remains a separate feature.
+![Local speech controls](images/tigo-speech-settings.png)
 
-On the first update to 0.7.0, old system voice IDs and rate/pitch settings reset
-to Automatic and neutral rate/pitch. Saved Speech off and volume are preserved.
-After migration, selected mode, voice and sliders persist.
+## Local neural: offline after download
 
-## Installation and downloads
+Piper/VITS runs on CPU through sherpa-onnx. Male models and Irina download about
+67 MB each; Lessac High is about 116 MB. Downloads verify pinned size/SHA-256,
+bound extraction and retain model cards. At most two models stay warm. All
+synthesis and playback happen outside the GUI thread, with transient PCM in RAM.
+No speech text is uploaded in local mode and no runtime audio file is saved.
 
-Ordinary GUI installers and launchers install the locked `voice` extra, including
-sherpa-onnx, its native core, sounddevice, NumPy and filelock. Windows needs no
-Russian language pack, speech component or separate TTS UAC prompt. Linux uses
-PortAudio for playback; distro dependency recipes include it. CPU inference
-needs no GPU, API key, account or Torch installation.
-
-The dependency-aware CachyOS/Windows updaters preload Dmitri and Joe. Ordinary
-GUI installation downloads a chosen model on first speech use, showing progress
-in Preferences > Speech. Each archive is about **67 MB**, unpacking to about
-**81 MB**. Denis downloads only when selected. Downloads use the official
-k2-fsa/sherpa-onnx GitHub release, checking pinned size and SHA-256 before bounded
-extraction. Interrupted or invalid downloads are replaced on the next attempt.
-Cached voices need no network for subsequent synthesis.
-
-- Linux cache: `${XDG_CACHE_HOME:-~/.cache}/tigo/voices`.
-- Windows cache: `%LOCALAPPDATA%\tigo\voices`.
-
-To download default voices from a prepared checkout, in Bash or PowerShell:
+Fresh caches use `${XDG_CACHE_HOME:-~/.cache}/tigo/voices` on Linux or
+`%LOCALAPPDATA%\tigo\voices` on Windows. Existing pre-rename caches are reused.
+Full updaters preload the default male Russian/English pair; other voices load
+on first use. To prepare female voices without playing audio:
 
 ```bash
-uv run --project gui --frozen --extra voice python -m tigo_gui.speech_models
+uv run --project gui --frozen --extra voice python -m tigo_gui.speech_models ru_RU-irina-medium en_US-lessac-high
 ```
 
-Append a model ID, such as `ru_RU-denis-medium`, to download only that voice.
-With Tigo closed, removing a voice cache directory forces a new verified
-download. Model cards remain alongside weights. See [voice notices](voice-notices.md).
+Ordinary launchers install the frozen voice dependencies. Linux needs PortAudio;
+Windows uses the sounddevice wheel runtime. No GPU, Torch, API key, Russian
+Windows language pack or elevated TTS installation is needed.
 
-## Controls
+## Online neural: Microsoft
 
-- **Speech on/off** saves automatic reading; default is on.
-- **Read** on an assistant message also works when automatic reading is off.
-- **Stop speech**, a new request, recording or app shutdown interrupts speech.
-  Escape stops output when no task or recording has priority.
-- **Preferences > Speech** selects **Neural (recommended)** or explicit legacy
-  system output, an available voice, rate and volume. Neural mode preserves
-  natural pitch; the pitch slider applies only to system voices.
-- **Test voice** applies displayed settings and speaks a sample. Save keeps
-  changes; the automatic checkbox and engine selection apply immediately.
-  **Refresh voices** recreates an idle engine and refreshes its catalog.
+Select **Online neural (Microsoft)** to use the online Edge speech service
+through the [edge-tts client](https://github.com/rany2/edge-tts). It requires
+Internet and sends the **cleaned spoken reply text to Microsoft**. Reading an
+old message in online mode sends that message's spoken copy too. The microphone,
+recordings and code blocks are not sent by the TTS worker. No separate API key
+is required. This is an unofficial client of the Edge service, not an Azure
+subscription with a service-level guarantee.
 
-Automatic speech reads only the current successful completed final answer.
-Streamed fragments, commentary, errors, canceled turns and restored history stay
-silent. Code fences, images, raw URLs and Markdown are removed from the spoken
-copy, limited to 6,000 characters. Chat text stays unchanged.
+Catalog browsing and changing modes do not submit an utterance. Automatic
+speech starts only for the current successful final reply, when enabled;
+**Read** and **Test voice** are explicit requests. Local failures never select
+online mode. Online errors do not change providers or replay audio. A network
+failure leaves text chat usable and explains selecting local output.
 
-## Responsiveness, microphone and privacy
+The worker fetches bounded phrases, decodes MP3 to mono 24 kHz PCM with PyAV,
+prefetches at most a small bounded number of phrases and plays from RAM. Each
+request has a 35-second bound; encoded size and decoded duration are bounded.
+Stop kills the owned worker and pending requests immediately. Nothing is
+written to an audio cache. This service's availability and voice catalog can
+change independently of Tigo. In live development probes the listed native
+Dmitry voice returned no audio; the offered multilingual male alternatives,
+Svetlana, Guy and Aria returned decodable audio instead.
 
-Downloads, loading, inference and playback run in an owned subprocess. The GUI
-stays responsive. Speech starts after the first bounded phrase synthesizes,
-without waiting for the entire answer. At most two successfully used models
-remain warm. Stop kills an active worker, so the next reply reloads from disk;
-successful completion keeps it warm. PCM stays in memory. No reply text is sent
-to a TTS service and speech recordings are not saved.
+![Online speech controls](images/tigo-online-speech-settings.png)
 
-Wake capture must acknowledge pause or exit before playback starts. It stays
-paused through output and a 300 ms quiet tail. Recording interrupts output and
-waits for the worker to stop before opening the mic. Late callbacks cannot start
-canceled speech/recording. This is coordinated turn-taking, not full-duplex echo
-cancellation. Model requests still use Codex as before.
+## Controls and microphone coordination
 
-Missing dependencies, unavailable speakers, download/checksum failures and
-worker errors appear in chat/settings without resending the Codex task.
-First-use preparation has a two-minute inactivity deadline, refreshed by
-progress; an utterance has a ten-minute overall bound. Check audio output,
-volume and initial-download network access. Speech errors leave text chat usable.
-Legacy system mode needs an installed Windows speech voice or Linux Speech
-Dispatcher/eSpeak NG and libpulse. No mock engine is a production fallback.
+- **Speech on/off** saves automatic reading; **Read** still works with auto off.
+- **Preferences > Speech** selects mode, male/female voice, rate and volume.
+  Voice choices are saved separately for each mode. Pitch applies only to the
+  explicit **System voices (legacy)** mode.
+- **Test voice** applies the displayed voice/sliders and speaks a fixed sample
+  in the selected voice's language. Automatic uses the configured input language
+  (Russian unless explicitly English). Save preferences keeps the choice.
+- **Stop speech**, recording, a new request and shutdown interrupt output.
+  Escape stops speech when another task/recording does not have priority.
+- Wake capture must acknowledge pause or exit before playback. It stays paused
+  through speech and a 300 ms quiet tail. Recording waits for the owned speech
+  process to exit; stale callbacks cannot restart canceled speech or recording.
 
-The user requested no further test runs and will check sound on their machines.
-Earlier local CPU synthesis and process/QML checks preceded that instruction;
-Windows hardware and audible quality have not been checked in this cloud.
-See [changes.md](../changes.md) for the recorded scope.
+Only successful completed final replies are automatically read. Streaming text,
+commentary, failed/canceled tasks and opened history stay silent. Fenced code,
+images, raw URLs and markup are removed from the speaking copy, bounded to
+6,000 characters. A ten-minute overall limit applies. System mode still supports
+installed OS voices for other languages; neural output defaults to Russian or
+English. See [voice notices](voice-notices.md) and [changes.md](../changes.md)
+for provenance and actual verification limits.

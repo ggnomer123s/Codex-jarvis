@@ -23,6 +23,9 @@ def spoken_text(text):
     text = re.sub(r'^\s{0,3}(?:#{1,6}\s+|>\s*|[-*+]\s+)', '', text, flags=re.M)
     text = re.sub(r'(`+|\*\*|__|~~)', '', text)
     text = html.unescape(text)
+    if re.search(r'[\u0400-\u052f]', text):
+        # Product pronunciation in Russian, without changing the displayed reply.
+        text = re.sub(r'\bTigo\b', '\u0422\u0438\u0433\u043e', text, flags=re.I)
     text = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', text)
     text = re.sub(r'[ \t]+', ' ', text)
     text = re.sub(r'\n{3,}', '\n\n', text).strip()

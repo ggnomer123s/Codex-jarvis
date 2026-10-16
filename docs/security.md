@@ -72,8 +72,10 @@ See [Linux backends](mcp-and-skills.md) and [Usage](usage.md).
 
 Automatic speech is on by default and may make the displayed answer audible to
 people nearby. The composer Speech toggle disables it immediately; Stop speech
-interrupts current output. Native Qt speech uses installed local system engines,
-without sending answer text to a cloud TTS service or creating audio files.
+interrupts current output. Local neural/system modes do not send speech text to a cloud service. Explicit
+Online neural mode sends the cleaned spoken text to Microsoft through edge-tts;
+this includes old messages when Read is pressed. Online mode never activates as
+a fallback from local output. Runtime audio stays in RAM, without saved audio files.
 The answer itself still comes from Codex. Wake capture pauses before speech and
 manual recording waits for output to stop. These are microphone coordination
 controls, not full-duplex echo cancellation. See [speech output](speech-output.md).

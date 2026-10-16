@@ -210,8 +210,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Tigo\s
 
 ## Spoken replies
 
-Speech is on by default. **Preferences > Speech** offers local neural Dmitri
-and Denis for Russian, Joe for English, rate/volume and Test voice. The first
+Speech is on by default. **Preferences > Speech** offers local male/female neural
+voices (Dmitri / Irina / Denis for Russian, Joe / Lessac High for English),
+optional online Microsoft voices, rate/volume and Test voice. Online output
+explicitly sends spoken text to Microsoft; local mode remains the default. The first
 0.7.0 launch resets old system voice IDs and rate/pitch to natural defaults,
 preserving Speech off and volume. Default model downloads happen in the full
 updaters or on first use with ordinary installers. Windows needs no system

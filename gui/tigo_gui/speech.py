@@ -1,4 +1,4 @@
-"""Local neural/system speech with cancellation and microphone handoff."""
+"""Local and opt-in online speech with cancellation and microphone handoff."""
 import math
 import re
 import sys
@@ -48,7 +48,7 @@ class Speech(QObject):
             for key, value in dict(engine='neural', voice='', rate=0., pitch=0.).items():
                 settings.setValue('speech/'+key, value)
         self._engine_kind = 'system' if self._injected else str(settings.value('speech/engine', 'neural'))
-        if self._engine_kind not in ('neural', 'system'): self._engine_kind = 'neural'
+        if self._engine_kind not in ('neural', 'online', 'system'): self._engine_kind = 'neural'
         self.factory = engine_factory or self._make_engine
         self._enabled = str(settings.value('speech/enabled', True)).lower() == 'true'
         self._voice_id = str(settings.value('speech/voice', ''))
@@ -60,7 +60,8 @@ class Speech(QObject):
         self._active = self._started = self._closing = self._ignore_state = False
         self._generation = 0
         self._state = 'idle'
-        self._status = 'Local neural speech is ready. Voice models download once, then work offline.'
+        self._status = ('Online speech selected. Spoken text is sent to Microsoft; Internet is required.'
+                        if self._engine_kind == 'online' else 'Local neural speech is ready. Male and female voices work offline after downloading.')
         self._quiet_callbacks = []
         self.quiet_timer = QTimer(self)
         self.quiet_timer.setSingleShot(True)
@@ -95,18 +96,23 @@ class Speech(QObject):
 
     def _make_engine(self, parent):
         if self._engine_kind == 'system': return native_engine(parent)
+        if self._engine_kind == 'online':
+            from .neural_speech import OnlineEngine
+            return OnlineEngine(parent)
         from .neural_speech import NeuralEngine
         return NeuralEngine(parent)
 
     @Slot(str)
     def setEngine(self, kind):
-        if self._injected or self._active or kind not in ('neural', 'system') or kind == self._engine_kind:
+        if self._injected or self._active or kind not in ('neural', 'online', 'system') or kind == self._engine_kind:
             return
         self.stop()
         self._dispose_engine()
-        self._engine_kind, self._voice_id = kind, ''
+        self.settings.setValue('speech/voice/' + self._engine_kind, self._voice_id)
+        self._engine_kind = kind
+        self._voice_id = str(self.settings.value('speech/voice/' + kind, ''))
         self.settings.setValue('speech/engine', kind)
-        self.settings.setValue('speech/voice', '')
+        self.settings.setValue('speech/voice', self._voice_id)
         self.refresh()
 
     def _dispose_engine(self):
@@ -130,10 +136,11 @@ class Speech(QObject):
 
     @Property('QVariantList', notify=changed)
     def voices(self):
-        result = [{'id':'', 'label':'Automatic (Russian / English)'}]
+        result = [{'id':'', 'label':'Automatic male (Russian / English)'},
+                  {'id':'auto:female', 'label':'Automatic female (Russian / English)'}]
         for key, voice in self._voices.items():
-            result.append({'id':key, 'label':voice.name() + ' / ' + voice.locale().name()})
-        if self._voice_id and self._voice_id not in self._voices:
+            result.append({'id':key, 'label':voice.name() + ' / ' + voice.locale().name() + ' / ' + voice.gender().name})
+        if self._voice_id and self._voice_id != 'auto:female' and self._voice_id not in self._voices:
             result.append({'id':self._voice_id, 'label':'Unavailable: ' + self._voice_id})
         return result
 
@@ -154,7 +161,7 @@ class Speech(QObject):
             self._status = 'Choose a supported speech rate, pitch and volume.'
             self.changed.emit()
             return False
-        if voice and voice not in self._voices and voice != self._voice_id:
+        if voice and voice != 'auto:female' and voice not in self._voices and voice != self._voice_id:
             self._status = 'Refresh voices and choose an available voice.'
             self.changed.emit()
             return False
@@ -162,6 +169,7 @@ class Speech(QObject):
         self._voice_id, self._rate, self._pitch, self._volume = voice, rate, pitch, volume
         for key, value in dict(voice=voice, rate=rate, pitch=pitch, volume=volume).items():
             self.settings.setValue('speech/' + key, value)
+        self.settings.setValue('speech/voice/' + self._engine_kind, voice)
         self.changed.emit()
         return True
 
@@ -196,13 +204,19 @@ class Speech(QObject):
         self._dispose_engine()
         try:
             self._ensure_engine()
-            self._state, self._status = 'idle', ('Neural voices ready. Automatic uses Dmitri for Russian and Joe for English; Denis is an alternate Russian voice. Models download on first use.' if self._engine_kind == 'neural' else 'Installed system voices refreshed. Automatic matches Russian or English.')
+            if self._engine_kind == 'online':
+                status = 'Online voices ready: Andrew / Brian Multilingual and Svetlana (Russian), Guy / Aria (English). Spoken text is sent to Microsoft. No API key is needed.'
+            elif self._engine_kind == 'neural':
+                status = 'Local voices ready: Dmitri / Irina (Russian), Joe / Lessac High (English); Denis is an alternate male voice. Models download once.'
+            else:
+                status = 'Installed system voices refreshed. Automatic matches Russian or English.'
+            self._state, self._status = 'idle', status
         except (ValueError, RuntimeError) as exc:
             self._state, self._status = 'error', str(exc)
         self.changed.emit()
 
     def _choose_voice(self, text):
-        if self._voice_id:
+        if self._voice_id and self._voice_id != 'auto:female':
             if self._voice_id not in self._voices:
                 raise ValueError('The saved voice is unavailable. Choose an available voice or Automatic in Preferences > Speech.')
             return self._voices[self._voice_id]
@@ -210,7 +224,13 @@ class Speech(QObject):
         candidates = [voice for voice in self._voices.values() if voice.locale().name().split('_')[0] == language]
         if not candidates:
             raise ValueError(('Russian' if language == 'ru' else 'English') + ' speech voice is not installed. Install it or choose a voice explicitly in Preferences > Speech.')
-        return min(candidates, key=lambda v:(v.age().name != 'Adult', v.gender().name != 'Male'))
+        gender = 'Female' if self._voice_id == 'auto:female' else 'Male'
+        matching = [voice for voice in candidates if voice.gender().name == gender]
+        if not matching and self._engine_kind == 'system' and not self._voice_id:
+            matching = candidates  # Preserve legacy Automatic on single-gender OS catalogs.
+        if not matching:
+            raise ValueError('No ' + gender.lower() + ' voice for this language. Select an installed voice explicitly.')
+        return min(matching, key=lambda v:v.age().name != 'Adult')
 
     def read(self, text, *, automatic=False):
         if self._closing or (automatic and not self._enabled):
@@ -226,7 +246,7 @@ class Speech(QObject):
         self.quiet_timer.stop()
         self._quiet_callbacks.clear()
         self._active, self._started = True, False
-        self._state, self._status = 'preparing', 'Preparing local speech; pausing the wake microphone.'
+        self._state, self._status = 'preparing', 'Preparing speech; pausing the wake microphone.'
         self.changed.emit()
         try:
             self.prepare(lambda: self._speak(generation, text))
@@ -250,7 +270,7 @@ class Speech(QObject):
             # this generation. Never speak after that cancellation.
             if generation != self._generation or not self._active or self._closing:
                 return
-            self._state, self._status = 'preparing', 'Starting local speech.'
+            self._state, self._status = 'preparing', ('Starting online speech with Microsoft.' if self._engine_kind == 'online' else 'Starting local speech.')
             self.start_timer.start(getattr(engine, 'start_timeout', 5000))
             self.end_timer.start()
             engine.say(text)
@@ -264,7 +284,7 @@ class Speech(QObject):
         if state.name == 'Speaking':
             self._started = True
             self.start_timer.stop()
-            self._state, self._status = 'speaking', 'Speaking locally. Use Stop speech to interrupt.'
+            self._state, self._status = 'speaking', ('Speaking online with Microsoft. Use Stop speech to interrupt.' if self._engine_kind == 'online' else 'Speaking locally. Use Stop speech to interrupt.')
             self.changed.emit()
         elif state.name == 'Ready' and self._started and self._engine.state() == state:
             self._cool_down('Finished speaking.')

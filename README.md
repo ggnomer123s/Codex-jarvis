@@ -36,11 +36,13 @@ card shows the current activity, elapsed time and errors. See the
 
 **Tigo character and spoken replies:** the installed Skill and managed Codex
 instructions treat you as the mentor: respectful, composed, concise and lightly
-witty. Completed answers use local neural voices: **Dmitri** for Russian,
-**Joe** for English, with **Denis** as another Russian option. Models download
-once, then speak offline on CPU. Use **Speech on/off**, a message's **Read**,
-or **Stop speech**; choose voice/rate/volume in **Preferences > Speech**.
-No Russian Windows speech pack is needed. Wake listening pauses during output. See
+witty. Completed answers can use **male or female** voices. Local CPU voices
+include **Dmitri / Irina** (Russian) and **Joe / Lessac High** (English), plus
+Denis. Optional online Microsoft voices include **Andrew / Brian Multilingual,
+Svetlana, Guy and Aria**. Choose Local or Online and Automatic male/female in
+**Preferences > Speech**. Local mode uploads no speech text; online mode sends
+the spoken copy to Microsoft and requires Internet. Both modes support Read,
+Stop, natural pitch, rate/volume and coordinated microphone pauses. See
 [speech setup and limitations](docs/speech-output.md).
 
 **Optional voice activation:** enable **Preferences > Wake** to listen locally
@@ -100,7 +102,7 @@ use an explicit checkout path and work from your user directory as well.
 
 ## Start here: project handoff for another AI
 
-**Current overview — 2026-10-16, GUI 0.8.0.** Start with
+**Current overview — 2026-10-16, GUI 0.9.0.** Start with
 **[readmeai.md](readmeai.md)** for the project's purpose, implemented features,
 architecture, decisions to preserve, code map, local state and test commands.
 This README is the public usage guide. **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**

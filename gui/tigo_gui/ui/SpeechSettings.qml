@@ -7,7 +7,7 @@ ScrollView {
     objectName: "speechSettings"
     clip: true; contentWidth: availableWidth
     function sync() {
-        engineChoice.currentIndex = bridge.speech.engineKind === "neural" ? 0 : 1
+        engineChoice.currentIndex = bridge.speech.engineKind === "online" ? 1 : (bridge.speech.engineKind === "system" ? 2 : 0)
         speechVoice.currentIndex = Math.max(0, speechVoice.indexOfValue(bridge.speech.voice))
         rateSlider.value = bridge.speech.rate
         pitchSlider.value = bridge.speech.pitch
@@ -23,13 +23,13 @@ ScrollView {
             onClicked: bridge.speech.setEnabled(checked)
             contentItem: Text { text: parent.text; color: "#b8eee4"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
         }
-        Text { Layout.fillWidth: true; text: "Local neural voices, without API keys or uploading your replies. A voice downloads once (about 67 MB), then works offline on CPU."; color: "#8baeb9"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+        Text { objectName: "speechPrivacy"; Layout.fillWidth: true; text: bridge.speech.engineKind === "online" ? "Online neural voices by Microsoft. Spoken reply text is sent to Microsoft over the Internet. No API key is required. Select Local neural to keep speech on this computer." : "Local male and female neural voices. Models download once (67-116 MB per voice), then speech works offline on CPU without uploading your replies."; color: bridge.speech.engineKind === "online" ? "#dfb987" : "#8baeb9"; font.pixelSize: 11; wrapMode: Text.WordWrap }
         HudComboBox {
             id: engineChoice; objectName: "speechEngineChoice"
             Layout.fillWidth: true
-            model: ["Neural (recommended)", "System voices (legacy)"]
+            model: ["Local neural (offline)", "Online neural (Microsoft)", "System voices (legacy)"]
             enabled: !bridge.speech.active
-            onActivated: { bridge.speech.setEngine(currentIndex === 0 ? "neural" : "system"); page.sync() }
+            onActivated: { bridge.speech.setEngine(["neural", "online", "system"][currentIndex]); page.sync() }
         }
         Text { text: "Speaking voice"; color: "#99bdc5"; font.pixelSize: 12 }
         HudComboBox {
@@ -39,11 +39,11 @@ ScrollView {
         }
         Text { text: "Rate"; color: "#99bdc5"; font.pixelSize: 12 }
         HudSlider { id: rateSlider; objectName: "speechRate"; Layout.fillWidth: true; from: -1; to: 1; stepSize: .05; value: bridge.speech.rate; Accessible.name: "Speech rate" }
-        Text { text: bridge.speech.engineKind === "neural" ? "Pitch (natural voice)" : "Pitch"; color: "#99bdc5"; font.pixelSize: 12 }
-        HudSlider { id: pitchSlider; enabled: bridge.speech.engineKind !== "neural"; Layout.fillWidth: true; from: -1; to: 1; stepSize: .05; value: bridge.speech.pitch; Accessible.name: "Speech pitch" }
+        Text { visible: bridge.speech.engineKind === "system"; text: "Pitch"; color: "#99bdc5"; font.pixelSize: 12 }
+        HudSlider { id: pitchSlider; visible: bridge.speech.engineKind === "system"; Layout.fillWidth: true; from: -1; to: 1; stepSize: .05; value: bridge.speech.pitch; Accessible.name: "Speech pitch" }
         Text { text: "Volume"; color: "#99bdc5"; font.pixelSize: 12 }
         HudSlider { id: volumeSlider; Layout.fillWidth: true; from: 0; to: 1; stepSize: .05; value: bridge.speech.volume; Accessible.name: "Speech volume" }
-        Text { Layout.fillWidth: true; text: bridge.speech.engineKind === "neural" ? "Automatic selects a male Russian or English neural voice. Natural pitch is preserved. First use needs Internet for the model; subsequent speech stays on this computer. This is not an actor's cloned voice." : "Legacy voices depend on your OS. Russian needs a system speech voice; Linux needs Speech Dispatcher. Neural mode is recommended for better sound."; color: "#799eac"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+        Text { Layout.fillWidth: true; text: bridge.speech.engineKind !== "system" ? "Automatic male / female matches Russian or English to each reply. A specific voice keeps its language. Neural voices preserve natural pitch." : "Legacy voices depend on your OS. Russian needs a system speech voice; Linux needs Speech Dispatcher. Choose a neural mode for trained voices."; color: "#799eac"; font.pixelSize: 11; wrapMode: Text.WordWrap }
         RowLayout {
             HudButton { text: "Refresh voices"; implicitHeight: 34; font.pixelSize: 11; enabled: !bridge.speech.active; onClicked: { bridge.speech.refresh(); page.sync() } }
             HudButton { text: "Test voice"; objectName: "testSpeechButton"; implicitHeight: 34; font.pixelSize: 11; enabled: !bridge.busy && bridge.voiceState === "idle" && !bridge.fullProfile.busy; onClicked: { if (page.apply()) bridge.testSpeech() } }

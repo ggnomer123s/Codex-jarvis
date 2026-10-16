@@ -21,8 +21,11 @@ respectful assistant who treats the user as mentor, uses their language and
 keeps a little restrained wit. Updating the installer refreshes these managed
 instructions while preserving personal text. Start a new conversation afterward.
 
-Completed successful answers use local neural voices by default: Dmitri for
-Russian, Joe for English, or an explicitly selected Denis Russian voice.
+Completed successful answers use local neural voices by default: Dmitri / Irina
+for Russian and Joe / Lessac High for English, with male/female automatic choices
+and optional Denis. Explicit Online mode adds Microsoft Andrew / Brian
+Multilingual, Svetlana, Guy and Aria; spoken text is sent to Microsoft only in
+that mode. Local mode retains on-device synthesis.
 Use **Speech on/off** below the chat, **Read** on an assistant message,
 **Stop speech** or Escape. **Preferences > Speech** provides voice selection,
 rate, volume, refresh and a test. Models download once, then work offline on CPU;
@@ -62,7 +65,7 @@ software renderer and requires no new dependency or network request.
 | Ready | Slow turquoise breathing and drifting filaments |
 | Connecting, voice preparation, profile setup | Pale-blue rotating preparation arc |
 | Recording | Mint filaments expand and the center wave responds to microphone level |
-| Speaking | Pale-cyan outward pulses while local speech is active |
+| Speaking | Pale-cyan outward pulses while speech is active |
 | Transcribing | Blue processing wave and traveling arc |
 | Planning | Violet orbital loops change inclination |
 | Acting | Faster blue particles with short orbital trails |

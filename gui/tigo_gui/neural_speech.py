@@ -15,14 +15,17 @@ class State(Enum):
 class VoiceAttribute(Enum):
     Adult = 0
     Male = 1
+    Female = 2
 
 
 class NeuralVoice:
-    def __init__(self, key): self.key = key
-    def name(self): return VOICES[self.key]['name']
-    def locale(self): return QLocale(VOICES[self.key]['locale'])
+    def __init__(self, key, catalog=None):
+        self.key = key
+        self.catalog = VOICES if catalog is None else catalog
+    def name(self): return self.catalog[self.key]['name']
+    def locale(self): return QLocale(self.catalog[self.key]['locale'])
     def age(self): return VoiceAttribute.Adult
-    def gender(self): return VoiceAttribute.Male
+    def gender(self): return VoiceAttribute[self.catalog[self.key].get('gender', 'Male')]
 
 
 class NeuralEngine(QObject):
@@ -31,10 +34,11 @@ class NeuralEngine(QObject):
     preparing = Signal(str)
     start_timeout = 120000
 
-    def __init__(self, parent=None, *, command=None):
+    def __init__(self, parent=None, *, command=None, catalog=None):
         super().__init__(parent)
         self.process = QProcess(self)
         self.command = command or [sys.executable, '-u', '-m', 'tigo_gui.neural_worker']
+        self.catalog = VOICES if catalog is None else catalog
         self.process.started.connect(self._send)
         self.process.readyReadStandardOutput.connect(self._read)
         self.process.readyReadStandardError.connect(self._drain_error)
@@ -44,7 +48,7 @@ class NeuralEngine(QObject):
         self._stderr = ''
         self._state = State.Ready
         self._locale = QLocale('ru_RU')
-        self._voice = NeuralVoice(next(iter(VOICES)))
+        self._voice = NeuralVoice(next(iter(self.catalog)), self.catalog)
         self._rate, self._volume = 0, .85
         self._id = 0
         self._pending = None
@@ -52,8 +56,8 @@ class NeuralEngine(QObject):
 
     def locale(self): return self._locale
     def setLocale(self, locale): self._locale = locale
-    def availableLocales(self): return list({v['locale']: QLocale(v['locale']) for v in VOICES.values()}.values())
-    def availableVoices(self): return [NeuralVoice(k) for k, v in VOICES.items() if QLocale(v['locale']) == self._locale]
+    def availableLocales(self): return list({v['locale']: QLocale(v['locale']) for v in self.catalog.values()}.values())
+    def availableVoices(self): return [NeuralVoice(k, self.catalog) for k, v in self.catalog.items() if QLocale(v['locale']) == self._locale]
     def state(self): return self._state
     def errorString(self): return self._stderr
     def setVoice(self, voice): self._voice = voice
@@ -126,7 +130,7 @@ class NeuralEngine(QObject):
 
     def _process_error(self, error):
         if not self._stopping and not self._closing:
-            self._error('The neural speech process failed: ' + self.process.errorString())
+            self._error('The speech process failed: ' + self.process.errorString())
 
     def _finished(self, code, status):
         expected = self._stopping or self._closing
@@ -134,7 +138,7 @@ class NeuralEngine(QObject):
         if self._pending and not self._closing:
             self._start()
         elif not expected and self._busy:
-            self._error('The neural speech process exited unexpectedly. ' + self._stderr[-400:])
+            self._error('The speech process exited unexpectedly. ' + self._stderr[-400:])
 
     def stop(self):
         interrupt = self._busy or self._stopping
@@ -152,3 +156,13 @@ class NeuralEngine(QObject):
         if self.process.state() != QProcess.ProcessState.NotRunning:
             self.process.kill()
             self.process.waitForFinished(1500)
+
+
+class OnlineEngine(NeuralEngine):
+    """Same owned-process cancellation and mic handoff as local neural output."""
+    start_timeout = 45000
+
+    def __init__(self, parent=None, *, command=None):
+        from .online_voices import VOICES as online_catalog
+        super().__init__(parent, command=command or [sys.executable, '-u', '-m', 'tigo_gui.online_worker'],
+                         catalog=online_catalog)

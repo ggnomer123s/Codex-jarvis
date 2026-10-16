@@ -8,6 +8,49 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-16 — Male/female local and online voices (GUI 0.9.0)
+
+- Added local Russian Irina and English Lessac High female voices, with pinned
+  official archive size/SHA-256, retained model cards and existing verified
+  cache reuse. Dmitri, Denis and Joe remain compatible. Automatic male/female
+  selects a voice for Russian/English; explicit voices remain available.
+- Added explicit Online neural mode through locked edge-tts 7.3.1 and PyAV.
+  The curated Microsoft catalog offers Andrew/Brian Multilingual for Russian
+  male output, Svetlana for Russian female, Guy/Aria for English. Live probes
+  of native Dmitry repeatedly returned no audio despite its being listed, so
+  it is not offered as a working voice. Service changes/errors remain possible.
+- Online speech sends only the cleaned speaking copy to Microsoft, in bounded
+  requests/MP3/decoded PCM, with a small prefetch queue and in-memory playback.
+  Short sentences are grouped into bounded phrases for continuous prosody.
+  It never activates as a fallback from local mode, retries or replays audio.
+  The existing owned-process cancellation, stale-event guards, wake pause,
+  recording handoff and quiet-tail behavior are reused. Local stays the default.
+- Saved voice choices are separate for each mode; auto off, chosen local voice,
+  rate and volume survive upgrades. Natural neural pitch is retained. Updated
+  Speech settings with male/female labels, privacy text, reachable preview/stop
+  controls and both local/online screenshots. Fixed female-Automatic preview
+  language and Russian pronunciation of Tigo without modifying displayed chat.
+- Updated frozen extras, bootstrap import checks, public/security/speech guides,
+  provenance and maintainer context. Existing dependency versions are retained;
+  new online dependencies are locked. Voice models and generated user-facing
+  demo audio are not committed as source assets.
+- Verification: 93 root tests discovered, 90 passed and three Windows-only skips;
+  78 Qt/process/QML tests passed. New fixtures exercise male/female selection,
+  per-mode persistence, explicit online privacy/preview controls, bounded fake
+  transport, actual MP3 decoding and worker cancellation before mic release.
+  Real CPU synthesis produced non-silent Irina/Lessac High audio. All five
+  offered online voices returned decodable audio; Russian male/female local and
+  online demo WAVs were generated from synthetic text without speakers/mic.
+  Speech smoke, Python/Bash syntax, frozen lock, local links, English docs/scripts
+  and whitespace checks passed. Windows/audio hardware and subjective quality
+  are not established by these fixtures or generated files. No GitHub CI run
+  or authenticated model request was made for these tests.
+- Restarted the installed Linux application and exercised Online / Automatic
+  female / Test voice through the real GUI. The owned online worker completed
+  playback and the UI reported Finished speaking. The existing wake listener
+  paused during the test and returned to listening afterward. This is a Linux
+  playback-path check, not a subjective voice-quality or Windows hardware claim.
+
 ## 2026-10-16 — Rename the assistant and application to Tigo (GUI 0.8.0)
 
 - Renamed the Qt application, message authors, tray/preferences/wake text,

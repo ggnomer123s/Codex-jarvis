@@ -1,6 +1,14 @@
 # Tigo — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-16; see the newest entry for current behavior._
 
+**Male/female local and online speech — 2026-10-16 (GUI 0.9.0):**
+The current voice implementation supersedes the earlier local-only speech
+sections below. See [speech-output.md](speech-output.md), [voice notices](voice-notices.md)
+and the newest root change report. Local remains the default; selecting Online
+sends spoken text to Microsoft. Male/female automatic selection and provider
+voice preferences persist; bounded owned workers preserve cancellation/mic
+handoff. No actor clone, full-duplex audio or guaranteed pronunciation is claimed.
+
 **Tigo rename — 2026-10-16 (GUI 0.8.0):** the current product, CLI,
 Python package, Skill, icons, UI and wake name are Tigo. See [rename.md](rename.md)
 for migration behavior. Existing private data and desktop grants are preserved.
