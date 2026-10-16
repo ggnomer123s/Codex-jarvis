@@ -18,6 +18,61 @@ first: X11 needs `xdotool`, `wmctrl`, `maim`; Hyprland needs `grim`, `wtype`
 and compositor tools; other Wayland desktops need their portal backend.
 Existing MCP permissions are retained.
 
+## Automatic dependency-aware update: CachyOS and Windows 11
+
+First choose **Quit JARVIS**, including the background listener. These bootstrap
+commands work before the repository has been cloned as well as for an existing
+clean `main` checkout at the usual `Codex-jarvis-gui` path. They download the
+updater from this repository over HTTPS, check/install prerequisites, clone or
+fast-forward the checkout, run the ordinary GUI installer and start JARVIS.
+
+CachyOS/Arch, from a normal user terminal (including fish):
+
+```bash
+bash -c 'set -e; command -v curl >/dev/null || sudo pacman -Syu --needed --noconfirm curl; f=$(mktemp); cleanup() { rm -f -- "$f"; }; trap cleanup EXIT; curl --proto "=https" --tlsv1.2 -fL https://raw.githubusercontent.com/ggnomer123s/Codex-jarvis/main/scripts/update-cachyos.sh -o "$f"; bash "$f"'
+```
+
+Windows 11, from a normal **PowerShell** window (enter `powershell` first in CMD):
+
+```powershell
+& { $ErrorActionPreference = 'Stop'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $f = Join-Path ([IO.Path]::GetTempPath()) ('jarvis-update-' + [guid]::NewGuid().ToString() + '.ps1'); try { Invoke-WebRequest -UseBasicParsing -Uri 'https://raw.githubusercontent.com/ggnomer123s/Codex-jarvis/main/scripts/update-windows.ps1' -OutFile $f; & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $f; if ($LASTEXITCODE -ne 0) { throw 'JARVIS update failed; inspect the error above.' } } finally { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue } }
+```
+
+The scripts install required system/GUI/CPU voice packages, use uv-managed
+Python 3.12 with the frozen lock and import-check Qt/transcription dependencies.
+They retain a compatible existing Codex CLI and install it through npm if absent;
+the CachyOS helper can also replace an unsupported CLI with the user-local npm
+installation. A custom unsupported native Windows Codex installation needs its
+own upgrade; the script reports this rather than replacing it silently.
+Node 22+ is checked. An old Node-manager selection can require selecting the
+newly installed version. Existing Codex login/settings/Full Access preferences
+are reused; device sign-in runs only when login status requires it.
+
+CachyOS uses `sudo pacman -Syu --needed --noconfirm`, including the normal full
+rolling-release system upgrade, to avoid partial upgrades. It may need your sudo
+password. Windows uses winget for missing Git/Node/uv and the x64 Visual C++
+runtime; App Installer (winget) must
+be available. PATH is refreshed in-process after installs. Installer UAC prompts
+remain native Windows prompts; JARVIS and Codex never run elevated.
+
+Windows also checks SAPI Russian voices and, if absent, attempts the official
+Russian Text-to-Speech Windows capability in a separately elevated PowerShell.
+That step needs UAC consent and Windows Update access. Cancellation/policy/download
+failure produces a warning and the app remains usable; finish voice installation
+in Windows Speech settings and Refresh voices in JARVIS. Narrator-only voices
+may not be exposed to Qt. Whisper model files download on first voice use, and
+the selected third-party MCP can download its own package on first start.
+CUDA/editor SDKs and manual OS/portal permissions are outside the default CPU setup.
+
+Custom paths: run the downloaded CachyOS script with a checkout path argument,
+or Windows with `-RepoPath 'C:\path\to\checkout'`. Windows accepts
+`-SkipRussianVoice` if you prefer managing system voices yourself. Both scripts
+reject another repository, a non-main/detached checkout or local changes rather
+than reset/stash/delete work. Git divergence and dependency failures stop the
+update. A locked old GUI process can still prevent environment replacement;
+quit it first. See [normal updates](#update-an-existing-gui-installation) if the
+dependencies are already prepared.
+
 ## CachyOS, Arch, Manjaro, EndeavourOS
 
 ```bash

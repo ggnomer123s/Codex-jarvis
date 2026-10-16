@@ -12,6 +12,17 @@ Windows issue/unknowns, user preferences, implementation contracts, commit/CI
 pointers, update commands, cloud workflow and continuation checklist. Read that
 snapshot before using older sections below. This update changes no runtime behavior.
 
+**Dependency-aware updaters — 2026-10-16:** new `update-cachyos.sh` and
+`update-windows.ps1` bootstrap dependencies and reuse ordinary GUI installers,
+shared login/settings and safe fast-forward updates. uv uses Python 3.12 and
+the frozen CPU voice environment. CachyOS runs a full pacman upgrade; Windows
+checks winget tools, refreshes PATH and optionally installs official Russian TTS
+via a separate UAC process. No JARVIS elevation or live package install was
+performed in cloud tests. Dirty/wrong-origin/non-main checkouts stop without
+reset/stash; compatible existing Codex and login are retained. See
+[bootstrap commands](install-desktop.md#automatic-dependency-aware-update-cachyos-and-windows-11)
+and the latest change report for evidence and limits. Runtime GUI stays 0.6.1.
+
 **Windows ownership diagnostics — 2026-10-16 (GUI 0.6.1):** the user reported
 that a screen service says the user owns control, but had no raw tool error.
 Upstream Windows-MCP has a separate ownership gate and normally a ten-second

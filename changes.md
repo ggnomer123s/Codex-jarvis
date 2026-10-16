@@ -11,6 +11,39 @@ the source of commit timestamps.
 
 
 
+## 2026-10-16 — Dependency-aware CachyOS and Windows update commands
+
+- Added downloadable `scripts/update-cachyos.sh` and `update-windows.ps1` for
+  fresh or existing default/custom checkout paths. They check/install prerequisites,
+  retain supported user-selected tools, use uv-managed Python 3.12 and frozen
+  voice dependencies, run existing GUI/shared-profile installers, import-check
+  Qt/CPU transcription and launch the app. Device login runs only if needed.
+- CachyOS installs Qt/X11/Wayland/audio/speech packages through the normal full
+  pacman rolling upgrade, and installs missing/unsupported Codex user-locally.
+  Windows installs missing Git/Node LTS/uv/Visual C++ runtime via winget, refreshes PATH and reports
+  unsupported custom native Codex/old shadowing Node selections. No credentials
+  are copied and saved Full Access/MCP settings remain under ordinary installers.
+- Windows checks Russian SAPI voices and can install the official Russian TTS
+  OS capability through a separate UAC process. Failed/canceled optional voice
+  setup warns; JARVIS itself never runs elevated. Whisper/MCP package downloads
+  can still occur on first use; CUDA/editor SDKs and OS/portal permission dialogs
+  are outside the default CPU dependency setup.
+- Checkouts are validated for expected origin/root/main and clean state; updates
+  use ff-only, with no automatic resets, stash or deletion of user work. Package,
+  Git, installer and import failures stop before later launch steps. Added
+  guarded HTTPS bootstrap commands and detailed limits to installation docs,
+  README and both AI handovers. GUI/runtime version remains 0.6.1.
+- Verification: fixture tests cover package/update/installer ordering, paths with
+  spaces, existing/missing/unknown-error authentication, dirty/wrong-origin/branch protection,
+  package failure, old Node shadowing and Windows-native probe/checkout helpers.
+  Local validation passed 77 root tests (three Windows-only skips), new updater
+  fixtures, Bash/Python syntax, English docs/scripts, 140 local links/anchors,
+  documented Bash syntax, frozen lock and diff checks. The bootstrap targets
+  x86-64 desktops. CI now parses every Bash script and exercises Windows helpers without real
+  package downloads/UAC. Final test/CI outcomes are recorded after publication.
+  No real pacman, winget, Windows capability install, sign-in or hardware task
+  ran in this cloud.
+
 ## 2026-10-16 — Complete context-rollover handover
 
 - Expanded `readmeai.md` with a first-read resume card and navigation, established

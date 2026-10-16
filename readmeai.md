@@ -13,11 +13,11 @@ This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
 
-The latest user request is to preserve all useful project context in this file
-before conversation rollover. This update is documentation work, not a request
-to add another feature. Runtime implementation **0.6.1** was already published
-as `d63f53d`; its final verification report is `b804dd0`. Those are the baseline
-commits before this handover expansion, not a claim about a future Git HEAD.
+The context-rollover handover was published as `e970515`. The subsequent user
+request adds full CachyOS/Windows update commands that check/install dependencies;
+see section 13 and the newest change report for those bootstrap scripts. Runtime
+implementation **0.6.1** was published as `d63f53d`; its verification report is
+`b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
 **Current state:** the implementation and its CI checks are complete. No code
 patch, migration, build or background test process is intentionally left pending
@@ -588,6 +588,18 @@ The installed Skill and AGENTS block are refreshed by the normal installers;
 editing the checkout alone does not refresh already-running Codex instructions.
 
 ## 13. Installation and update handover
+
+Dependency-aware bootstrap entry points now exist: `scripts/update-cachyos.sh`
+and `scripts/update-windows.ps1`. The [download-and-run commands](docs/install-desktop.md#automatic-dependency-aware-update-cachyos-and-windows-11)
+work before cloning, check packages, use uv Python 3.12/frozen voice dependencies,
+run the existing installers and reuse login (device auth only when needed).
+CachyOS includes a full pacman upgrade; Windows uses winget/PATH refresh and can
+attempt the official Russian TTS capability with a separate native UAC prompt.
+Voice-capability failure warns without elevating JARVIS. They reject dirty,
+wrong-origin/non-main checkouts and stop on failures. Do not run them on this
+cloud just to test: fixture tests replace package managers, login and launchers.
+Whisper/backend packages can still download on first use; custom native Codex,
+Node-manager selection and OS permission issues may require user attention.
 
 Use the full [OS recipes](docs/install-desktop.md) for fresh installations.
 Do not run `git pull` in the user's home directory without specifying the

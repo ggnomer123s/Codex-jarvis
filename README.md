@@ -79,6 +79,8 @@ Copy-ready commands, including dependencies, Codex login and menu installation:
 | Windows 11 | [Windows installation](docs/install-desktop.md#windows-11) |
 
 If you already cloned `Codex-jarvis-gui`, use the [update commands](docs/install-desktop.md#update-an-existing-gui-installation).
+For a command that also checks/installs dependencies, use the
+[CachyOS and Windows bootstrap commands](docs/install-desktop.md#automatic-dependency-aware-update-cachyos-and-windows-11).
 
 GUI and CLI use your current Codex profile and existing sign-in. Full Access is
 on by default. Disable it in **Preferences > Access**; the saved setting also
