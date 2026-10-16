@@ -65,31 +65,6 @@ function Update-JarvisCheckout([string]$path) {
     }
 }
 
-function Install-JarvisRussianVoice {
-    $synth = $null
-    try {
-        Add-Type -AssemblyName System.Speech
-        $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-        $russian = @($synth.GetInstalledVoices() | Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -like 'ru-*' })
-        if ($russian.Count) { Write-Host 'Russian system speech voice is already installed.'; return }
-    } catch {
-        Write-Host 'Checking the Russian Text-to-Speech Windows component.'
-    } finally {
-        if ($synth) { $synth.Dispose() }
-    }
-    # Elevate only the official OS capability installation, never JARVIS/Codex.
-    Write-Host 'Russian speech is missing. Windows may ask for UAC to install the official Text-to-Speech component.'
-    try {
-        $process = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -ArgumentList @(
-            '-NoProfile','-Command',
-            '"Add-WindowsCapability -Online -Name Language.TextToSpeech~~~ru-RU~0.0.1.0 -ErrorAction Stop | Out-Host"'
-        )
-        if ($process.ExitCode -ne 0) { throw "Windows capability installation failed (exit $($process.ExitCode))." }
-    } catch {
-        Write-Warning ('JARVIS is installed, but Russian speech setup needs attention: ' + $_.Exception.Message + ' Add Russian in Settings > Time & language > Speech, then Refresh voices in JARVIS.')
-    }
-}
-
 function Main {
     if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw 'Use 64-bit PowerShell on x86-64 Windows 11. Other architectures need separate packaging validation.' }
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -122,11 +97,12 @@ function Main {
     Invoke-JarvisNative (Get-Command uv.exe).Source @('python','install','3.12')
     Invoke-JarvisNative (Get-Command uv.exe).Source @('sync','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','--python','3.12')
     Invoke-JarvisNative 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $path 'scripts\install-gui-windows.ps1'))
-    Invoke-JarvisNative (Get-Command uv.exe).Source @('run','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','python','-c','import PySide6.QtQuick, sounddevice, faster_whisper; print(PySide6.__version__)')
+    Invoke-JarvisNative (Get-Command uv.exe).Source @('run','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','python','-c','import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx; print(PySide6.__version__)')
     if (Test-JarvisLoginNeeded $codex.Source) {
         Invoke-JarvisNative $codex.Source @('login','--device-auth')
     }
-    if (-not $SkipRussianVoice) { Install-JarvisRussianVoice }
+    # Kept as a compatibility switch; neural speech needs no Windows voice component.
+    Invoke-JarvisNative (Get-Command uv.exe).Source @('run','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','python','-m','jarvis_gui.speech_models')
     Write-Host 'JARVIS updated. Existing settings and login are reused. Whisper models download on first voice use.'
     Invoke-JarvisNative 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $path 'scripts\jarvis-gui-windows.ps1'))
 }

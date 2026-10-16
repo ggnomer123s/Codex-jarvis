@@ -1,4 +1,4 @@
-"""Local OS text-to-speech, with explicit cancellation and microphone handoff."""
+"""Local neural/system speech with cancellation and microphone handoff."""
 import math
 import re
 import sys
@@ -42,7 +42,14 @@ class Speech(QObject):
         super().__init__(parent)
         self.settings = settings
         self.prepare = prepare or (lambda callback: callback())
-        self.factory = engine_factory or native_engine
+        self._injected = engine_factory is not None
+        # Existing native voice IDs/rate/pitch must not distort the new default.
+        if not self._injected and not settings.contains('speech/engine'):
+            for key, value in dict(engine='neural', voice='', rate=0., pitch=0.).items():
+                settings.setValue('speech/'+key, value)
+        self._engine_kind = 'system' if self._injected else str(settings.value('speech/engine', 'neural'))
+        if self._engine_kind not in ('neural', 'system'): self._engine_kind = 'neural'
+        self.factory = engine_factory or self._make_engine
         self._enabled = str(settings.value('speech/enabled', True)).lower() == 'true'
         self._voice_id = str(settings.value('speech/voice', ''))
         self._rate = saved_number(settings, 'rate', -.05, -1, 1)
@@ -53,7 +60,7 @@ class Speech(QObject):
         self._active = self._started = self._closing = self._ignore_state = False
         self._generation = 0
         self._state = 'idle'
-        self._status = 'Local speech is ready to initialize. Voices depend on your system.'
+        self._status = 'Local neural speech is ready. Voice models download once, then work offline.'
         self._quiet_callbacks = []
         self.quiet_timer = QTimer(self)
         self.quiet_timer.setSingleShot(True)
@@ -82,6 +89,35 @@ class Speech(QObject):
 
     @Property(str, notify=changed)
     def voice(self): return self._voice_id
+
+    @Property(str, notify=changed)
+    def engineKind(self): return self._engine_kind
+
+    def _make_engine(self, parent):
+        if self._engine_kind == 'system': return native_engine(parent)
+        from .neural_speech import NeuralEngine
+        return NeuralEngine(parent)
+
+    @Slot(str)
+    def setEngine(self, kind):
+        if self._injected or self._active or kind not in ('neural', 'system') or kind == self._engine_kind:
+            return
+        self.stop()
+        self._dispose_engine()
+        self._engine_kind, self._voice_id = kind, ''
+        self.settings.setValue('speech/engine', kind)
+        self.settings.setValue('speech/voice', '')
+        self.refresh()
+
+    def _dispose_engine(self):
+        if self._engine:
+            self._engine.stateChanged.disconnect(self._native_state)
+            self._engine.errorOccurred.disconnect(self._native_error)
+            if hasattr(self._engine, 'shutdown'): self._engine.shutdown()
+            else: self._engine.stop()
+            self._engine.deleteLater()
+            self._engine = None
+        self._voices = {}
 
     @Property(float, notify=changed)
     def rate(self): return self._rate
@@ -119,7 +155,7 @@ class Speech(QObject):
             self.changed.emit()
             return False
         if voice and voice not in self._voices and voice != self._voice_id:
-            self._status = 'Refresh voices and choose an installed voice.'
+            self._status = 'Refresh voices and choose an available voice.'
             self.changed.emit()
             return False
         self.stop()
@@ -134,7 +170,9 @@ class Speech(QObject):
             self._engine = self.factory(self)
             self._engine.stateChanged.connect(self._native_state)
             self._engine.errorOccurred.connect(self._native_error)
-        if self._engine.state() == QTextToSpeech.State.Error:
+            if hasattr(self._engine, 'preparing'):
+                self._engine.preparing.connect(self._preparing)
+        if self._engine.state().name == 'Error':
             raise ValueError(self._engine.errorString() or 'The local speech engine is unavailable.')
         if not self._voices:
             # Qt exposes voices for the current locale. Enumerate all installed
@@ -155,15 +193,10 @@ class Speech(QObject):
     def refresh(self):
         if self._active or self._closing:
             return
-        if self._engine:
-            self._engine.stateChanged.disconnect(self._native_state)
-            self._engine.errorOccurred.disconnect(self._native_error)
-            self._engine.deleteLater()
-            self._engine = None
-            self._voices = {}
+        self._dispose_engine()
         try:
             self._ensure_engine()
-            self._state, self._status = 'idle', 'Installed voices refreshed. Automatic chooses a matching Russian or English voice, preferring an adult male voice.'
+            self._state, self._status = 'idle', ('Neural voices ready. Automatic uses Dmitri for Russian and Joe for English; Denis is an alternate Russian voice. Models download on first use.' if self._engine_kind == 'neural' else 'Installed system voices refreshed. Automatic matches Russian or English.')
         except (ValueError, RuntimeError) as exc:
             self._state, self._status = 'error', str(exc)
         self.changed.emit()
@@ -171,13 +204,13 @@ class Speech(QObject):
     def _choose_voice(self, text):
         if self._voice_id:
             if self._voice_id not in self._voices:
-                raise ValueError('The saved voice is unavailable. Choose an installed voice or Automatic in Preferences > Speech.')
+                raise ValueError('The saved voice is unavailable. Choose an available voice or Automatic in Preferences > Speech.')
             return self._voices[self._voice_id]
         language = 'ru' if re.search(r'[\u0400-\u052f]', text) else 'en'
         candidates = [voice for voice in self._voices.values() if voice.locale().name().split('_')[0] == language]
         if not candidates:
             raise ValueError(('Russian' if language == 'ru' else 'English') + ' speech voice is not installed. Install it or choose a voice explicitly in Preferences > Speech.')
-        return min(candidates, key=lambda v:(v.age() != QVoice.Age.Adult, v.gender() != QVoice.Gender.Male))
+        return min(candidates, key=lambda v:(v.age().name != 'Adult', v.gender().name != 'Male'))
 
     def read(self, text, *, automatic=False):
         if self._closing or (automatic and not self._enabled):
@@ -218,7 +251,7 @@ class Speech(QObject):
             if generation != self._generation or not self._active or self._closing:
                 return
             self._state, self._status = 'preparing', 'Starting local speech.'
-            self.start_timer.start()
+            self.start_timer.start(getattr(engine, 'start_timeout', 5000))
             self.end_timer.start()
             engine.say(text)
         except (ValueError, RuntimeError) as exc:
@@ -228,13 +261,19 @@ class Speech(QObject):
     def _native_state(self, state):
         if self._ignore_state or self._closing or not self._active:
             return
-        if state == QTextToSpeech.State.Speaking:
+        if state.name == 'Speaking':
             self._started = True
             self.start_timer.stop()
             self._state, self._status = 'speaking', 'Speaking locally. Use Stop speech to interrupt.'
             self.changed.emit()
-        elif state == QTextToSpeech.State.Ready and self._started and self._engine.state() == state:
+        elif state.name == 'Ready' and self._started and self._engine.state() == state:
             self._cool_down('Finished speaking.')
+
+    def _preparing(self, message):
+        if self._active and not self._closing:
+            self._state, self._status = 'preparing', message
+            self.start_timer.start(120000)
+            self.changed.emit()
 
     def _native_error(self, reason, message=''):
         if not self._ignore_state and not self._closing:
@@ -281,6 +320,9 @@ class Speech(QObject):
             self.stop()
 
     def _quiet(self):
+        if self._engine and not getattr(self._engine, 'is_quiet', True):
+            self.quiet_timer.start(50)
+            return
         self._active = False
         if self._state != 'error': self._state = 'idle'
         callbacks, self._quiet_callbacks = self._quiet_callbacks, []
@@ -294,4 +336,5 @@ class Speech(QObject):
         self._quiet_callbacks.clear()
         self.quiet_timer.stop()
         self._stop_native()
+        if self._engine and hasattr(self._engine, 'shutdown'): self._engine.shutdown()
         self._active = False

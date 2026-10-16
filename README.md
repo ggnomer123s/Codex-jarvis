@@ -33,10 +33,11 @@ card shows the current activity, elapsed time and errors. See the
 
 **JARVIS character and spoken replies:** the installed Skill and managed Codex
 instructions treat you as the mentor: respectful, composed, concise and lightly
-witty. Completed answers are read aloud by default using local Windows/Linux
-voices. Use **Speech on/off**, a message's **Read**, or **Stop speech**; choose
-voice/rate/pitch/volume in **Preferences > Speech**. Russian needs an installed
-Russian speech voice. Wake listening pauses during output. See
+witty. Completed answers use local neural voices: **Dmitri** for Russian,
+**Joe** for English, with **Denis** as another Russian option. Models download
+once, then speak offline on CPU. Use **Speech on/off**, a message's **Read**,
+or **Stop speech**; choose voice/rate/volume in **Preferences > Speech**.
+No Russian Windows speech pack is needed. Wake listening pauses during output. See
 [speech setup and limitations](docs/speech-output.md).
 
 **Optional voice activation:** enable **Preferences > Wake** to listen locally
@@ -96,7 +97,7 @@ use an explicit checkout path and work from your user directory as well.
 
 ## Start here: project handoff for another AI
 
-**Current overview — 2026-10-16, GUI 0.6.1.** Start with
+**Current overview — 2026-10-16, GUI 0.7.0.** Start with
 **[readmeai.md](readmeai.md)** for the project's purpose, implemented features,
 architecture, decisions to preserve, code map, local state and test commands.
 This README is the public usage guide. **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**

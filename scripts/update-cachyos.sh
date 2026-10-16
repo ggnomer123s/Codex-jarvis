@@ -53,13 +53,14 @@ main() {
     bash "$repo_dir/scripts/install-gui-linux.sh"
     # Import the actual CPU voice and GUI dependencies without opening the mic.
     QT_QPA_PLATFORM=offscreen uv run --project "$repo_dir/gui" --frozen --extra voice python -c \
-        'import PySide6.QtQuick, sounddevice, faster_whisper; from jarvis_gui.speech import native_engine; print("GUI and CPU transcription imports passed.")'
+        'import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx; print("GUI, CPU transcription and neural speech imports passed.")'
     login_output="$(codex login status 2>&1)" || login_code=$?
     if (( login_code != 0 )); then
         [[ "${login_output,,}" == *'not logged in'* ]] || fail 'Could not verify the existing Codex login. Run codex login status and fix that error; no replacement login was attempted.'
         echo 'Codex is not signed in. Complete device login in the existing home.'
         codex login --device-auth
     fi
+    uv run --project "$repo_dir/gui" --frozen --extra voice python -m jarvis_gui.speech_models
     echo 'JARVIS updated. Whisper models download on first voice use; saved settings and login are reused.'
     exec "$HOME/.local/bin/jarvis-gui"
 }

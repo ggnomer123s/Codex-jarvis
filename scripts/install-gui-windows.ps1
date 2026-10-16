@@ -34,4 +34,4 @@ $shortcut.Description = 'JARVIS-CODEX MANAGED'
 $shortcut.Save()
 Write-Host 'Installed JARVIS in your Start menu. Keep this checkout in place.'
 Write-Host 'Full Access is on by default. Disable it in Preferences > Access if desired.'
-Write-Host 'Spoken replies are on by default. Preferences > Speech selects installed voices; add Russian in Windows Speech settings if needed.'
+Write-Host 'Local neural speech is on by default. Russian/English models download on first use; Preferences > Speech selects voices. No Windows voice component is needed.'

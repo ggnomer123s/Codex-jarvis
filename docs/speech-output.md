@@ -1,93 +1,102 @@
-# JARVIS character and local spoken replies
+# JARVIS character and local neural speech
 
-Updating the ordinary GUI installer refreshes `jarvis-desktop/SKILL.md` and the
-managed block of your Codex `AGENTS.md`, preserving personal instructions.
-Start a new conversation to load updated instructions. The character is calm,
-attentive and respectful: the user is the mentor and decision-maker. JARVIS
-uses the user's language, concise explanations and occasional dry wit, accepts
-corrections and can disagree thoughtfully. This is a conversational style,
-without claiming fictional identity, consciousness or additional permissions.
+Updating the GUI installer refreshes `jarvis-desktop/SKILL.md` and the managed
+Codex `AGENTS.md` block, preserving personal instructions. Start a new
+conversation to load them. JARVIS treats the user as mentor: calm, respectful,
+concise and occasionally dryly witty, using the user's language.
+
+## New default in 0.7.0
+
+Spoken answers now use **Piper/VITS neural voices through sherpa-onnx on CPU**,
+rather than Windows SAPI or Linux eSpeak speech output.
+
+| Voice | Language | Selection |
+| --- | --- | --- |
+| Dmitri Neural | Russian | Automatic for Russian text |
+| Denis Neural | Russian | Alternate in Preferences > Speech |
+| Joe Neural | English | Automatic for English text |
+
+These trained voices preserve natural pitch; no actor clone is included.
+Automatic selects one language for the whole reply; mixed-language pronunciation
+depends on that voice. Other languages can use explicitly selected installed
+voices in **System voices (legacy)** mode. Multilingual Whisper transcription
+remains a separate feature.
+
+On the first update to 0.7.0, old system voice IDs and rate/pitch settings reset
+to Automatic and neutral rate/pitch. Saved Speech off and volume are preserved.
+After migration, selected mode, voice and sliders persist.
+
+## Installation and downloads
+
+Ordinary GUI installers and launchers install the locked `voice` extra, including
+sherpa-onnx, its native core, sounddevice, NumPy and filelock. Windows needs no
+Russian language pack, speech component or separate TTS UAC prompt. Linux uses
+PortAudio for playback; distro dependency recipes include it. CPU inference
+needs no GPU, API key, account or Torch installation.
+
+The dependency-aware CachyOS/Windows updaters preload Dmitri and Joe. Ordinary
+GUI installation downloads a chosen model on first speech use, showing progress
+in Preferences > Speech. Each archive is about **67 MB**, unpacking to about
+**81 MB**. Denis downloads only when selected. Downloads use the official
+k2-fsa/sherpa-onnx GitHub release, checking pinned size and SHA-256 before bounded
+extraction. Interrupted or invalid downloads are replaced on the next attempt.
+Cached voices need no network for subsequent synthesis.
+
+- Linux cache: `${XDG_CACHE_HOME:-~/.cache}/jarvis/voices`.
+- Windows cache: `%LOCALAPPDATA%\jarvis\voices`.
+
+To download default voices from a prepared checkout, in Bash or PowerShell:
+
+```bash
+uv run --project gui --frozen --extra voice python -m jarvis_gui.speech_models
+```
+
+Append a model ID, such as `ru_RU-denis-medium`, to download only that voice.
+With JARVIS closed, removing a voice cache directory forces a new verified
+download. Model cards remain alongside weights. See [voice notices](voice-notices.md).
 
 ## Controls
 
-- **Speech on/off** in the composer saves automatic reading; it is on by default.
-- **Read** on an assistant message reads it even with automatic speech off.
-- **Stop speech** interrupts output. Escape also stops speech when no task or
-  recording has priority. Sending a new task or starting recording stops output.
-- **Preferences > Speech** selects an installed voice and saves rate, pitch and
-  volume. Use **Refresh voices**, **Test voice**, then Save to keep slider changes.
-  Test applies the displayed voice settings. The automatic checkbox applies
-  immediately. Native engines differ in pitch/rate support and voice quality.
+- **Speech on/off** saves automatic reading; default is on.
+- **Read** on an assistant message also works when automatic reading is off.
+- **Stop speech**, a new request, recording or app shutdown interrupts speech.
+  Escape stops output when no task or recording has priority.
+- **Preferences > Speech** selects **Neural (recommended)** or explicit legacy
+  system output, an available voice, rate and volume. Neural mode preserves
+  natural pitch; the pitch slider applies only to system voices.
+- **Test voice** applies displayed settings and speaks a sample. Save keeps
+  changes; the automatic checkbox and engine selection apply immediately.
+  **Refresh voices** recreates an idle engine and refreshes its catalog.
 
-Automatic reads only the current successful completed final answer. Streamed
-fragments, commentary, failed/canceled turns and restored conversations stay
-silent. Code fences, images, formatting and raw web URLs are removed from the
-spoken copy; the displayed answer remains unchanged. Speech is bounded to
-6,000 characters including a notice to read the remainder in chat. This is not
-semantic summarization. Automatic language choice supports Russian/English,
-preferring an adult male voice when installed. Other languages work by choosing
-an installed voice explicitly. A missing matching voice is reported instead of
-using the wrong language. This does not include an actor's cloned voice.
+Automatic speech reads only the current successful completed final answer.
+Streamed fragments, commentary, errors, canceled turns and restored history stay
+silent. Code fences, images, raw URLs and Markdown are removed from the spoken
+copy, limited to 6,000 characters. Chat text stays unchanged.
 
-![Speech settings showing the missing-engine diagnostic in this cloud capture](images/jarvis-speech-settings.png)
+## Responsiveness, microphone and privacy
 
-## Windows 11
+Downloads, loading, inference and playback run in an owned subprocess. The GUI
+stays responsive. Speech starts after the first bounded phrase synthesizes,
+without waiting for the entire answer. At most two successfully used models
+remain warm. Stop kills an active worker, so the next reply reloads from disk;
+successful completion keeps it warm. PCM stays in memory. No reply text is sent
+to a TTS service and speech recordings are not saved.
 
-Qt uses a local Windows `winrt` or `sapi` engine. Open **Settings > Time &
-language > Speech > Add voices**, install Russian, restart JARVIS and Refresh
-voices. Select a voice exposed in JARVIS's list: Narrator-only voices may not
-be exposed by the native Qt engine. Check Windows audio output and volume if
-the test is silent. Voice installation may require an initial system download;
-speaking through installed local voices does not require a TTS API key.
+Wake capture must acknowledge pause or exit before playback starts. It stays
+paused through output and a 300 ms quiet tail. Recording interrupts output and
+waits for the worker to stop before opening the mic. Late callbacks cannot start
+canceled speech/recording. This is coordinated turn-taking, not full-duplex echo
+cancellation. Model requests still use Codex as before.
 
-## Linux
+Missing dependencies, unavailable speakers, download/checksum failures and
+worker errors appear in chat/settings without resending the Codex task.
+First-use preparation has a two-minute inactivity deadline, refreshed by
+progress; an utterance has a ten-minute overall bound. Check audio output,
+volume and initial-download network access. Speech errors leave text chat usable.
+Legacy system mode needs an installed Windows speech voice or Linux Speech
+Dispatcher/eSpeak NG and libpulse. No mock engine is a production fallback.
 
-Install the libpulse client library, Speech Dispatcher, its speech output module
-and eSpeak NG. libpulse is needed by Qt even on a PipeWire desktop; it does not
-require replacing PipeWire or installing a PulseAudio server. For CachyOS
-and Arch derivatives:
-
-```bash
-sudo pacman -S --needed libpulse speech-dispatcher espeak-ng
-```
-
-Debian/Ubuntu:
-
-```bash
-sudo apt install libpulse0 speech-dispatcher espeak-ng libspeechd2
-```
-
-Fedora:
-
-```bash
-sudo dnf install pulseaudio-libs speech-dispatcher speech-dispatcher-espeak-ng espeak-ng
-```
-
-On openSUSE, use the Speech Dispatcher/eSpeak NG packages and output module
-provided by your release, plus its libpulse client library. Check the
-distribution's module configuration if Russian is absent from the voice list. Restart JARVIS after installing packages.
-If provided, `spd-say -l ru "Speech test"` checks the system output independently.
-The GUI installer never invokes sudo or edits system speech configuration.
-Qt uses `speechd`, or `flite` if its plugin and suitable voices are installed.
-No test/mock engine is selected as a production fallback.
-
-## Microphone, privacy and troubleshooting
-
-Speech uses local system synthesis, without a cloud TTS request or audio-file
-storage. People nearby can hear spoken answers; use Speech off or headphones
-when appropriate. Model requests still use Codex as before.
-
-Before playback, the optional wake worker must acknowledge that capture is
-paused (or exit if stalled). It remains paused until speech finishes plus a
-300 ms cooldown. Push-to-talk interrupts speech, waits for quiet, then starts
-capture; canceling that request discards late callbacks. The warm transcription
-worker can remain loaded. This is coordinated turn-taking, not full-duplex
-conversation or echo cancellation; delayed room echoes can still be heard.
-
-Missing voices, native engine errors and failure to start within five seconds
-are visible in chat/settings; a failure does not resend the model request.
-Refresh voices after fixing system configuration. Speech stops on app shutdown
-and has a ten-minute bound. A missing engine leaves chat and voice input usable.
-The automated tests use deterministic adapters and Qt's injected test plugin;
-actual voice quality, speakers and microphone behavior require a target-machine
-test on Linux/Windows.
+The user requested no further test runs and will check sound on their machines.
+Earlier local CPU synthesis and process/QML checks preceded that instruction;
+Windows hardware and audible quality have not been checked in this cloud.
+See [changes.md](../changes.md) for the recorded scope.

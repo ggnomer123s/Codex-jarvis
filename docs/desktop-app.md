@@ -21,11 +21,13 @@ respectful assistant who treats the user as mentor, uses their language and
 keeps a little restrained wit. Updating the installer refreshes these managed
 instructions while preserving personal text. Start a new conversation afterward.
 
-Completed successful answers are spoken by default through local OS voices.
+Completed successful answers use local neural voices by default: Dmitri for
+Russian, Joe for English, or an explicitly selected Denis Russian voice.
 Use **Speech on/off** below the chat, **Read** on an assistant message,
 **Stop speech** or Escape. **Preferences > Speech** provides voice selection,
-rate, pitch, volume, refresh and a test. Russian requires an installed Russian
-voice. Wake capture pauses during output; manual recording interrupts output
+rate, volume, refresh and a test. Models download once, then work offline on CPU;
+no Windows language pack is needed. Pitch applies only to legacy system mode.
+Wake capture pauses during output; manual recording interrupts output
 before opening the microphone. See [speech output](speech-output.md).
 
 ## Windows desktop ownership
@@ -259,14 +261,14 @@ bash scripts/jarvis-gui-linux.sh --no-voice
 ```bash
 uv sync --project gui --frozen --extra voice
 python3 -m unittest discover -s tests -v
-uv run --project gui --frozen python -m unittest discover -s gui/tests -v
+uv run --project gui --frozen --extra speech python -m unittest discover -s gui/tests -v
 ```
 
 Headless Linux smoke test (does not send a Codex request or access a microphone):
 
 ```bash
 QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software \
-  uv run --project gui --frozen jarvis-gui --smoke-test --screenshot /tmp/jarvis.png
+  uv run --project gui --frozen --extra speech jarvis-gui --smoke-test --screenshot /tmp/jarvis.png
 ```
 
 `gui/uv.lock` pins the dependencies. An isolated QML test exercises the real

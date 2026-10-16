@@ -1,16 +1,35 @@
 # JARVIS — AI MAINTAINER HANDOFF
 _Last reconciled on 2026-10-16; see the newest entry for current behavior._
 
+**Local neural speech — 2026-10-16 (GUI 0.7.0):** the user disliked system TTS.
+Default output now uses CPU Piper/VITS through sherpa-onnx: Dmitri Russian,
+Joe English, and optional Denis Russian. Old voice IDs/rate/pitch migrate to
+Automatic/natural defaults while Speech off and volume survive. Downloads,
+inference and in-memory sounddevice playback run in a warm owned subprocess;
+Stop cancels it and microphone callbacks wait for process exit. Models come
+from official GitHub releases with pinned size/SHA-256, locked bounded/atomic
+cache installs and model cards. Full updaters preload default voices; Windows
+no longer requests a Russian system speech capability or TTS UAC prompt.
+Preferences offers neural or explicit legacy system mode. No online TTS was
+added: the user's brief online preference was explicitly reversed to local.
+They also said **no further tests; they will check it**. A previous local Qt run
+passed 72 tests and actual Russian/English CPU generation returned finite,
+non-silent 22,050 Hz PCM. Later CLI/hardening/docs edits were not rerun and no
+Windows or audible hardware check is claimed. Publish with `[skip ci]`, leave
+no test job pending, and do not start further checks without a new request.
+See [speech output](speech-output.md), [notices](voice-notices.md),
+[readmeai.md](../readmeai.md) and [changes.md](../changes.md).
+
 **Start with [readmeai.md](../readmeai.md)** for the consolidated current product
 and architecture, implemented features, preserved decisions, source map, state
 locations and verification commands. This longer file retains chronological
 investigations: older diagrams, setup instructions and roadmap sections may be
 superseded or declined. Read them with the current overview and newest change
 report, not as a list of work to implement. The overview was checked against
-GUI 0.6.1 source and expanded for context rollover with a resume card, current
+GUI 0.7.0 source and expanded for context rollover with a resume card, current
 Windows issue/unknowns, user preferences, implementation contracts, commit/CI
 pointers, update commands, cloud workflow and continuation checklist. Read that
-snapshot before using older sections below. This update changes no runtime behavior.
+snapshot before using the historical sections below.
 
 **Dependency-aware updaters — 2026-10-16:** new `update-cachyos.sh` and
 `update-windows.ps1` bootstrap dependencies and reuse ordinary GUI installers,

@@ -77,7 +77,7 @@ class AppServer(QObject):
     def _initialize(self):
         if self._closing:
             return
-        self.request("initialize", {"clientInfo": {"name": "jarvis_desktop", "title": "JARVIS", "version": "0.6.1"},
+        self.request("initialize", {"clientInfo": {"name": "jarvis_desktop", "title": "JARVIS", "version": "0.7.0"},
                                     "capabilities": {"experimentalApi": False}}, self._initialized)
 
     def _initialized(self, result, error):

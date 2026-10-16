@@ -243,6 +243,11 @@ with tempfile.TemporaryDirectory() as directory:
  settings=QSettings(str(Path(directory)/'ui.ini'),QSettings.IniFormat)
  backend=Backend(settings,codex_home_override=Path(directory)/'codex')
  assert backend.speech.enabled
+ backend.speaker.refresh()
+ assert backend.speaker.engineKind=='neural'
+ assert any('Dmitri Neural' in v['label'] for v in backend.speaker.voices)
+ assert backend.speaker.state=='idle'
+ backend.speaker.setEngine('system')
  backend.speaker.read('A local voice test')
  assert backend.speaker.state=='error'
  assert 'libpulse' in backend.speaker.status

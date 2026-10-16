@@ -55,18 +55,16 @@ runtime; App Installer (winget) must
 be available. PATH is refreshed in-process after installs. Installer UAC prompts
 remain native Windows prompts; JARVIS and Codex never run elevated.
 
-Windows also checks SAPI Russian voices and, if absent, attempts the official
-Russian Text-to-Speech Windows capability in a separately elevated PowerShell.
-That step needs UAC consent and Windows Update access. Cancellation/policy/download
-failure produces a warning and the app remains usable; finish voice installation
-in Windows Speech settings and Refresh voices in JARVIS. Narrator-only voices
-may not be exposed to Qt. Whisper model files download on first voice use, and
+Both updaters download the default Russian/English neural speech models (about
+134 MB total), verify their pinned checksums and cache them for offline use.
+Windows no longer installs a Russian system speech capability or requests TTS
+UAC approval. An existing voice cache is reused. Whisper model files download on first voice use, and
 the selected third-party MCP can download its own package on first start.
 CUDA/editor SDKs and manual OS/portal permissions are outside the default CPU setup.
 
 Custom paths: run the downloaded CachyOS script with a checkout path argument,
 or Windows with `-RepoPath 'C:\path\to\checkout'`. Windows accepts
-`-SkipRussianVoice` if you prefer managing system voices yourself. Both scripts
+`-SkipRussianVoice` as a compatibility no-op; there is no system voice install. Both scripts
 reject another repository, a non-main/detached checkout or local changes rather
 than reset/stash/delete work. Git divergence and dependency failures stop the
 update. A locked old GUI process can still prevent environment replacement;
@@ -135,9 +133,9 @@ menu entry and update the ordinary Codex desktop backend. Full Access defaults
 on; disable it in Preferences > Access to save a sandbox mode for GUI and regular
 CLI launchers. All modes reuse the current Codex login. Keep the checkout in place.
 
-Linux spoken replies use Speech Dispatcher and an installed speech module.
-For openSUSE, install the Speech Dispatcher/eSpeak NG packages available for
-your release and configure its output module; see [speech setup](speech-output.md).
+Linux spoken replies use local neural synthesis and PortAudio. Speech Dispatcher
+and eSpeak output packages in older recipes are needed only for optional legacy
+system mode; see [speech setup](speech-output.md).
 
 ## Windows 11
 
@@ -212,11 +210,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Codex-
 
 ## Spoken replies
 
-Speech is on by default. Open **Preferences > Speech** to test installed voices
-and adjust voice/rate/pitch/volume. Windows uses native system voices; add the
-Russian voice under **Settings > Time & language > Speech > Add voices** if
-needed. Linux uses the packages listed above; existing CachyOS users can run
-`sudo pacman -S --needed libpulse speech-dispatcher espeak-ng` before updating.
+Speech is on by default. **Preferences > Speech** offers local neural Dmitri
+and Denis for Russian, Joe for English, rate/volume and Test voice. The first
+0.7.0 launch resets old system voice IDs and rate/pitch to natural defaults,
+preserving Speech off and volume. Default model downloads happen in the full
+updaters or on first use with ordinary installers. Windows needs no system
+Russian voice; Linux playback uses PortAudio. Pitch is kept natural in neural
+mode. Legacy system output remains an explicit option.
 The installer updates the managed JARVIS Skill and AGENTS character instructions;
 start a new conversation after updating. See [speech output](speech-output.md).
 

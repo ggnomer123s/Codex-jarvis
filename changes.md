@@ -8,6 +8,47 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-16 — Local neural voices replace system speech (GUI 0.7.0)
+
+Implementation: [speech controller](gui/jarvis_gui/speech.py),
+[worker](gui/jarvis_gui/neural_worker.py),
+[verified assets](gui/jarvis_gui/speech_models.py) and
+[update recipes](docs/install-desktop.md).
+
+- Replaced default OS TTS with CPU Piper/VITS through locked sherpa-onnx and
+  its native core: Dmitri Neural for Russian, Joe Neural for English, plus Denis
+  Neural as another Russian choice. The first launch clears legacy voice IDs
+  and resets rate/pitch to natural defaults while preserving Speech off/volume;
+  subsequent engine/voice settings persist. No online TTS path was added.
+- Added a warm owned worker for downloads, model loading, bounded-phrase
+  synthesis and in-memory sounddevice playback. Successful output retains up to
+  two models; interruption kills active synthesis/audio. Generation IDs ignore
+  late events, and microphone callbacks also wait for worker exit.
+- Added pinned-size/SHA-256 downloads from official sherpa-onnx GitHub assets,
+  cross-platform cache locks, bounded path-safe extraction, atomic installation
+  and interrupted-download replacement. Each voice is about 67 MB compressed;
+  default Russian/English downloads total about 134 MB. Cards remain with models.
+- Preferences > Speech now offers recommended neural or explicit legacy system
+  mode, available neural voices, rate/volume, progress and natural pitch. Updated
+  the frozen voice extra and added a smaller speech-only development extra.
+- Full CachyOS/Windows updaters preload default voices. Removed Windows SAPI
+  probing and Russian speech-capability/UAC installation; its old opt-out switch
+  remains an accepted no-op. Ordinary GUI installers download voices on first
+  speech use. Updated README, installation/speech docs, provenance notices and
+  both AI handovers. GUI/client metadata is 0.7.0.
+- Before the user's stop-testing instruction: 72 local Qt/process/QML tests
+  passed, including migration, warm reuse, stale events, cancellation, errors,
+  asset integrity and traversal/link rejection. Real Dmitri/Joe CPU inference
+  produced finite non-silent 22,050 Hz audio. Example 4-second phrases generated
+  in about 0.23-0.49 seconds after loading on this cloud CPU; this is not a
+  latency guarantee or an audible-quality/hardware check. The lock was refreshed
+  and speech dependencies imported successfully.
+- The user explicitly chose local speech and asked to run no further tests.
+  Later CLI/default-argument hardening, event validation, active-mode guard and
+  final docs were not rerun. This publication skips CI. Windows hardware, actual
+  speakers and subjective sound quality are left for the user's verification;
+  no live installer/package-manager task ran in this cloud.
+
 
 
 

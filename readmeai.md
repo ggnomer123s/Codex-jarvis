@@ -1,6 +1,6 @@
 # JARVIS: current project context for an AI maintainer
 
-Last reconciled: **2026-10-16**, GUI **0.6.1**. Repository:
+Last reconciled: **2026-10-16**, GUI **0.7.0**. Repository:
 [ggnomer123s/Codex-jarvis](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -19,13 +19,20 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** the implementation and its CI checks are complete. No code
-patch, migration, build or background test process is intentionally left pending
-by this handover. No next feature has been chosen. Preserve the original user
+**Current state:** GUI 0.7.0 replaces disliked system speech with local CPU
+Piper/VITS neural voices: Dmitri (Russian default), Denis (Russian alternative),
+Joe (English). The user briefly selected online speech, then explicitly reversed
+that choice: **local speech, no further tests; the user will check it**. No online
+TTS dependency or text-upload path was added. Publish this change with `[skip ci]`;
+do not start further local/CI runs unless the user requests them. Earlier local
+CPU synthesis and 72 simulated Qt tests completed before this instruction;
+later small hardening/CLI/docs changes were not rerun. No Windows/audio hardware
+or subjective voice-quality check is claimed. No test process is left running.
+Preserve the original user
 goal when the conversation continues; do not restart development from scratch
 or implement older declined proposals just because they appear in the history.
 
-**Latest practical issue:** the user reports that JARVIS on Windows said the
+**Previous unresolved live-machine issue:** the user reports that JARVIS on Windows said the
 screen service was temporarily unavailable because control belonged to the
 user. They requested permanent control and a default-on checkbox. The existing
 Full Access checkbox already defaults on. Version 0.6.1 adds read-only ownership
@@ -103,7 +110,7 @@ Typed request / reviewed push-to-talk transcript / reviewed local attachments
             -> configured desktop MCP -> windows, pointer, keyboard, screenshots
        <- typed events -> streamed chat, activity, verification, final result
        -> local conversation history and content-free timing/checkpoint data
-       -> successful final answer -> optional local system text-to-speech
+       -> successful final answer -> optional local neural text-to-speech
 
 Optional local wake listener -> matching wake name -> restore existing window
 Terminal jarvis launchers -> interactive Codex CLI in the same Codex home
@@ -204,19 +211,32 @@ history stay silent. **Read** speaks an assistant message even with auto off;
 **Speech on/off**, **Stop speech** and **Preferences > Speech** expose control,
 voice selection, rate, pitch, volume, refresh and testing.
 
-Qt uses installed Windows winrt/sapi or Linux speechd/flite engines. Enumerate
-voices across all installed locales, not just the OS interface language.
-Automatic choice matches Russian/English and prefers an adult male voice when
-installed; other languages need an explicit installed voice selection. Missing
-matching voices are reported. This is system TTS, not an actor clone or cloud
-TTS service. Fenced code, images, raw URLs and Markdown are removed from the
+Default synthesis uses sherpa-onnx CPU Piper/VITS models: Dmitri for Russian,
+Joe for English, with Denis as an explicit Russian alternative. `NeuralEngine`
+adapts a warm owned `neural_worker` subprocess to the speech controller. Downloads,
+model loading, bounded-phrase inference and sounddevice playback stay outside
+the GUI thread. At most two models remain warm; successful output keeps the
+worker alive, while Stop kills an active worker and rejects late IDs. Playback
+uses in-memory PCM, with no TTS text upload or saved audio. `speech_models.py`
+downloads official GitHub archives (about 67 MB each), verifies pinned SHA-256
+and size, locks concurrent writers, bounds extraction and atomically installs
+under Linux XDG cache or Windows LOCALAPPDATA `jarvis/voices`.
+
+The first 0.7.0 launch migrates old voice/rate/pitch to Automatic/neutral while
+preserving automatic Speech off and volume. Selected engine/voice persists
+afterward. Neural pitch stays natural; rate and volume remain adjustable.
+Legacy system mode is explicit: Qt winrt/sapi or speechd/flite enumerates all
+installed locales and sets the chosen locale before voice. Other languages can
+use explicit installed system voices. No actor clone or cloud TTS was added.
+Fenced code, images, raw URLs and Markdown are removed from the
 spoken copy; output is bounded to 6,000 characters. Chat text stays unchanged.
 
 Speech waits for wake capture to acknowledge pause or exit, then holds the mic
 through playback and a 300 ms cooldown. Manual recording interrupts speech and
 waits for quiet. Cancellation/generation IDs reject stale callbacks. This is
-turn-taking, not full-duplex echo cancellation. A missing native speech module
-must leave text chat usable with a visible speech error. Never silently select
+turn-taking, not full-duplex echo cancellation. Quiet callbacks also wait until
+an interrupted neural process has exited. Missing speech dependencies must leave
+text chat usable with a visible error. Never silently select
 Qt's test/mock speech engine in production.
 
 ### Speed, workflows, diagnostics and repair memory
@@ -282,7 +302,7 @@ See [installation/update recipes](docs/install-desktop.md),
 | `gui/jarvis_gui/app_server.py`, `core.py` | Owned JSON-RPC process, protocol/launch policy, bounded requests and cleanup. |
 | `gui/jarvis_gui/ui/` | Production Qt Quick window, artwork, chat cards, previews, history and speech settings. |
 | `messages.py`, `presentation.py`, `attachments.py`, `history.py` under `gui/jarvis_gui/` | Chat model, inert Markdown rendering, reviewed local files and SQLite persistence. |
-| `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py` under `gui/jarvis_gui/` | Local transcription, wake detection, acknowledged capture ownership and native speech. |
+| `voice.py`, `wake.py`, `wake_control.py`, `speech.py`, `speech_text.py`, `neural_speech.py`, `neural_worker.py`, `speech_models.py` under `gui/jarvis_gui/` | Local transcription, acknowledged wake/mic ownership, speech lifecycle, warm neural worker and verified model assets. |
 | `runtime.py`, `workflows.py`, `access.py`, `profiles.py`, `preferences.py`, `desktop_control.py` under `gui/jarvis_gui/` | Timings/checkpoints, checked aliases, shared access/login, model/language settings and read-only ownership diagnostics. |
 | `skills/jarvis-desktop/SKILL.md`, `config/jarvis-agents.md` | Installed conversation persona and instruction-based GUI routing. |
 | `scripts/sync_agents.py` | Safe managed AGENTS block upgrades/backups; preserve unrelated text. |
@@ -303,10 +323,10 @@ desktops. Other architectures need their own packaging validation.
 For a local development/test environment, from the repository root:
 
 ```bash
-uv sync --project gui --frozen
+uv sync --project gui --frozen --extra speech
 python3 -m unittest discover -s tests -v
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen python scripts/check_desktop_ui.py
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen jarvis-gui --smoke-test
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen --extra speech python scripts/check_desktop_ui.py
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software uv run --project gui --frozen --extra speech jarvis-gui --smoke-test
 uv lock --project gui --check --offline
 git diff --check
 ```
@@ -318,8 +338,9 @@ settings. Real launchers enable optional voice dependencies via `--extra voice`;
 the test suite uses isolated fake processes/audio and needs no Codex login.
 
 Linux needs Qt display/OpenGL libraries; see distribution recipes rather than
-guessing package names. Speech needs the libpulse client library plus a usable
-Speech Dispatcher/eSpeak NG module, or another supported native engine.
+guessing package names. Neural output uses the locked speech/voice extra and
+PortAudio; system mode alone needs Speech Dispatcher/eSpeak NG or Windows voices.
+The native Qt module is optional. Model downloads require GitHub release access.
 PipeWire desktops can use libpulse without replacing their audio server.
 Microphone input needs PortAudio. Windows uses installed native voices and the
 sounddevice runtime when available. Whisper's initial model download needs
@@ -363,7 +384,7 @@ locale. Read the relevant tests before changing those paths.
 
 General task rollback/replay, automatic repair, continuous video understanding,
 specialized editing bridges, parallel specialist bots, extra model providers,
-neural/actor-identical speech and full-duplex conversation are not implemented.
+actor-identical speech and full-duplex conversation are not implemented.
 Earlier competitor reviews and roadmap proposals are background research,
 not approved work. See [related projects](docs/related-projects.md) and the
 [long handoff](docs/AI_HANDOFF.md) only with that distinction in mind.
@@ -541,8 +562,8 @@ not establish authenticated model requests, desktop input or image extraction.
 | Wake segmentation | 16 kHz, about 0.65 s silence or 4 s max phrase, short overlap, 8 s wake cooldown. |
 | Wake pause acknowledgment | 1.5 s deadline, then kill only the stalled wake worker before releasing capture ownership. |
 | Warm voice worker | Five idle minutes before unload; model/options changes and shutdown also unload. |
-| Speech | Auto on; rate -0.05, pitch -0.12, volume 0.85; system-dependent actual voice. |
-| Speech timing | 300 ms quiet tail, 5 s start deadline, 10 minute utterance bound, 6,000-character spoken copy. |
+| Speech | Auto on; local neural Dmitri/Joe, optional Denis; neutral rate/pitch, volume 0.85. |
+| Speech timing | 300 ms quiet tail plus interrupted-worker exit; neural preparation 120 s inactivity (progress refreshes), native start 5 s; total 10 min, 6,000-character spoken copy. |
 | Layout | Font 14 px, 12-28 px bounds; normal core shown; full chat initially off. Saved pane width constrained to 420-1000. |
 | History persistence | 750 ms debounce and explicit flushes at completion/context changes/exit; 8,000,000-byte transcript bound. |
 | History list | 100 matching entries, pins first, Unicode case folding; no automatic history deletion. |
@@ -567,7 +588,12 @@ HTTP(S) schemes; Copy preserves the source text.
 
 ### Speech, wake and settings
 
-Keep OS speech separate from transcription and the Codex process. Enumerate Qt
+Keep speech synthesis separate from transcription and the Codex process.
+Neural downloads/inference/playback belong in the owned worker, never the GUI
+thread. Keep verified cache installs, bounded chunks, generation IDs and worker
+exit before microphone callbacks. Do not kill the warm worker after a successful
+utterance; stop an active one immediately on interruption. Neural pitch must
+not be artificially lowered. For explicit legacy mode, enumerate Qt
 voices by installed locales; `availableVoices()` alone can expose only the
 current locale. Explicitly set the chosen locale before its voice. Native errors
 can fire synchronously during configuration: recheck generation/cancellation
@@ -593,9 +619,9 @@ Dependency-aware bootstrap entry points now exist: `scripts/update-cachyos.sh`
 and `scripts/update-windows.ps1`. The [download-and-run commands](docs/install-desktop.md#automatic-dependency-aware-update-cachyos-and-windows-11)
 work before cloning, check packages, use uv Python 3.12/frozen voice dependencies,
 run the existing installers and reuse login (device auth only when needed).
-CachyOS includes a full pacman upgrade; Windows uses winget/PATH refresh and can
-attempt the official Russian TTS capability with a separate native UAC prompt.
-Voice-capability failure warns without elevating JARVIS. They reject dirty,
+CachyOS includes a full pacman upgrade; Windows uses winget/PATH refresh.
+Both preload verified default neural voices; no Windows speech capability or
+TTS UAC step remains in 0.7.0. They reject dirty,
 wrong-origin/non-main checkouts and stop on failures. Do not run them on this
 cloud just to test: fixture tests replace package managers, login and launchers.
 Whisper/backend packages can still download on first use; custom native Codex,
@@ -642,11 +668,12 @@ native stderr from `codex mcp get windows-mcp` must not abort the missing-server
 probe: the installer scopes a nonterminating policy to that probe and checks
 the exit code. Real registration failures still stop installation.
 
-For CachyOS local output, install `libpulse speech-dispatcher espeak-ng` using
-the distribution package manager; recording needs PortAudio. Other distribution
-package names are in the recipes. On Windows, add a Russian speech voice under
-Time & language > Speech, restart JARVIS and Refresh voices. Narrator-only
-voices may not be exposed to Qt. Installed voice quality/pitch support varies.
+Full updaters preload the two default neural models after installing locked
+voice dependencies. Ordinary installers defer this to first use. Windows no
+longer installs a Russian system speech capability; `-SkipRussianVoice` is a
+compatibility no-op. No TTS elevation or language pack is needed. Linux output
+and recording use PortAudio. Other distribution packages are in the recipes;
+Speech Dispatcher/system voices apply only to explicit legacy mode.
 Neither the GUI installer nor this cloud work bypasses UAC or installs a system
 input daemon. After updating Skill/persona/ownership guidance, start a new
 conversation to load it. Keep using the existing Codex login.
@@ -665,7 +692,7 @@ In this cloud, writable cache directories under `/tmp` avoided cache permission
 problems. A previously exercised invocation was:
 
 ```bash
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_CACHE_HOME=/tmp/jarvis-cache UV_CACHE_DIR=/tmp/uv-cache uv run --project gui --frozen python scripts/check_desktop_ui.py
+QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software XDG_CACHE_HOME=/tmp/jarvis-cache UV_CACHE_DIR=/tmp/uv-cache uv run --project gui --frozen --extra speech python scripts/check_desktop_ui.py
 ```
 
 The GUI environment is `gui/.venv`; root tests mostly use the standard library.
@@ -734,7 +761,7 @@ schemas and official source before adopting additional code/dependencies.
 | [Install recipes](docs/install-desktop.md), [Linux](docs/linux.md), [Windows](docs/windows11.md) | Fresh install/update prerequisites, platform integration and known failures. |
 | [Access](docs/full-access.md), [Hypruse access](docs/hypruse-access.md), [security](docs/security.md) | Shared profile, checkbox, ownership, confinement and permission boundaries. |
 | [Runtime](docs/runtime.md), [performance](docs/performance.md) | Persistent workers, protocol/workflows, timing and avoiding repeated round trips. |
-| [Wake](docs/voice-activation.md), [speech](docs/speech-output.md), [memory/voice](docs/memory-and-voice.md) | Microphone modes, local audio, installed voices and explicit repair memory. |
+| [Wake](docs/voice-activation.md), [speech](docs/speech-output.md), [voice notices](docs/voice-notices.md), [memory/voice](docs/memory-and-voice.md) | Microphone modes, neural voice setup/provenance, legacy mode and explicit repair memory. |
 | [GUI operator](docs/gui-operator.md), [navigation](docs/gui-navigation.md), [shortcuts](docs/shortcuts.md) | Backend-aware actions, regions, pointer selection, keyboard/compositor differences. |
 | [MCP/Skills](docs/mcp-and-skills.md), [usage](docs/usage.md), [related projects](docs/related-projects.md) | Instruction/tool integration, terminal usage and source research. |
 
@@ -745,7 +772,7 @@ schemas and official source before adopting additional code/dependencies.
 2. Inspect the real checkout/agent instructions, `git status`, recent commits and
    current remote before editing. Do not reset another contributor's changes.
 3. Read the newest `changes.md` entries and relevant source/tests. The latest
-   runtime is 0.6.1; a later documentation commit does not require version bumps
+   runtime is 0.7.0; a later documentation commit does not require version bumps
    or mean another feature remains to implement.
 4. Continue the actual requested task. If the user says to continue Windows
    troubleshooting, distinguish unknown live diagnostics from already-completed
