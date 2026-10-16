@@ -40,7 +40,11 @@ the source of commit timestamps.
   fixtures, Bash/Python syntax, English docs/scripts, 140 local links/anchors,
   documented Bash syntax, frozen lock and diff checks. The bootstrap targets
   x86-64 desktops. CI now parses every Bash script and exercises Windows helpers without real
-  package downloads/UAC. Final test/CI outcomes are recorded after publication.
+  package downloads/UAC. Initial [CI 38869298088](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38869298088)
+  passed static/root and both GUI suites but failed the new Windows updater
+  fixture step. Extended the existing child-test runner with a bootstrap option
+  so its failure traceback appears in the public CI annotation for diagnosis.
+  Final test/CI outcomes are recorded after publication.
   No real pacman, winget, Windows capability install, sign-in or hardware task
   ran in this cloud.
 
