@@ -25,6 +25,10 @@ conversation. See [ownership](full-access.md#windows-desktop-ownership) and the
 newest [change report](../changes.md) for verification. Real Windows session
 ownership was not observed from this cloud; identifying the user's actual tool
 still requires its diagnostic output.
+Local suites passed 71 root tests (one native Windows skip) and 65 Qt tests.
+[CI run 38866945827](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38866945827)
+for `d63f53d` passed static/root and both Ubuntu/Windows desktop jobs, including
+the Windows shared-profile probe. This result-only documentation update skips CI.
 
 **JARVIS character and speech update — 2026-10-15 (GUI 0.6.0):** the user
 requested a mentor-oriented JARVIS character and spoken answers. The installed

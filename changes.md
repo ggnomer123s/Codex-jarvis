@@ -38,8 +38,12 @@ the source of commit timestamps.
   button, read-only calls with no model turn, missing tools, refusal and Stop.
   Targeted final regressions, Python syntax, English Markdown, 119 local links/
   fragments, Access-tab smoke, frozen lock and diff checks passed. Cross-platform
-  CI is recorded after publication below. Real Windows desktop input, service ownership
-  and authenticated model tasks were not exercised in this cloud.
+  CI [run 38866945827](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38866945827)
+  for [d63f53d](https://github.com/ggnomer123s/Codex-jarvis/commit/d63f53d) passed
+  static/root and Ubuntu/Windows desktop jobs, including the native Windows
+  shared-profile probe. Real Windows desktop input, service ownership and
+  authenticated model tasks were not exercised in this cloud. This result-only
+  documentation follow-up skips CI.
 
 ## 2026-10-15 — Consolidated AI project overview
 

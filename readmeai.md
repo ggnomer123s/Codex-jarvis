@@ -298,8 +298,10 @@ frozen unless a requested dependency change requires updating them.
 
 GUI 0.6.1 local verification: **71 root tests passed**, one native Windows probe
 skipped, and **65 Qt tests passed**. Ownership diagnostics use simulated
-Windows-MCP status, not the user's live desktop; see the newest change report
-for subsequent CI outcomes.
+Windows-MCP status, not the user's live desktop.
+[CI run 38866945827](https://github.com/ggnomer123s/Codex-jarvis/actions/runs/38866945827)
+for `d63f53d` passed static/root and Ubuntu/Windows desktop jobs, including the
+Windows shared-profile probe.
 
 Preceding GUI 0.6.0 runtime verification: **67 root tests passed**, one native Windows probe
 skipped locally, and **60 Qt tests passed**. Final
