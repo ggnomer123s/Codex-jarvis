@@ -8,6 +8,28 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Sentence-level speech and shorter playback gaps (GUI 0.14.1)
+
+- Wrapped lines and commas no longer split prose into single-word synthesis
+  requests. Completed sentences are emitted separately even when one model delta
+  contains several; partial text remains buffered until a sentence or message
+  boundary. Fenced code and incomplete-link handling remain in place.
+- Removed the fixed 300 ms delay between queued sentences. Dispatch proceeds on
+  the next event-loop opportunity once the engine is quiet; the microphone stays
+  reserved through the queue instead of being prepared again for every sentence.
+  Late-arriving queued speech can also bypass an already-started completion tail.
+  The final speaker tail and error/cancellation microphone safeguards remain.
+- Added the reported greeting as a character-by-character/wrapped-line fixture
+  and queue tests checking sub-300-ms dispatch, sentence order, a single microphone
+  reservation and the final quiet tail. Updated live-voice documentation and GUI
+  version/lock metadata; no dependencies or installer changes are required.
+- Targeted verification: four pure text tests and fourteen speech/Qt tests passed.
+  The isolated clean-HEAD GUI/process/QML suite passed all 118 tests, without
+  including canceled setup/wake drafts. Final targeted speech tests, frozen-lock,
+  Python syntax, English-only guide and diff checks also passed. No live Windows audio
+  or online latency measurement is claimed; synthesis and network latency remain.
+  This change does not alter dictation or earlier canceled setup/wake drafts.
+
 ## 2026-10-17 — Live dictation and incremental assistant speech (GUI 0.14.0)
 
 - Added bounded rolling local/online provisional transcription, refreshed after

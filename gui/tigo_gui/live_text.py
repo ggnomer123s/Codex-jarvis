@@ -28,7 +28,13 @@ class LiveTranscript:
 class SpeechSentences:
     def __init__(self):
         self.buffer = ''
+        self.prose = ''
         self.fence = ''
+
+    @staticmethod
+    def balanced(text):
+        return (text.count('`') % 2 == 0 and text.count('[') == text.count(']')
+                and text.count('(') == text.count(')'))
 
     def feed(self, text, final=False):
         self.buffer += text
@@ -39,24 +45,40 @@ class SpeechSentences:
         if final:
             self._line(self.buffer, result)
             self.buffer = ''
-        elif not self.fence and not re.match(r'^\s*[`~]', self.buffer):
-            # Wait for balanced inline markup before exposing a partial URL/code.
-            if self.buffer.count('`') % 2 == 0 and self.buffer.count('[') == self.buffer.count(']') and self.buffer.count('(') == self.buffer.count(')'):
-                ends = list(re.finditer(r'[.!?\u2026][\"\u00bb\u201d]*\s+', self.buffer))
-                if ends:
-                    cut = ends[-1].end()
-                    self._line(self.buffer[:cut], result)
-                    self.buffer = self.buffer[cut:]
+            self._emit(result, final=True)
+        elif not self.fence and not re.match(r'^\s*[`~]', self.buffer) and self.balanced(self.buffer):
+            ends = list(re.finditer(r'[.!?\u2026][\"\u00bb\u201d]*\s+', self.buffer))
+            if ends:
+                cut = ends[-1].end()
+                self._line(self.buffer[:cut], result)
+                self.buffer = self.buffer[cut:]
         return result
+
+    def _emit(self, result, final=False):
+        # Every completed sentence becomes one utterance. A wrapped line or
+        # comma never creates a separate single-word synthesis request.
+        if self.balanced(self.prose):
+            offset = 0
+            for end in re.finditer(r'[.!?\u2026][\"\u00bb\u201d]*(?:\s+|$)', self.prose):
+                clean = spoken_text(self.prose[offset:end.end()])
+                if clean:
+                    result.append(clean)
+                offset = end.end()
+            self.prose = self.prose[offset:]
+        if final:
+            clean = spoken_text(self.prose)
+            if clean:
+                result.append(clean)
+            self.prose = ''
 
     def _line(self, line, result):
         marker = re.match(r'^ {0,3}(`{3,}|~{3,})', line)
         if marker:
             if not self.fence:
+                self._emit(result, final=True)
                 self.fence = marker[1]
             elif marker[1][0] == self.fence[0] and len(marker[1]) >= len(self.fence):
                 self.fence = ''
         elif not self.fence:
-            clean = spoken_text(line)
-            if clean:
-                result.append(clean)
+            self.prose += (' ' if self.prose and line.strip() else '') + line.strip()
+            self._emit(result)

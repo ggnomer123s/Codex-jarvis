@@ -179,6 +179,34 @@ for line in sys.stdin:
         QTest.qWait(350)
         self.assertEqual(self.engine.spoken,['First sentence.','Second sentence.'])
 
+    def test_sentence_queue_has_no_300ms_gap_or_repeated_microphone_pause(self):
+        prepared=[]
+        def prepare(callback):
+            prepared.append(True)
+            callback()
+        speech=self.speech(prepare=prepare)
+        speech.begin_stream()
+        for text in ['Hello, mentor.','Ready for work.','How are you?']:
+            speech.enqueue(text)
+        self.assertEqual(self.engine.spoken,['Hello, mentor.'])
+        self.engine.finish()
+        QTest.qWait(50)
+        self.assertEqual(self.engine.spoken,['Hello, mentor.','Ready for work.'])
+        self.engine.finish()
+        QTest.qWait(50)
+        self.assertEqual(self.engine.spoken,['Hello, mentor.','Ready for work.','How are you?'])
+        self.assertEqual(len(prepared),1)
+        self.engine.finish()
+        self.assertTrue(speech.active)
+        QTest.qWait(50)
+        self.assertTrue(speech.active)  # Final speaker tail still protects mic.
+        speech.enqueue('A late sentence.')
+        QTest.qWait(50)
+        self.assertEqual(self.engine.spoken[-1],'A late sentence.')
+        self.assertEqual(len(prepared),1)
+        self.engine.finish()
+        self.wait(lambda:not speech.active)
+
     def test_wake_pause_precedes_speech_and_resumes_after_cooldown(self):
         backend=self.backend()
         script=self.root/'wake.py'

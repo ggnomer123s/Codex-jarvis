@@ -252,10 +252,12 @@ class Speech(QObject):
         elif len(self._queue) < 256 and self._queue_chars + len(text) <= 64000:
             self._queue.append(text)
             self._queue_chars += len(text)
+            if self._state == 'finishing' and self._status == 'Finished speaking.':
+                self.quiet_timer.start(0)
         else:
             self._fail('Speech backlog exceeded the limit. Read the remaining text in chat.')
 
-    def read(self, text, *, automatic=False):
+    def read(self, text, *, automatic=False, prepared=False):
         if self._closing or (automatic and not self._enabled):
             return False
         if not automatic:
@@ -276,7 +278,10 @@ class Speech(QObject):
         self._state, self._status = 'preparing', 'Preparing speech; pausing the wake microphone.'
         self.changed.emit()
         try:
-            self.prepare(lambda: self._speak(generation, text))
+            if prepared:
+                self._speak(generation, text)
+            else:
+                self.prepare(lambda: self._speak(generation, text))
         except (ValueError, RuntimeError) as exc:
             self._fail(str(exc))
             return False
@@ -314,7 +319,7 @@ class Speech(QObject):
             self._state, self._status = 'speaking', ('Speaking online with Microsoft. Use Stop speech to interrupt.' if self._engine_kind == 'online' else 'Speaking locally. Use Stop speech to interrupt.')
             self.changed.emit()
         elif state.name == 'Ready' and self._started and self._engine.state() == state:
-            self._cool_down('Finished speaking.')
+            self._cool_down('Finished speaking.', completed=True)
 
     def _preparing(self, message):
         if self._active and not self._closing:
@@ -337,10 +342,10 @@ class Speech(QObject):
                 self._ignore_state = False
         self._started = False
 
-    def _cool_down(self, status):
+    def _cool_down(self, status, *, completed=False):
         self._stop_native()
         self._state, self._status = 'finishing', status
-        self.quiet_timer.start()
+        self.quiet_timer.start(0 if completed and self._queue else 300)
         self.changed.emit()
 
     def _fail(self, message):
@@ -351,7 +356,7 @@ class Speech(QObject):
         self._stop_native()
         self._state, self._status = 'error', str(message)[:700]
         if self._active:
-            self.quiet_timer.start()
+            self.quiet_timer.start(300)
         self.changed.emit()
 
     @Slot()
@@ -380,7 +385,7 @@ class Speech(QObject):
         if self._queue and not self._stream_muted and not self._quiet_callbacks:
             text = self._queue.popleft()
             self._queue_chars -= len(text)
-            self.read(text, automatic=True)
+            self.read(text, automatic=True, prepared=True)
             return
         if self._state != 'error': self._state = 'idle'
         callbacks, self._quiet_callbacks = self._quiet_callbacks, []

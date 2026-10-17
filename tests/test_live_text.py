@@ -25,5 +25,15 @@ class TestLiveText(unittest.TestCase):
         text=SpeechSentences()
         self.assertEqual(text.feed('Hello. \n```py\nsecret. \n'),['Hello.'])
         self.assertEqual(text.feed('more code\n```\nVisit [my site]('),[])
-        self.assertEqual(text.feed('https://example.com). Ready. '),['Visit my site. Ready.'])
+        self.assertEqual(text.feed('https://example.com). Ready. '),['Visit my site.', 'Ready.'])
         self.assertEqual(text.feed('```\nunclosed code',final=True),[])
+
+    def test_greeting_stays_in_sentences_even_with_wrapped_word_deltas(self):
+        text=SpeechSentences()
+        phrase='\u041f\u0440\u0438\u0432\u0435\u0442,\n\u043d\u0430\u0441\u0442\u0430\u0432\u043d\u0438\u043a. \u042f \u043d\u0430 \u0441\u0432\u044f\u0437\u0438, \u0433\u043e\u0442\u043e\u0432 \u043a \u0434\u0435\u043b\u0443. \u041a\u0430\u043a \u0442\u044b?'
+        spoken=[]
+        for char in phrase: spoken.extend(text.feed(char))
+        self.assertEqual(len(spoken),2)
+        spoken.extend(text.feed('',final=True))
+        self.assertEqual(spoken,[phrase.split('. ')[0].replace('\n',' ')+'.',phrase.split('. ')[1]+'.',phrase.split('. ')[2]])
+        self.assertEqual(SpeechSentences().feed('First. Second. Last?',final=True),['First.','Second.','Last?'])

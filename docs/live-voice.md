@@ -23,8 +23,8 @@ No automatic provider fallback or microphone opening is added.
 
 Preferences > Speech independently selects local neural, online Microsoft or
 legacy system speech. With automatic speech enabled, all assistant messages,
-including progress/commentary, enter one ordered queue as complete sentences or
-lines arrive. The remaining fragment is flushed when the message ends. Code
+including progress/commentary, enter one ordered queue as complete sentences arrive. Wrapped lines and commas stay within their
+sentence; several sentences in one delta are dispatched separately. The remaining fragment is flushed when the message ends. Code
 fences, raw URLs and reasoning/tool payloads are not read. Completed messages
 are not replayed at turn completion; opening history remains silent. A manual
 Read action replaces pending speech. Stop speech mutes subsequent chunks of the
@@ -42,3 +42,10 @@ Install/update with the existing voice extra. No dependency or platform setup
 change is required. Verification uses simulated model/service results, real Qt
 processes/QML and fake audio playback. It is not a Windows microphone benchmark
 or a live online service latency/accuracy test.
+
+
+In 0.14.1 queued sentences start at the next event-loop opportunity when the
+engine is quiet, without a fixed 300 ms pause or another microphone reservation
+for each sentence. The 300 ms speaker tail remains at the end of playback before
+microphone release. Stop/Cancel still clear queued speech. Synthesis/network and
+speaker latency remain; removing the scheduling gap does not eliminate them.
