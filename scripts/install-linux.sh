@@ -51,7 +51,11 @@ elif [[ "$SESSION" == 'x11' ]]; then
   require xdotool
   require wmctrl
   require maim
+  if ! /usr/bin/python3 -c 'import gi; gi.require_version("Atspi", "2.0")' 2>/dev/null; then
+    echo '[notice] Named X11 controls need system Python GI and AT-SPI typelibs. See docs/gui-operator.md; visual tools remain available.'
+  fi
   cp "$ROOT/scripts/x11_mcp.py" "$APP/x11_mcp.py"
+  cp "$ROOT/scripts/x11_accessibility.py" "$APP/x11_accessibility.py"
   if codex mcp get tigo-x11 >/dev/null 2>&1; then
     echo '[info] Existing tigo-x11 MCP retained. Its permissions were not changed.'
   elif codex mcp get jarvis-x11 >/dev/null 2>&1; then
@@ -59,6 +63,7 @@ elif [[ "$SESSION" == 'x11' ]]; then
     echo '[info] Existing desktop MCP identity and permissions retained for compatibility.'
     mkdir -p "$HOME/.local/share/jarvis-codex"
     cp "$ROOT/scripts/x11_mcp.py" "$HOME/.local/share/jarvis-codex/x11_mcp.py"
+    cp "$ROOT/scripts/x11_accessibility.py" "$HOME/.local/share/jarvis-codex/x11_accessibility.py"
   else
     codex mcp add tigo-x11 --env "TIGO_X11_ALLOW_INPUT=$ENABLE_INPUT" -- uv run --no-project --with mcp python "$APP/x11_mcp.py"
   fi

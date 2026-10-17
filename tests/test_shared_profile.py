@@ -60,7 +60,10 @@ class TestSharedLinuxInstaller(unittest.TestCase):
                 registrations = [x['args'] for x in calls if x['args'][:2] == ['mcp','add']]
                 self.assertEqual([x[2] for x in registrations], [server] if server else [])
                 if server == 'hypruse': self.assertFalse(any('HYPRUSE_CONFINE' in x for x in registrations[0]))
-                if server == 'tigo-x11': self.assertIn('TIGO_X11_ALLOW_INPUT=1', registrations[0])
+                if server == 'tigo-x11':
+                    self.assertIn('TIGO_X11_ALLOW_INPUT=1', registrations[0])
+                    helper = home / '.local/share/tigo-codex/x11_accessibility.py'
+                    self.assertEqual(helper.read_bytes(), (ROOT/'scripts/x11_accessibility.py').read_bytes())
                 # GUI writes this exact shared preference; normal CLI reads it.
                 flag = home / '.local/share/tigo-codex/access-mode'
                 for mode, expected in [('full-access','--dangerously-bypass-approvals-and-sandbox'),

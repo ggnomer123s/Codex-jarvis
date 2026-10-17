@@ -2,7 +2,7 @@
 
 A native Qt Quick window for Linux and Windows 11, with an animated cyan core,
 a streaming conversation panel, model/workspace selection, reasoning presets and
-warm local push-to-talk voice input. Runtime and Automation tabs expose task
+warm local or keyless online push-to-talk voice input. Runtime and Automation tabs expose task
 timings, scoped conversation resume and checked desktop workflows. The same interface runs on both platforms; platform-specific
 launchers and menu installers are provided. This is a source distribution,
 not a signed standalone EXE, AppImage, DEB or RPM release.
@@ -236,18 +236,24 @@ The same controls remain in Preferences > Intelligence.
 
 ## Voice input
 
+GUI 0.12 adds an explicit Local Whisper / Online Google Web Speech provider selector.
+See [dictation setup and privacy](voice-input.md). The local model defaults to small
+for new GUI settings; existing model/language choices are preserved. The CLI
+voice command and wake listener remain local.
+
 For optional continuous local listening that opens this window by name, see
 [voice activation](voice-activation.md). Enable it in **Preferences > Wake**;
 push-to-talk below remains the normal way to dictate a task.
 
 Click the microphone button, speak, then click it again. Recording stops after
 60 seconds at most. The ring responds to the microphone level. Local
-faster-whisper defaults to CPU int8 with the multilingual `base` model;
+faster-whisper defaults to CPU int8 with the multilingual `small` model for new GUI settings;
 Russian and other languages are detected automatically. The first voice use
 loads/downloads the model; subsequent recordings reuse it for five idle minutes. Internet access to the Hugging Face model/CDN
 hosts is needed for that download; a configured local model directory can be
 supplied through `TIGO_VOICE_MODEL` for offline use. Audio is held in memory
-and is not saved or uploaded by the voice worker.
+and is not saved to disk. Local mode does not upload it; the explicitly selected
+online provider sends the completed recording to Google.
 
 The transcript is placed in the composer and **never submitted automatically**.
 Review/edit it, then press Send to submit its text to Codex. Cancel is available

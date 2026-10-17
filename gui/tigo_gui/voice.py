@@ -21,20 +21,22 @@ OUTPUT_LOCK = threading.Lock()
 
 
 class VoiceWorker:
-    """One multilingual model, many recordings; bounded audio/preview queues."""
+    """One explicit provider, many recordings; bounded audio/preview queues."""
 
-    def __init__(self, model_name, device="cpu", *, model_factory=None, output=None):
+    def __init__(self, model_name, device="cpu", *, model_factory=None, output=None, provider="local"):
         # Imports are local so text-only installations can still load the UI.
         import numpy as np
         import sounddevice as sd
-        if model_factory is None:
+        self.provider = provider
+        if provider == "local" and model_factory is None:
             from faster_whisper import WhisperModel
             model_factory = WhisperModel
         self.np, self.sd = np, sd
         self.output = output or emit
         started = time.monotonic()
-        self.model = model_factory(model_name, device=device,
+        self.model = (model_factory(model_name, device=device,
                                    compute_type="int8" if device == "cpu" else "int8_float16")
+                      if provider == "local" else None)
         self.load_ms = round((time.monotonic() - started) * 1000, 1)
         self._model_lock = threading.Lock()
         self.stop = threading.Event()
@@ -79,6 +81,9 @@ class VoiceWorker:
         return True
 
     def _transcribe(self, raw, language, beam):
+        if self.provider == "online":
+            from .transcription import transcribe_online
+            return transcribe_online(raw, language)
         audio = self.np.frombuffer(raw, dtype=self.np.int16).astype(self.np.float32) / 32768.0
         with self._model_lock:
             segments, _ = self.model.transcribe(audio, beam_size=beam, vad_filter=True,
@@ -126,7 +131,7 @@ class VoiceWorker:
                     pass
 
         preview_thread = None
-        if options.get("preview"):
+        if options.get("preview") and self.provider == "local":
             preview_thread = threading.Thread(target=preview_worker, daemon=True)
             preview_thread.start()
         preview_raw = bytearray()
@@ -197,9 +202,9 @@ class VoiceWorker:
             self.output("idle", id=recording_id)
 
 
-def worker_main(model, device):
+def worker_main(model, device, provider="local"):
     try:
-        worker = VoiceWorker(model, device)
+        worker = VoiceWorker(model, device, provider=provider)
         emit("ready", modelLoadMs=worker.load_ms, microphones=worker.devices())
         for line in sys.stdin:
             if len(line) > 10000:
@@ -213,7 +218,7 @@ def worker_main(model, device):
         worker.command({"command": "shutdown"})
         return 0
     except Exception as exc:
-        emit("error", message=f"Local model unavailable: {exc}")
+        emit("error", message=f"Transcription unavailable: {exc}")
         return 2
 
 
@@ -222,27 +227,31 @@ def emit(kind: str, **fields):
         print(json.dumps({"type": kind, **fields}), flush=True)
 
 
-def dependencies_available() -> bool:
-    return all(importlib.util.find_spec(name) is not None
-               for name in ("numpy", "sounddevice", "faster_whisper"))
+def dependencies_available(provider="local") -> bool:
+    names = ("numpy", "sounddevice", "faster_whisper") if provider == "local" else ("numpy", "sounddevice", "speech_recognition")
+    return all(importlib.util.find_spec(name) is not None for name in names)
 
 
 def main(argv=()) -> int:
-    parser = argparse.ArgumentParser(description="Local multilingual Tigo voice worker")
+    parser = argparse.ArgumentParser(description="Local or explicit keyless online Tigo dictation worker")
     from .compat import environment
     parser.add_argument("--language", default=environment("VOICE_LANGUAGE") or "auto")
     parser.add_argument("--model", default=environment("VOICE_MODEL", "base"))
     parser.add_argument("--worker", action="store_true", help="Keep the model loaded; accept JSON recording commands")
     parser.add_argument("--device", choices=("cpu", "cuda"), default="cpu")
+    parser.add_argument("--provider", choices=("local", "online"), default="local")
     options = parser.parse_args(argv)
     if options.language not in dict(LANGUAGES) or not valid_voice_model(options.model):
         emit("error", message="Choose Auto detect or a supported language, and a multilingual Whisper model or local model folder.")
         return 2
-    if not dependencies_available():
+    if not (dependencies_available() if options.provider == "local" else dependencies_available("online")):
         emit("error", message="Voice packages are missing. Launch with the voice extra; see docs/desktop-app.md.")
         return 2
     if options.worker:
-        return worker_main(options.model, options.device)
+        return worker_main(options.model, options.device, options.provider)
+    if options.provider != "local":
+        emit("error", message="Online dictation uses the desktop worker; start Tigo GUI and select Online in Voice settings.")
+        return 2
     stop = threading.Event()
     cancelled = threading.Event()
 

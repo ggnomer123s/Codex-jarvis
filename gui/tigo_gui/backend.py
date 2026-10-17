@@ -26,6 +26,7 @@ from .history import History
 from .attachments import inspect_file, validate_files, MAX_FILES
 from .speech import Speech
 from .desktop_control import control_summary
+from .interface_tools import interface_summary
 from .screen_activity import ScreenActivity
 from .updates import Updates
 from .compat import desktop_settings, environment, existing_path, LEGACY
@@ -88,9 +89,12 @@ class Backend(QObject):
         self._language = str(self.settings.value("language", environment("VOICE_LANGUAGE") or "auto"))
         if self._language not in dict(LANGUAGES):
             self._language = "auto"
-        self._voice_model = str(self.settings.value("voiceModel", environment("VOICE_MODEL", "base")))
+        self._voice_model = str(self.settings.value("voiceModel", environment("VOICE_MODEL", "small")))
         if not valid_voice_model(self._voice_model):
             self._voice_model = "base"
+        self._transcription_provider = str(self.settings.value("transcriptionProvider", "local"))
+        if self._transcription_provider not in ("local", "online"):
+            self._transcription_provider = "local"
         self._auto_reasoning = str(self.settings.value("autoReasoning", "false")).lower() == "true"
         try:
             beam = int(self.settings.value("voiceBeam", 3))
@@ -135,6 +139,7 @@ class Backend(QObject):
         self._item_rows = {}
         self._pending_text = {}
         self._mcp_status = "Not inspected yet"
+        self._interface_status = "Not inspected yet"
         self._voice_id = ""
         self._voice_buffer = b""
         self._voice_stop_requested = False
@@ -649,7 +654,24 @@ class Backend(QObject):
 
     @Property(bool, notify=changed)
     def voiceAvailable(self):
-        return dependencies_available()
+        return dependencies_available() if self._transcription_provider == "local" else dependencies_available("online")
+
+    @Property(str, notify=changed)
+    def transcriptionProvider(self):
+        return self._transcription_provider
+
+    @Slot(str, result=bool)
+    def saveTranscriptionPreferences(self, provider):
+        if self._locked():
+            return False
+        if provider not in ("local", "online"):
+            return self._settings_error("Choose Local Whisper or Online Google Web Speech.")
+        if provider != self._transcription_provider:
+            self._close_voice()
+        self._transcription_provider = provider
+        self.settings.setValue("transcriptionProvider", provider)
+        self.changed.emit()
+        return True
 
     @Property(str, notify=changed)
     def voiceState(self):
@@ -685,8 +707,8 @@ class Backend(QObject):
     def runtimeDetails(self):
         voice = json.dumps(self.profiler.voice, indent=2)
         return (f"Codex app-server: {'connected' if self.server.connected else 'not connected'}\n"
-                f"Desktop MCP: {self._mcp_status}\nWindows desktop: {self._desktop_control_status}\nTask: {self.profiler.summary()}\n"
-                f"Verified/completed steps: {self._completed_steps}\nLocal voice timings (ms):\n{voice}")
+                f"Desktop MCP: {self._mcp_status}\nInterface structure: {self._interface_status}\nWindows desktop: {self._desktop_control_status}\nTask: {self.profiler.summary()}\n"
+                f"Verified/completed steps: {self._completed_steps}\nDictation timings (ms):\n{voice}")
 
     @Property(bool, constant=True)
     def windowsDesktop(self):
@@ -876,8 +898,10 @@ class Backend(QObject):
                 return
             if error:
                 self._mcp_status = "Inventory unavailable: " + error
+                self._interface_status = "Inventory unavailable"
             else:
                 servers = result.get("data", []) if isinstance(result, dict) else []
+                self._interface_status = interface_summary(servers)
                 self._mcp_status = ", ".join(str(x.get("name", "MCP")) for x in servers if isinstance(x, dict)) or "No desktop servers reported"
             self.changed.emit()
         self.server.request("mcpServerStatus/list", {"threadId": self._thread_id, "limit": 100}, returned)
@@ -1224,6 +1248,7 @@ class Backend(QObject):
         self._item_rows = {}
         self.chat.clear()
         self._mcp_status = "Not inspected yet"
+        self._interface_status = "Not inspected yet"
         self._activity, self._stage = "Ready when you are", "idle"
         self.messagesChanged.emit()
         self.changed.emit()
@@ -1394,7 +1419,7 @@ class Backend(QObject):
             return
         self._voice_cancelled = False
         self._voice_id = str(uuid.uuid4())
-        self._voice_state, self._activity = "loading", "Preparing local voice model"
+        self._voice_state, self._activity = "loading", "Preparing " + self._transcription_provider + " transcription"
         self._start_voice()
         self.changed.emit()
 
@@ -1424,7 +1449,7 @@ class Backend(QObject):
             self._voice_buffer = b""
             self._voice_ready = False
             self.voice.start(self._voice_command[0], [*self._voice_command[1:], "--worker", "--model", self._voice_model,
-                              "--device", self._voice_options["device"]])
+                              "--device", self._voice_options["device"], "--provider", self._transcription_provider])
 
     def _voice_after_speech(self, token):
         self._speech_handoff = ''
@@ -1439,15 +1464,18 @@ class Backend(QObject):
             self._voice_stop_requested = True
             if self._voice_ready:
                 self._voice_write("stop")
-            self._voice_state, self._activity = "transcribing", "Transcribing locally"
+            self._voice_state, self._activity = "transcribing", "Transcribing " + ("locally" if self._transcription_provider == "local" else "online")
         elif self._voice_state == "idle":
+            if self._transcription_provider == "online" and self._language == "auto":
+                self._message("error", "Select a speech language in Voice settings for online dictation. Auto detect is local-only.")
+                return
             if not self.voiceAvailable:
                 self._message("error", "Voice packages are missing. Use the voice-enabled launcher.")
                 return
             self._voice_id = str(uuid.uuid4())
             self._voice_cancelled = False
             self._voice_stop_requested = False
-            self._voice_state, self._activity = "starting", "Opening local voice input"
+            self._voice_state, self._activity = "starting", "Opening " + self._transcription_provider + " voice input"
             self._start_voice()
         self.changed.emit()
 
@@ -1488,7 +1516,7 @@ class Backend(QObject):
                         self._voice_write("stop")
                 else:
                     self._voice_state = "idle"
-                    self._activity = "Local voice model ready"
+                    self._activity = "Transcription ready"
                     self._voice_idle_timer.start()
                 self.changed.emit()
                 continue
@@ -1501,7 +1529,7 @@ class Backend(QObject):
                     self._voice_state = "recording"
                     self._activity = "Listening - click microphone to finish"
             elif kind == "transcribing":
-                self._voice_state, self._activity = "transcribing", "Transcribing locally"
+                self._voice_state, self._activity = "transcribing", "Transcribing " + ("locally" if self._transcription_provider == "local" else "online")
             elif kind == "level":
                 self._level = max(0, min(1, float(event.get("value", 0))))
             elif kind == "preview":

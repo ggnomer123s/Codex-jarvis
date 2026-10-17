@@ -96,7 +96,7 @@ class TestDesktopVoice(unittest.TestCase):
 
 
 class TestPersistentVoice(unittest.TestCase):
-    def worker(self, cancel=False):
+    def worker(self, cancel=False, provider="local"):
         events = []
         holder = {}
 
@@ -126,9 +126,28 @@ class TestPersistentVoice(unittest.TestCase):
                     holder['worker'].cancelled.set()
 
         with mock.patch.dict(sys.modules, {'numpy':numpy,'sounddevice':sd}):
-            worker = voice.VoiceWorker('base', model_factory=factory, output=output)
+            worker = voice.VoiceWorker('base', model_factory=factory, output=output, provider=provider)
         holder['worker'] = worker
         return worker, factory, events
+
+    def test_online_records_once_without_loading_whisper_or_uploading_previews(self):
+        worker, factory, events = self.worker(provider="online")
+        with mock.patch("tigo_gui.transcription.transcribe_online", return_value="Recognized online") as recognize:
+            worker.command({'command':'record','id':'online-1','language':'ru','beam':3,'preview':True})
+            worker.thread.join(2)
+        factory.assert_not_called()
+        recognize.assert_called_once_with(b'\0'*32000, 'ru')
+        self.assertEqual([e['text'] for e in events if e['type']=='transcript'], ['Recognized online'])
+        self.assertFalse(any(e['type']=='preview' for e in events))
+
+    def test_cancelled_online_recording_does_not_upload(self):
+        worker, factory, events = self.worker(cancel=True, provider="online")
+        with mock.patch("tigo_gui.transcription.transcribe_online") as recognize:
+            worker.command({'command':'record','id':'cancelled','language':'en','beam':3})
+            worker.thread.join(2)
+        factory.assert_not_called()
+        recognize.assert_not_called()
+        self.assertFalse(any(e['type']=='transcript' for e in events))
 
     def test_one_model_serves_two_recordings_and_keeps_russian(self):
         worker, factory, events = self.worker()

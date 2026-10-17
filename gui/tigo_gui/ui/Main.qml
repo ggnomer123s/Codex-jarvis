@@ -220,7 +220,7 @@ ApplicationWindow {
                         Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 10; spacing: 14
                         Text { text: bridge.effort.toUpperCase() + " REASONING"; color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
                         Rectangle { width: 1; height: 10; color: "#2a4752" }
-                        Text { text: "LOCAL VOICE / " + bridge.language.toUpperCase() + " / " + (bridge.voiceModels.indexOf(bridge.voiceModel) >= 0 ? bridge.voiceModel.toUpperCase() : "CUSTOM"); color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
+                        Text { text: (bridge.transcriptionProvider === "online" ? "ONLINE DICTATION / " : "LOCAL WHISPER / ") + bridge.language.toUpperCase(); color: "#567986"; font.pixelSize: 8; font.letterSpacing: 1 }
                     }
                     Text {
                         Layout.alignment: Qt.AlignHCenter; Layout.maximumWidth: Math.max(200, corePanel.width - 30)
@@ -453,7 +453,7 @@ ApplicationWindow {
                                 Text {
                                     Layout.fillWidth: true; Layout.minimumWidth: 0
                                     visible: chatPane.width > 700
-                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? "Transcribing locally..." : (bridge.voiceReady ? "Local voice model ready" : "Voice stays local until you send"))
+                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? (bridge.transcriptionProvider === "online" ? "Transcribing online..." : "Transcribing locally...") : (bridge.transcriptionProvider === "online" ? "Online dictation · audio sent to Google" : (bridge.voiceReady ? "Local voice model ready" : "Local dictation · review before Send")))
                                     color: "#7897a7"; font.pixelSize: 9; elide: Text.ElideRight
                                 }
                                 HudButton {
@@ -502,6 +502,7 @@ ApplicationWindow {
             }
         }
         exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: bridge.reducedMotion ? 0 : 100 } }
+        property string speechLanguageCode: bridge.language
         function applyWake() {
             return bridge.wake.configure(wakeToggle.checked, wakeAutostart.checked, wakeModel.editText.trim(),
                 wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked)
@@ -512,7 +513,9 @@ ApplicationWindow {
             accessChoice.currentIndex = ["read-only", "workspace-write"].indexOf(bridge.normalAccess)
             modelChoice.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
             modelChoice.editText = bridge.model || "Codex default"
-            languageChoice.currentIndex = languageChoice.indexOfValue(bridge.language)
+            preferences.speechLanguageCode = bridge.language
+            transcriptionChoice.currentIndex = bridge.transcriptionProvider === "online" ? 1 : 0
+            languageChoice.currentIndex = Math.max(0, languageChoice.indexOfValue(bridge.language))
             voiceModelChoice.currentIndex = bridge.voiceModels.indexOf(bridge.voiceModel)
             voiceModelChoice.editText = bridge.voiceModel
             adaptiveChoice.checked = bridge.autoReasoning
@@ -585,27 +588,45 @@ ApplicationWindow {
                     ColumnLayout {
                     width: parent.width
                     spacing: 14
+                    Text { text: "Transcription"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox {
+                        id: transcriptionChoice; objectName: "transcriptionChoice"
+                        Layout.fillWidth: true; model: ["Local Whisper (offline)", "Online Google Web Speech (no API key)"]
+                        enabled: !window.locked
+                        onActivated: { if (languageChoice.currentIndex < 0) languageChoice.currentIndex = 0 }
+                    }
+                    Text {
+                        objectName: "transcriptionPrivacy"; Layout.fillWidth: true
+                        text: transcriptionChoice.currentIndex === 1
+                            ? "No personal API key or account needed. Each completed recording is sent to Google over HTTPS. This public personal-use service may be limited or unavailable. Choose a language; automatic detection and preview are local-only."
+                            : "Audio is transcribed on this computer. The selected Whisper model downloads once; after download it works offline. Choose small or medium for more demanding speech."
+                        color: transcriptionChoice.currentIndex === 1 ? "#dfb987" : "#6f909f"
+                        font.pixelSize: 11; wrapMode: Text.WordWrap
+                    }
                     Text { text: "Speech language"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox {
                         id: languageChoice; objectName: "languageChoice"; Layout.fillWidth: true; enabled: !window.locked
-                        model: bridge.languageOptions; textRole: "label"; valueRole: "code"
+                        model: transcriptionChoice.currentIndex === 1 ? bridge.languageOptions.filter(function(item) { return item.code !== "auto" }) : bridge.languageOptions; textRole: "label"; valueRole: "code"
+                        onActivated: preferences.speechLanguageCode = currentValue
+                        onModelChanged: Qt.callLater(function() { languageChoice.currentIndex = Math.max(0, languageChoice.indexOfValue(preferences.speechLanguageCode)) })
                     }
-                    Text { Layout.fillWidth: true; text: "15 language presets, including Russian. Auto detect also handles other languages supported by multilingual Whisper."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
-                    Text { text: "Local Whisper model"; color: "#8eadbd"; font.pixelSize: 12 }
-                    HudComboBox { id: voiceModelChoice; Layout.fillWidth: true; editable: true; model: bridge.voiceModels; enabled: !window.locked }
-                    Text { Layout.fillWidth: true; text: "tiny: smaller and faster. base: balanced. small / medium: larger models for more demanding speech. You can enter a local multilingual model folder for offline use."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Text { Layout.fillWidth: true; text: "Choose the language you speak for better accuracy. Local Whisper also supports automatic language detection."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Text { visible: transcriptionChoice.currentIndex === 0; text: "Local Whisper model"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox { id: voiceModelChoice; visible: transcriptionChoice.currentIndex === 0; Layout.fillWidth: true; editable: true; model: bridge.voiceModels; enabled: !window.locked && transcriptionChoice.currentIndex === 0 }
+                    Text { visible: transcriptionChoice.currentIndex === 0; Layout.fillWidth: true; text: "tiny: smaller and faster. base: balanced. small / medium: larger models for more demanding speech. You can enter a local multilingual model folder for offline use."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     RowLayout {
-                        HudComboBox { id: deviceChoice; Layout.fillWidth: true; model: ["CPU / int8", "NVIDIA CUDA / int8-fp16"]; enabled: !window.locked }
-                        HudComboBox { id: beamChoice; Layout.fillWidth: true; model: ["Beam 1 / fast", "Beam 3 / balanced", "Beam 5 / thorough"]; enabled: !window.locked }
+                        visible: transcriptionChoice.currentIndex === 0
+                        HudComboBox { id: deviceChoice; Layout.fillWidth: true; model: ["CPU / int8", "NVIDIA CUDA / int8-fp16"]; enabled: !window.locked && transcriptionChoice.currentIndex === 0 }
+                        HudComboBox { id: beamChoice; Layout.fillWidth: true; model: ["Beam 1 / fast", "Beam 3 / balanced", "Beam 5 / thorough"]; enabled: !window.locked && transcriptionChoice.currentIndex === 0 }
                     }
                     Text { text: "Microphone"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox { id: micChoice; Layout.fillWidth: true; model: bridge.microphones; textRole: "label"; valueRole: "id"; enabled: !window.locked }
                     CheckBox {
-                        id: previewChoice; text: "Show provisional text while recording"; enabled: !window.locked
+                        id: previewChoice; visible: transcriptionChoice.currentIndex === 0; text: "Show provisional text while recording"; enabled: !window.locked && transcriptionChoice.currentIndex === 0
                         contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                     }
-                    Text { Layout.fillWidth: true; text: "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Audio stays in memory; review before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
-                    HudButton { text: bridge.voiceReady ? "Voice model ready" : "Prepare saved model / list microphones"; enabled: !window.locked && bridge.voiceAvailable; onClicked: bridge.warmVoice() }
+                    Text { Layout.fillWidth: true; text: transcriptionChoice.currentIndex === 1 ? "Only explicit dictation uses the online service. Wake listening always stays local. Review the transcript before sending." : "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Wake listening always stays local. Review the transcript before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    HudButton { text: bridge.voiceReady ? "Transcription ready" : "Prepare saved provider / list microphones"; enabled: !window.locked && bridge.voiceAvailable; onClicked: bridge.warmVoice() }
                     }
                 }
                 ScrollView {
@@ -736,7 +757,7 @@ ApplicationWindow {
                 SpeechSettings { id: speechPage }
             }
             HudButton {
-                Layout.fillWidth: true; primary: true; text: preferenceTabs.currentIndex === 5 ? "Apply voice activation" : "Save preferences"
+                objectName: "savePreferencesButton"; Layout.fillWidth: true; primary: true; text: preferenceTabs.currentIndex === 5 ? "Apply voice activation" : "Save preferences"
                 enabled: !window.locked
                 onClicked: {
                     if (preferenceTabs.currentIndex === 6) { if (speechPage.apply()) preferences.close(); return }
@@ -744,7 +765,7 @@ ApplicationWindow {
                     let model = modelChoice.editText === "Codex default" ? "" : modelChoice.editText
                     let access = bridge.fullAccess ? "full-access" : ["read-only", "workspace-write"][accessChoice.currentIndex]
                     if (bridge.saveAllPreferences(effortChoice.currentValue, access, model, languageChoice.currentValue, voiceModelChoice.editText,
-                        workflowEditor.text, adaptiveChoice.checked, ["cpu", "cuda"][deviceChoice.currentIndex], [1, 3, 5][beamChoice.currentIndex], previewChoice.checked, micChoice.currentValue || "")) preferences.close()
+                        workflowEditor.text, adaptiveChoice.checked, ["cpu", "cuda"][deviceChoice.currentIndex], [1, 3, 5][beamChoice.currentIndex], previewChoice.checked, micChoice.currentValue || "") && bridge.saveTranscriptionPreferences(transcriptionChoice.currentIndex === 1 ? "online" : "local")) preferences.close()
                 }
             }
             Text { Layout.fillWidth: true; visible: bridge.preferencesError.length > 0; text: bridge.preferencesError; color: "#f5a4a4"; font.pixelSize: 11; wrapMode: Text.WordWrap }

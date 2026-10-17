@@ -88,7 +88,7 @@ dependencies are already prepared.
 ## CachyOS, Arch, Manjaro, EndeavourOS
 
 ```bash
-sudo pacman -Syu --needed git uv python gtk4 gtk4-layer-shell python-gobject nodejs npm portaudio libpulse speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+sudo pacman -Syu --needed git uv python gtk4 gtk4-layer-shell python-gobject at-spi2-core nodejs npm portaudio libpulse speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
 "$HOME/.local/bin/codex" login
@@ -277,3 +277,30 @@ The first voice transcription downloads the multilingual Whisper model.
 Speak, stop recording, review the recognized text and press Send. See
 [Desktop application](desktop-app.md) for access modes, cancellation, offline
 models and troubleshooting.
+
+
+## Dictation and semantic controls (0.12)
+
+The voice extra now includes locked `SpeechRecognition` for online Google Web
+Speech. It needs no personal API key or account; this is a public personal-use
+service with possible quotas/availability changes, not Google Cloud Speech.
+Only explicitly selected online dictation uploads the completed microphone
+recording over HTTPS. Local Whisper remains the default; a new GUI profile uses
+small, while existing choices remain. The model downloads once before offline
+use. Review the transcript before Send. See [voice input](voice-input.md).
+
+Run the normal updater or `uv sync --project gui --frozen --extra voice` after
+upgrading. Windows wheels include the converter used for online FLAC encoding;
+no PyAudio, FFmpeg CLI or paid service credentials are required. The platform
+updaters import-check SpeechRecognition with the existing audio/GUI dependencies.
+Root setup scripts and Update Center continue to invoke these updaters.
+
+X11 now installs `x11_accessibility.py` alongside the existing MCP, retaining old
+MCP identities and input grants. Named controls require distribution packages:
+Debian/Ubuntu `python3-gi gir1.2-atspi-2.0 at-spi2-core`; Arch/CachyOS
+`python-gobject at-spi2-core`; Fedora `python3-gobject at-spi2-core`; openSUSE
+`python3-gobject typelib-1_0-Atspi-2_0 at-spi2-core`. The dependency-aware Linux
+updaters include them. The lightweight installer reports missing prerequisites
+without changing system settings. Existing Hypruse and Windows-MCP supply their
+own accessibility tools. Restart Tigo/Codex sessions after updating tools and
+instructions. See [semantic targeting](gui-operator.md#semantic-interface-targeting).

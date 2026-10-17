@@ -20,12 +20,12 @@ A community project that connects **OpenAI Codex CLI** to desktop automation via
 
 A native desktop interface is now available: an original animated woven-light core,
 streaming Codex app-server chat with continuing conversation context, task cancellation, model/workspace
-and reasoning settings, Full Access on by default with a saved settings checkbox, and local
-push-to-talk transcription with a warm model and 15 language presets including Russian. Voice text is
+and reasoning settings, Full Access on by default with a saved settings checkbox, and
+push-to-talk transcription through local Whisper or online Google Web Speech without a personal API key. There are 15 language presets including Russian. Voice text is
 reviewed before sending. The app uses your existing Codex login and MCP setup.
 
 The GUI now keeps an owned **Codex app-server** connection between messages,
-keeps Whisper ready between recordings, and includes checked desktop workflow
+keeps the selected transcription worker ready between recordings, and includes checked desktop workflow
 aliases, timing export, optional adaptive reasoning and scoped conversation
 checkpoints. **Preferences > Runtime / Automation** exposes the new controls.
 See [runtime guide](docs/runtime.md) and the [source review of other Tigo,
@@ -252,6 +252,8 @@ cd Tigo
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\install-windows.ps1
 # Reopen PowerShell, then: tigo
 ```
+
+GUI dictation supports [local and keyless online transcription](docs/voice-input.md). Named desktop controls use [semantic interface targeting](docs/gui-operator.md#semantic-interface-targeting).
 
 ## Memory and voice input
 

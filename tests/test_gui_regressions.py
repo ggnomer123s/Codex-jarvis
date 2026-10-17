@@ -199,6 +199,28 @@ class TestX11Shortcuts(unittest.TestCase):
         guard.assert_not_called()
         self.assertEqual(call.call_args_list[-1].args,("xdotool","getwindowname","4660"))
 
+    def test_semantic_tools_are_scoped_to_native_x11_and_keep_input_guard(self):
+        import os
+        mod = self.backend
+        with mock.patch.dict(os.environ, {'XDG_SESSION_TYPE':'wayland'}), mock.patch.object(mod, '_run') as run:
+            with self.assertRaises(RuntimeError): mod.ui_elements('0x1234')
+            run.assert_not_called()
+        with mock.patch.dict(os.environ, {'XDG_SESSION_TYPE':'x11'}), mock.patch.object(mod, '_require_input', side_effect=PermissionError('read only')), mock.patch.object(mod, '_run') as run:
+            with self.assertRaises(PermissionError): mod.click_ui('0x1234','Save')
+            run.assert_not_called()
+
+    def test_semantic_query_forwards_exact_identity_without_injecting_input(self):
+        import json, os
+        mod = self.backend
+        response = types.SimpleNamespace(returncode=0,stdout=json.dumps({'elements':[], 'truncated':False}))
+        with mock.patch.dict(os.environ, {'XDG_SESSION_TYPE':'x11'}), mock.patch.object(mod, '_run', side_effect=['41','Fixture']), mock.patch.object(mod.subprocess, 'run', return_value=response) as helper, mock.patch.object(mod, '_require_input') as guard:
+            mod.ui_elements('0x1234',name='Save',role='push button')
+        guard.assert_not_called()
+        request = json.loads(helper.call_args.kwargs['input'])
+        self.assertEqual((request['pid'],request['title'],request['action']), (41,'Fixture','find'))
+        self.assertEqual(helper.call_args.args[0][0], '/usr/bin/python3')
+        self.assertEqual(helper.call_args.kwargs['timeout'], 8)
+
     def test_window_wait_is_bounded_and_escapes_title_regex(self):
         import json
         mod=self.backend

@@ -52,6 +52,8 @@ class TestWindow(unittest.TestCase):
                 self.assertEqual(window.property("title"), "Tigo - Personal intelligence")
                 self.assertEqual(window.findChild(QObject, "brandMonogram").property("text"), "T")
                 self.assertEqual(window.findChild(QObject, "brandTitle").property("text"), "Tigo")
+                # Drain initial QML callLater model/control synchronization before editing.
+                QTest.qWait(30)
                 composer = window.findChild(QObject, "composer")
                 button = window.findChild(QObject, "sendButton")
                 composer.setProperty("text", "Check the workspace")

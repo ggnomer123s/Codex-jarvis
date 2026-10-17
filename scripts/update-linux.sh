@@ -59,16 +59,16 @@ install_node() {
 system_packages() {
     if command -v apt-get >/dev/null; then
         sudo apt-get update
-        sudo apt-get install -y git curl python3 ca-certificates xz-utils libportaudio2 libpulse0 libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xdotool wmctrl maim grim wtype python3-gi gir1.2-gtk-4.0
+        sudo apt-get install -y git curl python3 ca-certificates xz-utils libportaudio2 libpulse0 libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 xdotool wmctrl maim grim wtype python3-gi gir1.2-gtk-4.0 gir1.2-atspi-2.0 at-spi2-core
         if apt-cache show libgtk4-layer-shell0 >/dev/null 2>&1; then
             sudo apt-get install -y libgtk4-layer-shell0 gir1.2-gtk4layershell-1.0
         else
             echo '[notice] This release lacks GTK4 layer-shell packages. The Wayland indicator may be unavailable; see the installation guide.'
         fi
     elif command -v dnf >/dev/null; then
-        sudo dnf install -y git curl python3 xz portaudio pulseaudio-libs mesa-libEGL mesa-libGL libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil xdotool wmctrl maim grim wtype gtk4 gtk4-layer-shell python3-gobject
+        sudo dnf install -y git curl python3 xz portaudio pulseaudio-libs mesa-libEGL mesa-libGL libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil xdotool wmctrl maim grim wtype gtk4 gtk4-layer-shell python3-gobject at-spi2-core
     elif command -v zypper >/dev/null; then
-        sudo zypper --non-interactive install git curl python3 xz libportaudio2 libpulse0 libEGL1 libOpenGL0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 xdotool wmctrl maim grim wtype
+        sudo zypper --non-interactive install git curl python3 xz libportaudio2 libpulse0 libEGL1 libOpenGL0 libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 xdotool wmctrl maim grim wtype python3-gobject typelib-1_0-Atspi-2_0 at-spi2-core
         echo '[notice] For a Wayland screen indicator install the distribution GTK4/PyGObject/Gtk4LayerShell typelibs; see the installation guide.'
     else
         fail 'Supported families: Arch/CachyOS, Debian/Ubuntu/Mint, Fedora, openSUSE. See docs/install-desktop.md for manual setup.'
@@ -105,7 +105,7 @@ main() {
     uv python install 3.12
     uv sync --project "$repo_dir/gui" --frozen --extra voice --python 3.12
     bash "$repo_dir/scripts/install-gui-linux.sh"
-    QT_QPA_PLATFORM=offscreen uv run --project "$repo_dir/gui" --frozen --extra voice python -c 'import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx, edge_tts, av'
+    QT_QPA_PLATFORM=offscreen uv run --project "$repo_dir/gui" --frozen --extra voice python -c 'import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx, edge_tts, av, speech_recognition'
     login_output="$(codex login status 2>&1)" || login_code=$?
     if (( login_code != 0 )); then
         [[ "${login_output,,}" == *'not logged in'* ]] || fail 'Could not verify the existing Codex login. Run codex login status; no replacement login was attempted.'

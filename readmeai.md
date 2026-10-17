@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-17**, GUI **0.11.0**. Repository:
+Last reconciled: **2026-10-17**, GUI **0.12.0**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -19,7 +19,21 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** GUI 0.11.0 adds an on-demand Update Center (sidebar Updates /
+**Current state:** GUI 0.12.0 adds explicit local/keyless online dictation and
+semantic-first interface targeting. Online dictation uses SpeechRecognition's
+public personal-use Google Web Speech configuration, forced HTTPS, bounded
+in-memory audio and no personal API key. It is not a guaranteed Cloud API.
+Select a language; no online Auto detection or preview. Local Whisper defaults
+to small only for new GUI settings; saved model choices stay intact. Wake/CLI
+remain local and dictation still requires review and Send. See [voice input](docs/voice-input.md).
+X11 adds scoped AT-SPI ui_elements/click_ui via a system-Python helper with
+PID/title/focus/state/ambiguity checks. Hypruse/Windows use existing native
+trees; shipped instructions prefer them for labeled controls. Runtime reports
+only actually advertised semantic tools, not ownership or app support. New GI/
+AT-SPI distro prerequisites and SpeechRecognition are included in setup/lock/
+platform import checks. See [semantic targeting](docs/gui-operator.md#semantic-interface-targeting).
+
+GUI 0.11.0 adds an on-demand Update Center (sidebar Updates /
 Ctrl+U), version/commit/notes review and a detached terminal installer handshake.
 Checks fetch Git objects without changing working files; application shutdown
 requires a ready installer, reviewed commit and an idle UI with no draft/files.
@@ -209,9 +223,14 @@ is released; missing tools/refusals do not trigger another input backend.
   Activity cards show phase, elapsed time, errors and Stop. Scrolling up disables
   automatic following; Latest restores it.
 
-### Local voice input and wake activation
+### Voice input and local wake activation
 
-Push-to-talk uses a separate persistent faster-whisper worker. It loads a
+Push-to-talk uses a separate persistent worker. Local mode uses faster-whisper;
+explicit online mode uses keyless Google Web Speech over HTTPS, with a selected
+language and no preview. It loads no local model and may be rate-limited.
+Audio is sent to Google only in that mode. Local mode defaults to small for new
+GUI settings, preserving saved choices. The following model/preview details
+apply to local mode. It loads a
 multilingual model once, retains it between recordings and unloads after five
 idle minutes or settings changes. CPU int8 is default; optional CUDA needs a
 compatible runtime. There are 15 explicit language presets including Russian,

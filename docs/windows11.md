@@ -163,3 +163,16 @@ restart Tigo, then Refresh voices. Choose a voice that appears in Tigo's
 list: voices available only to Narrator may not be exposed to Qt's speech
 engine. Speech on/off and Stop speech are available directly beside the chat.
 See [speech output](speech-output.md) for microphone coordination and limits.
+
+
+### GUI online and offline dictation
+
+In Preferences > Voice choose Local Whisper or Online Google Web Speech (no API
+key). Select Russian or another spoken language for online mode; Auto detect is
+local-only. Local models download once and then work offline. Online recordings
+are sent to Google over HTTPS and are subject to public-service availability.
+The normal Windows updater installs the locked SpeechRecognition dependency.
+See [voice input](voice-input.md). Windows desktop targeting uses the existing
+Windows-MCP UI Automation `Snapshot`; screenshot recognition remains available
+for applications without a useful accessibility tree. Native ownership guards
+remain active.

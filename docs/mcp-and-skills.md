@@ -31,7 +31,7 @@ New registrations have no confinement filter. An existing `HYPRUSE_CONFINE=launc
 
 ## X11
 
-The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `screenshot`, `screenshot_region`, `user_select_screenshot`, `focus_window`, `click`, `drag`, `key`, `type_text` and `scroll`. `drag` (application selection or moving objects) requires GUI input to be enabled in its registration; `screenshot_region` is read-only; `user_select_screenshot` waits for the human to draw a capture rectangle. The X11 drag always attempts to release its button, even after a failed movement.
+The repository contains an X11 backend implemented with Python FastMCP and standard X11 tools. It provides `desktop_info`, `windows`, `active_window`, `ui_elements`, `click_ui`, `screenshot`, `screenshot_region`, `user_select_screenshot`, `focus_window`, `click`, `drag`, `key`, `type_text` and `scroll`. `drag` (application selection or moving objects) requires GUI input to be enabled in its registration; `screenshot_region` is read-only; `user_select_screenshot` waits for the human to draw a capture rectangle. The X11 drag always attempts to release its button, even after a failed movement.
 
 ~~~sh
 codex mcp get tigo-x11
@@ -43,7 +43,7 @@ The installer registers:
 codex mcp add tigo-x11 --env TIGO_X11_ALLOW_INPUT=1 -- uv run --no-project --with mcp python "$HOME/.local/share/tigo-codex/x11_mcp.py"
 ~~~
 
-New registrations enable input; existing read-only registrations remain unchanged. To update one deliberately, follow [Linux instructions](linux.md#enable-x11-gui-input). X11 MCP **does not** work on Wayland merely because XWayland is running.
+Named controls use the bundled `x11_accessibility.py` helper with `/usr/bin/python3`, system PyGObject and AT-SPI typelibs. See [semantic targeting](gui-operator.md#semantic-interface-targeting) for selectors and prerequisites. New registrations enable input; existing read-only registrations remain unchanged. To update one deliberately, follow [Linux instructions](linux.md#enable-x11-gui-input). X11 MCP **does not** work on Wayland merely because XWayland is running.
 
 ## General Wayland: GNOME, KDE Plasma, Sway, Niri, COSMIC, River
 

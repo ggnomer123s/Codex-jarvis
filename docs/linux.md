@@ -35,7 +35,7 @@ You need an installed, signed-in [Codex CLI](https://github.com/openai/codex), G
 sudo apt update
 sudo apt install git
 # For X11:
-sudo apt install xdotool wmctrl maim
+sudo apt install xdotool wmctrl maim python3-gi gir1.2-atspi-2.0 at-spi2-core
 # For Hyprland if it is your session:
 sudo apt install grim wtype
 # For GNOME/KDE Wayland portal fallbacks:
@@ -49,7 +49,7 @@ Also install the portal backend for your current desktop (for example `xdg-deskt
 ~~~sh
 sudo dnf install git
 # X11:
-sudo dnf install xdotool wmctrl maim
+sudo dnf install xdotool wmctrl maim python3-gobject at-spi2-core
 # Hyprland:
 sudo dnf install grim wtype
 # GNOME/KDE Wayland:
@@ -63,7 +63,7 @@ Use the corresponding `xdg-desktop-portal-gnome` / `xdg-desktop-portal-kde` pack
 ~~~sh
 sudo pacman -S --needed git uv
 # X11:
-sudo pacman -S --needed xdotool wmctrl maim
+sudo pacman -S --needed xdotool wmctrl maim python-gobject at-spi2-core
 # Hyprland:
 sudo pacman -S --needed grim wtype
 # GNOME/KDE Wayland:
@@ -77,7 +77,7 @@ Use `xdg-desktop-portal-gnome` for GNOME, `xdg-desktop-portal-kde` for Plasma an
 ~~~sh
 sudo zypper install git
 # X11:
-sudo zypper install xdotool wmctrl maim
+sudo zypper install xdotool wmctrl maim python3-gobject typelib-1_0-Atspi-2_0 at-spi2-core
 # Hyprland:
 sudo zypper install grim wtype
 # Wayland:

@@ -8,6 +8,56 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Semantic interface targeting and keyless dictation (GUI 0.12.0)
+
+- Added native-X11 `ui_elements` / `click_ui` tools backed by a bounded AT-SPI
+  helper running in system Python. Queries are scoped to current PID/window
+  title; action selection checks exact names/roles, ambiguity, path, focus and
+  enabled/sensitive/showing state. Native click/press/activate actions do not
+  guess coordinates, retry failed actions or enable read-only input grants.
+  Incomplete or unsupported trees require a current scoped visual observation.
+- Updated shipped AGENTS/Skill routing to prefer interface structure for named
+  controls: existing Hypruse ui/click_ui, existing Windows-MCP UIA Snapshot
+  without vision when supported, and new X11 tools. Windows input still uses
+  the installed tool schema/guards; no second input backend was introduced.
+  Runtime diagnostics report semantic tools actually advertised by MCPs;
+  availability does not claim app accessibility or desktop ownership. Checked
+  workflows can use ui_elements as a read-only condition.
+- Added saved Local Whisper / Online Google Web Speech provider choice in
+  Preferences > Voice. Online uses SpeechRecognition's public personal-use
+  service configuration, explicit HTTPS, bounded in-memory PCM/FLAC/response,
+  selected language and one request per completed recording. No personal API
+  key/account, online preview, automatic retry/fallback upload or task submission.
+  Errors are redacted; cancellation closes the owned worker and rejects late
+  results. Wake listening and CLI dictation remain local. The public online
+  service can be limited/unavailable and is not a Google Cloud API guarantee.
+- New GUI settings default to local small for speech quality; existing model,
+  language, output-voice, login and permission choices are preserved. Both
+  providers reuse the worker, microphone selection and review-before-Send flow.
+  Online mode does not load Whisper. Auto detect/preview/CUDA/beam controls are
+  local-only; online selection exposes the language and audio-upload notice.
+- Locked SpeechRecognition 3.17.0 in the voice extra, with Python >=3.13 audioop/
+  aifc/chunk compatibility dependencies. Existing locked dependency versions
+  remain. Updated Linux AT-SPI/GI packages, X11 helper/legacy-path installation,
+  Windows/Linux updater import checks, CI syntax coverage, platform/setup/voice
+  guides and readmeai. Root one-step setup and Update Center keep using the
+  updated platform scripts; no extra API credentials or PyAudio are required.
+- Verification: 123 root tests discovered, 120 passed and 3 Windows-only tests
+  skipped; 102 Qt/process/QML tests passed after settling initial QML control
+  synchronization in an existing test. New tests cover ambiguity/stale state,
+  disabled/read-only controls, selected-window helper requests, HTTPS/error/
+  redirect/size handling, cancellation without upload, worker reuse, provider
+  persistence and production QML language/privacy controls. Isolated installer
+  fixtures check new packages and helper copy; Bash/Python/Skill/lock checks pass.
+- Live speech check: one synthetic Russian demo was recognized by the real
+  Google HTTPS service without personal credentials, and by cached local small
+  with HF_HUB_OFFLINE=1/local_files_only. Both returned text; proper-name errors
+  remain, so this is not an accuracy or general performance benchmark. An
+  attempted private-D-Bus/offscreen AT-SPI fixture could not export its GUI tree;
+  native X11 and Windows hardware/input behavior remain unverified. No live
+  desktop speedup, microphone hardware test, system-package installation or
+  public CI result is claimed. Preview uses isolated production QML settings.
+
 ## 2026-10-17 — Update Center, simpler setup and quiet GUI motion (GUI 0.11.0)
 
 - Added [Update Center](docs/updates.md) in the sidebar and Ctrl+U: running/main

@@ -15,7 +15,7 @@ SERVERS = {"hypruse", "tigo-x11", "windows-mcp", "tigo-wayland",
            "jarvis-x11", "jarvis-wayland"}  # Existing MCP grants/workflows remain valid.
 OBSERVATIONS = {"desktop", "ui", "windows", "snapshot", "state", "screenshot", "screenshot_region",
                 "describe_environment", "displayinventory", "wait_for", "waitfor", "wait_for_window",
-                "active_window", "desktop_info"}
+                "active_window", "desktop_info", "ui_elements"}
 DESKTOP_TOOLS = OBSERVATIONS | {"launch", "hypr", "focus_window", "click_ui", "sequence", "pointer",
                                "keyboard", "key", "click", "drag", "scroll", "type", "type_text", "app", "move",
                                "shortcut", "multiselect", "use_bind", "binds", "marks"}

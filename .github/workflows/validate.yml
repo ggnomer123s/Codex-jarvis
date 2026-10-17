@@ -20,7 +20,7 @@ jobs:
             if ($errors.Count -gt 0) { throw "$($_.Name): $($errors | Out-String)" }
           }
       - name: Check Python syntax
-        run: python3 -m py_compile scripts/x11_mcp.py scripts/tigo_memory.py scripts/tigo_voice.py scripts/sync_agents.py tests/test_memory.py tests/test_gui_regressions.py tests/test_full_launcher.py
+        run: python3 -m py_compile scripts/x11_mcp.py scripts/x11_accessibility.py scripts/tigo_memory.py scripts/tigo_voice.py scripts/sync_agents.py tests/test_memory.py tests/test_gui_regressions.py tests/test_full_launcher.py
       - name: Verify local memory lifecycle
         run: python3 -m unittest discover -s tests -v
       - name: Check English documentation and managed scripts

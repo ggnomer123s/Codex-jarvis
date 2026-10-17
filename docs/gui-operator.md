@@ -92,3 +92,50 @@ A measurable "better than" statement requires real **task-completion benchmarks*
 - Keep drag start/end points grounded, release buttons on failure, and verify the final selection.
 - Do not perform arbitrary shell inputs after a GUI MCP refuses scope or auth.
 - Continue a long task by checkpoints rather than restarting its entire sequence.
+
+## Semantic interface targeting
+
+For labeled buttons, fields and menus, use the target window's accessibility
+structure first. It returns names/roles/state without interpreting a screenshot.
+Canvas/unsupported applications still need one scoped image. Do not repeat
+empty tree queries or switch input backends after a guard refusal.
+
+| Session | Semantic observation/action |
+|---|---|
+| Hyprland | Existing Hypruse `ui` scoped to the window and `click_ui` |
+| Windows | Existing Windows-MCP `Snapshot`, with `use_vision=False` when supported; use current returned control target/geometry with native input tools |
+| Native X11 | New `ui_elements` and `click_ui` using the bundled AT-SPI adapter |
+
+Tool versions differ: inspect the current schema. Windows Click is not assumed
+to accept a name. DOM extraction may be available through Snapshot's use_dom
+option or a configured browser MCP; this change does not install a new browser
+extension or replace browser authentication. Runtime diagnostics distinguish
+advertised semantic tools from actual app accessibility/input ownership.
+
+X11 examples, using a window ID obtained from `windows`:
+
+```json
+{"tool":"ui_elements","arguments":{"window_id":"0x1234","name":"Save","role":"push button"}}
+{"tool":"click_ui","arguments":{"window_id":"0x1234","name":"Save","role":"push button","path":"0/2"}}
+```
+
+Use the returned path, not the illustrative path above. Names/roles match exactly
+(case-insensitive); duplicate labels require a fresh role/path. The helper binds
+queries to the window PID and exact title, caps tree traversal at 1200 nodes /
+24 levels and returns at most 100 matches. It never reads text-field values.
+Incomplete trees cannot establish a unique action target. An action rechecks
+identity, focus, name/role, enabled/sensitive/showing state and invokes one
+native click/press/activate action. A delivered action still needs application
+result verification. No coordinate fallback, cached control replay or automatic
+action retry occurs. An uncertain timeout requires observation before another
+action. Existing read-only X11 registrations remain read-only.
+
+The helper runs in `/usr/bin/python3` so the uv MCP can use distribution GI
+without building PyGObject. Install system Python GI + AT-SPI typelibs as listed
+in [installation](install-desktop.md#dictation-and-semantic-controls-012).
+The lightweight installer copies both helper files, including the retained
+legacy backend location, and warns if system GI/Atspi is missing. The full
+Linux updater installs these prerequisites. A native X11 session, session
+accessibility bus and an application exporting a useful tree are required.
+Nothing enables global accessibility settings, weakens ownership guards or
+makes a Wayland session an X11 session. Restart Tigo/Codex after installation.
