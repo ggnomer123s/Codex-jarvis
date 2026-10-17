@@ -8,6 +8,36 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Live dictation and incremental assistant speech (GUI 0.14.0)
+
+- Added bounded rolling local/online provisional transcription, refreshed after
+  about 1.2 seconds of captured audio when inference is available. Current-window
+  text is revised rather than appended repeatedly; window overlap merges words.
+  Final full-recording recognition remains authoritative. The existing online
+  service receives partial audio while Live text is enabled; this is phrase HTTP,
+  not a persistent realtime API. No personal key or new dependency is required.
+- Partial text now appears directly in the composer. Final text replaces its
+  provisional suffix once. Cancellation restores the original unedited draft;
+  manual edits stop automatic replacements and retain send safeguards. Existing
+  saved preview opt-out is preserved; new settings default Live text on.
+- Assistant message deltas feed a bounded prose/sentence queue, including
+  commentary and the final answer, with per-item completion deduplication. Code
+  fences, URLs, reasoning and tool payloads are excluded. Local/online/system
+  speech use the same queue. Stop speech suppresses further chunks for that turn;
+  new tasks reset it. Playback generations and microphone handoff remain in use.
+  Queue overflow reports an error; history opening does not trigger speech.
+- Updated Voice/Speech UI text, added the live-voice guide and maintainer context,
+  and synchronized GUI version/lock metadata. Installers/dependencies need no
+  change for this feature. Earlier canceled setup/wake drafts remain separate;
+  an isolated feature patch is provided to avoid committing them accidentally.
+- Verification: pure text assembly tests, real Qt fake-engine streaming tests,
+  provisional-before-final local/online worker fixtures and actual composer
+  revision/cancellation/edit tests passed. The feature-only patch over clean HEAD passed 140 root tests discovered
+  (137 passed, 3 Windows-only skips) and 117 Qt/process/QML tests. The current
+  working tree also passed 121 Qt tests. Frozen lock and diff checks passed. No live microphone, real online latency test
+  or authenticated model request was used; chunk delivery is subject to CPU,
+  network and service limits. This does not promise word-by-word audio latency.
+
 ## 2026-10-17 — Windows-MCP and Tigo indicator coexistence
 
 - Moved the Windows Tigo screen-control banner to the bottom center of each

@@ -14,6 +14,7 @@ import argparse
 import queue
 import time
 from .preferences import LANGUAGES, valid_voice_model
+from .live_text import LiveTranscript
 
 MAX_SECONDS = 60
 SAMPLE_RATE = 16000
@@ -104,7 +105,7 @@ class VoiceWorker:
         # Preview only processes newly captured chunks, never a growing full buffer.
         previews = queue.Queue(maxsize=1)
         preview_done = threading.Event()
-        preview_text = []
+        live = LiveTranscript()
 
         def callback(indata, nframes, time_info, status):
             # The realtime callback does not run numpy, JSON or model inference.
@@ -119,7 +120,7 @@ class VoiceWorker:
         def preview_worker():
             while not preview_done.is_set():
                 try:
-                    raw = previews.get(timeout=.1)
+                    window, raw = previews.get(timeout=.1)
                 except queue.Empty:
                     continue
                 if self.cancelled.is_set() or preview_done.is_set():
@@ -127,17 +128,18 @@ class VoiceWorker:
                 try:
                     text = self._transcribe(raw, options["language"], 1)
                     if text and not self.cancelled.is_set() and not preview_done.is_set():
-                        preview_text.append(text)
-                        self.output("preview", id=recording_id, text=" ".join(preview_text))
+                        self.output("preview", id=recording_id, text=live.update(window, text))
                 except Exception:
                     # Preview is optional; the final transcription reports errors.
                     pass
 
         preview_thread = None
-        if options.get("preview") and self.provider == "local":
+        if options.get("preview"):
             preview_thread = threading.Thread(target=preview_worker, daemon=True)
             preview_thread.start()
         preview_raw = bytearray()
+        preview_window = 0
+        preview_samples = 0
         last_preview = time.monotonic()
         last_speech = time.monotonic()
         try:
@@ -162,6 +164,8 @@ class VoiceWorker:
                             break
                         continue
                     raw = raw[:(SAMPLE_RATE * MAX_SECONDS - count) * 2]
+                    if not raw:
+                        continue
                     buffers.append(raw)
                     count += len(raw) // 2
                     if endpoint:
@@ -178,13 +182,22 @@ class VoiceWorker:
                         last_speech = now
                     if preview_thread:
                         preview_raw.extend(raw)
-                        if now - last_preview >= 8 or (now - last_preview >= 2 and now - last_speech >= .7):
+                        preview_samples += len(raw) // 2
+                        # Re-decode the current bounded window to revise partial words.
+                        # Online is keyless phrase HTTP, not a persistent streaming API.
+                        if preview_samples >= SAMPLE_RATE * 1.2:
                             try:
-                                previews.put_nowait(bytes(preview_raw))
-                                preview_raw.clear()
+                                previews.put_nowait((preview_window, bytes(preview_raw)))
+                                preview_samples = 0
                                 last_preview = now
+                                if len(preview_raw) >= SAMPLE_RATE * 8 * 2:
+                                    preview_raw = bytearray(preview_raw[-SAMPLE_RATE * 2:])
+                                    preview_window += 1
                             except queue.Full:
-                                pass
+                                # Keep one fresh bounded window while inference is busy.
+                                if len(preview_raw) > SAMPLE_RATE * 10 * 2:
+                                    preview_raw = bytearray(preview_raw[-SAMPLE_RATE * 8 * 2:])
+                                    preview_window += 1
             # Include frames queued just before the user's stop request.
             if overflow.is_set():
                 raise RuntimeError("Audio input overflowed. Retry with preview disabled or a smaller model.")

@@ -1,5 +1,6 @@
 """Local and opt-in online speech with cancellation and microphone handoff."""
 import math
+from collections import deque
 import re
 import sys
 from PySide6.QtCore import QObject, Property, QTimer, Signal, Slot
@@ -62,6 +63,9 @@ class Speech(QObject):
         self._state = 'idle'
         self._status = ('Online speech selected. Spoken text is sent to Microsoft; Internet is required.'
                         if self._engine_kind == 'online' else 'Local neural speech is ready. Male and female voices work offline after downloading.')
+        self._queue = deque()
+        self._queue_chars = 0
+        self._stream_muted = False
         self._quiet_callbacks = []
         self.quiet_timer = QTimer(self)
         self.quiet_timer.setSingleShot(True)
@@ -232,9 +236,32 @@ class Speech(QObject):
             raise ValueError('No ' + gender.lower() + ' voice for this language. Select an installed voice explicitly.')
         return min(matching, key=lambda v:v.age().name != 'Adult')
 
+    def begin_stream(self):
+        self.stop()
+        self._stream_muted = False
+        if self._state == 'error': self._state = 'finishing' if self._active else 'idle'
+
+    def enqueue(self, text):
+        if self._closing or not self._enabled or self._stream_muted or self._state == 'error':
+            return
+        text = spoken_text(text)
+        if not text:
+            return
+        if not self._active:
+            self.read(text, automatic=True)
+        elif len(self._queue) < 256 and self._queue_chars + len(text) <= 64000:
+            self._queue.append(text)
+            self._queue_chars += len(text)
+        else:
+            self._fail('Speech backlog exceeded the limit. Read the remaining text in chat.')
+
     def read(self, text, *, automatic=False):
         if self._closing or (automatic and not self._enabled):
             return False
+        if not automatic:
+            self._queue.clear()
+            self._queue_chars = 0
+            self._stream_muted = True
         text = spoken_text(text)
         if not text:
             self._status = 'No prose to read. Code blocks and URLs stay in chat.'
@@ -317,6 +344,9 @@ class Speech(QObject):
         self.changed.emit()
 
     def _fail(self, message):
+        self._queue.clear()
+        self._queue_chars = 0
+        self._stream_muted = True
         self._generation += 1
         self._stop_native()
         self._state, self._status = 'error', str(message)[:700]
@@ -326,6 +356,9 @@ class Speech(QObject):
 
     @Slot()
     def stop(self):
+        self._queue.clear()
+        self._queue_chars = 0
+        self._stream_muted = True
         if not self._active or self._closing:
             return
         self._generation += 1
@@ -344,6 +377,11 @@ class Speech(QObject):
             self.quiet_timer.start(50)
             return
         self._active = False
+        if self._queue and not self._stream_muted and not self._quiet_callbacks:
+            text = self._queue.popleft()
+            self._queue_chars -= len(text)
+            self.read(text, automatic=True)
+            return
         if self._state != 'error': self._state = 'idle'
         callbacks, self._quiet_callbacks = self._quiet_callbacks, []
         self.changed.emit()
@@ -351,6 +389,7 @@ class Speech(QObject):
             callback()
 
     def shutdown(self):
+        self._queue.clear()
         self._closing = True
         self._generation += 1
         self._quiet_callbacks.clear()

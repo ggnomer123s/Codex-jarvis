@@ -53,7 +53,7 @@ is required. This is an unofficial client of the Edge service, not an Azure
 subscription with a service-level guarantee.
 
 Catalog browsing and changing modes do not submit an utterance. Automatic
-speech starts only for the current successful final reply, when enabled;
+speech starts for assistant prose as complete sentences arrive, when enabled;
 **Read** and **Test voice** are explicit requests. Local failures never select
 online mode. Online errors do not change providers or replay audio. A network
 failure leaves text chat usable and explains selecting local output.
@@ -84,8 +84,9 @@ Svetlana, Guy and Aria returned decodable audio instead.
   through speech and a 300 ms quiet tail. Recording waits for the owned speech
   process to exit; stale callbacks cannot restart canceled speech or recording.
 
-Only successful completed final replies are automatically read. Streaming text,
-commentary, failed/canceled tasks and opened history stay silent. Fenced code,
+Assistant prose, including commentary, is automatically queued as sentences arrive. See [live voice](live-voice.md) for ordered playback, cancellation and limits.
+Already spoken progress cannot be recalled on task failure/cancellation; pending
+speech is stopped. Opened history stays silent. Fenced code,
 images, raw URLs and markup are removed from the speaking copy, bounded to
 6,000 characters. A ten-minute overall limit applies. System mode still supports
 installed OS voices for other languages; neural output defaults to Russian or

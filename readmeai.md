@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-17**, GUI **0.13.1**. Repository:
+Last reconciled: **2026-10-17**, GUI **0.14.0**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -12,6 +12,8 @@ Source, tests and observed behavior take precedence over dated summaries.
 This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
+
+GUI 0.14.0 adds live composer dictation and sentence-level speech for all assistant messages. See [Live voice](docs/live-voice.md) for settings, privacy and limits.
 
 **Tool discovery correction (2026-10-17):** The Tigo Skill and managed AGENTS
 block now distinguish browser integration, desktop MCP and shell PATH. Inspect

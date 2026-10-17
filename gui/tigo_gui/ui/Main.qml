@@ -16,6 +16,14 @@ ApplicationWindow {
     property bool compact: width < 1250
     property real coreSize: Math.min(compact ? 280 : 360, Math.max(220, height - 440), Math.max(220, corePanel.width - 30))
     property string liveTranscript: ""
+    property string voiceDraftBase: ""
+    property bool voiceDraftOwned: false
+    property bool voiceDraftUpdate: false
+    function setVoiceDraft(text) {
+        voiceDraftUpdate = true
+        composer.text = text
+        voiceDraftUpdate = false
+    }
     property bool followConversation: true
     function syncComposerControls() {
         if (!inlineModel.activeFocus && !inlineModel.contentItem.activeFocus) inlineModel.editText = bridge.model || "Codex default"
@@ -41,16 +49,32 @@ ApplicationWindow {
         target: bridge
         function onTranscriptReady(text) {
             window.liveTranscript = ""
+            if (window.voiceDraftOwned) {
+                window.setVoiceDraft(window.voiceDraftBase)
+                window.voiceDraftOwned = false
+            }
             composer.text = composer.text ? composer.text + "\n" + text : text
             composer.forceActiveFocus()
         }
-        function onTranscriptPreview(text) { window.liveTranscript = text }
+        function onTranscriptPreview(text) {
+            if (!window.liveTranscript.length) {
+                window.voiceDraftBase = composer.text
+                window.voiceDraftOwned = true
+            }
+            window.liveTranscript = text
+            if (window.voiceDraftOwned) window.setVoiceDraft(window.voiceDraftBase + (window.voiceDraftBase ? "\n" : "") + text)
+        }
         function onChanged() {
             if (bridge.voiceState === "starting") window.liveTranscript = ""
+            if (bridge.voiceState === "idle" && window.voiceDraftOwned) {
+                window.setVoiceDraft(window.voiceDraftBase)
+                window.voiceDraftOwned = false
+                window.liveTranscript = ""
+            }
             Qt.callLater(window.syncComposerControls)
         }
         function onMessagesChanged() { if (window.followConversation) scrollDelay.restart() }
-        function onDraftRequested(text) { composer.text = text; composer.forceActiveFocus() }
+        function onDraftRequested(text) { window.voiceDraftOwned = false; window.liveTranscript = ""; composer.text = text; composer.forceActiveFocus() }
     }
     Timer { id: scrollDelay; interval: 50; onTriggered: conversation.positionViewAtEnd() }
     Connections {
@@ -396,7 +420,7 @@ ApplicationWindow {
                                 TextArea {
                                     id: composer
                                     objectName: "composer"
-                                    onTextChanged: bridge.updateDraftState(text.trim().length > 0)
+                                    onTextChanged: { if (!window.voiceDraftUpdate) { window.voiceDraftOwned = false; bridge.updateDraftState(text.trim().length > 0) } }
                                     placeholderText: "Ask Tigo anything, or use your voice..."
                                     placeholderTextColor: "#688291"
                                     color: "#e0f1f4"; font.pixelSize: 13
@@ -601,7 +625,7 @@ ApplicationWindow {
                     Text {
                         objectName: "transcriptionPrivacy"; Layout.fillWidth: true
                         text: transcriptionChoice.currentIndex === 1
-                            ? "No personal API key or account needed. Each completed recording is sent to Google over HTTPS. This public personal-use service may be limited or unavailable. Choose a language; automatic detection and preview are local-only."
+                            ? "No personal API key or account needed. Audio is sent to Google over HTTPS. Live text sends partial audio while you record, then the completed recording for correction. This public service may be limited or unavailable. Select a language; Auto detect is local-only."
                             : "Audio is transcribed on this computer. The selected Whisper model downloads once; after download it works offline. Choose small or medium for more demanding speech."
                         color: transcriptionChoice.currentIndex === 1 ? "#dfb987" : "#6f909f"
                         font.pixelSize: 11; wrapMode: Text.WordWrap
@@ -625,10 +649,10 @@ ApplicationWindow {
                     Text { text: "Microphone"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox { id: micChoice; Layout.fillWidth: true; model: bridge.microphones; textRole: "label"; valueRole: "id"; enabled: !window.locked }
                     CheckBox {
-                        id: previewChoice; visible: transcriptionChoice.currentIndex === 0; text: "Show provisional text while recording"; enabled: !window.locked && transcriptionChoice.currentIndex === 0
+                        id: previewChoice; text: "Live text while recording (provisional)"; enabled: !window.locked
                         contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                     }
-                    Text { Layout.fillWidth: true; text: transcriptionChoice.currentIndex === 1 ? "Only explicit dictation uses the online service. Wake transcription has its own Local / Online setting. Review the transcript before sending." : "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Wake transcription has its own Local / Online setting. Review the transcript before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Text { Layout.fillWidth: true; text: transcriptionChoice.currentIndex === 1 ? "Live text uses short repeated requests, without an API key; latency depends on the network. Disable Live text to upload only after recording. Wake has a separate provider. Review the final transcript before sending." : "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Wake transcription has its own Local / Online setting. Review the transcript before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     VoiceAutomation { objectName: "dictationAutomation"; Layout.fillWidth: true; enabled: !window.locked }
                     HudButton { text: bridge.voiceReady ? "Transcription ready" : "Prepare saved provider / list microphones"; enabled: !window.locked && bridge.voiceAvailable; onClicked: bridge.warmVoice() }
                     }

@@ -28,10 +28,11 @@ key or Codex API billing setup is required. The implementation uses
 with an explicit HTTPS endpoint. This is not the paid Google Cloud Speech API;
 the upstream shared service can impose limits or stop being available.
 
-Only a completed explicit dictation recording is encoded as FLAC and uploaded
-to Google. Recording buffers and the response are kept in RAM; Tigo does not
+With Live text enabled, partial audio windows are encoded as FLAC and uploaded
+to Google during explicit recording; the completed recording is sent for final
+correction. With Live text off, only the completed recording is uploaded. Recording buffers and the response are kept in RAM; Tigo does not
 write an audio file. The service processes the uploaded audio under its own
-policies. Online dictation has no previews. Wake has its own explicit Local/Online choice;
+policies. Online Live text uses repeated phrase requests; see [live voice](live-voice.md). Wake has its own explicit Local/Online choice;
 online wake listening uploads speech phrases while enabled. Online mode
 requires a chosen language; Auto detect is local-only. The existing microphone
 selection works for both providers. There is no automatic fallback upload,

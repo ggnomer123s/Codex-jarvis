@@ -143,19 +143,41 @@ for line in sys.stdin:
         self.assertEqual(backend.process.processId(),0)
         backend.cancelVoice()
 
-    def test_only_completed_current_reply_is_read_and_history_is_silent(self):
+    def test_all_messages_are_queued_and_history_is_silent(self):
         backend=self.backend('commentary')
         backend.send('The task is complete.')
         self.wait(lambda:not backend.busy)
-        self.assertEqual(self.engine.spoken,['The task is complete.'])
+        self.assertEqual(self.engine.spoken,['I will inspect the task.'])
+        self.engine.finish()
+        self.wait(lambda:len(self.engine.spoken)==2)
+        self.assertEqual(self.engine.spoken,['I will inspect the task.','The task is complete.'])
         key=backend.historyEntries[0]['id']
         backend.speaker.stop()
         self.wait(lambda:not backend.speaker.active)
         backend.newSession()
         self.assertTrue(backend.openConversation(key))
         QTest.qWait(30)
-        self.assertEqual(self.engine.spoken,['The task is complete.'])
+        self.assertEqual(self.engine.spoken,['I will inspect the task.','The task is complete.'])
         self.assertEqual(backend.process.state(),backend.process.ProcessState.Running)
+
+    def test_deltas_speak_before_turn_end_and_stop_mutes_remaining_stream(self):
+        backend=self.backend()
+        backend._begin('codex')
+        backend._thread_id,backend._turn_id='thread','turn'
+        def delta(text):
+            backend._notification('item/agentMessage/delta',{'threadId':'thread','turnId':'turn','itemId':'one','delta':text})
+        delta('First sentence. ')
+        self.assertTrue(backend.busy)
+        self.assertEqual(self.engine.spoken,['First sentence.'])
+        delta('Second sentence. ')
+        self.assertEqual(self.engine.spoken,['First sentence.'])
+        self.engine.finish()
+        self.wait(lambda:len(self.engine.spoken)==2)
+        backend.speaker.stop()
+        delta('Should remain silent. ')
+        backend._finish('completed')
+        QTest.qWait(350)
+        self.assertEqual(self.engine.spoken,['First sentence.','Second sentence.'])
 
     def test_wake_pause_precedes_speech_and_resumes_after_cooldown(self):
         backend=self.backend()
@@ -204,7 +226,7 @@ for line in sys.stdin:
         self.assertIsNone(self.engine)
         self.assertFalse(backend.speaker.active)
 
-    def test_interrupted_and_commentary_only_turns_are_silent(self):
+    def test_interrupted_turn_stops_but_commentary_only_turn_is_spoken(self):
         backend=self.backend('slow')
         backend.send('A task')
         self.wait(lambda:bool(backend._turn_id))
@@ -214,7 +236,7 @@ for line in sys.stdin:
         backend=self.backend('commentary-only')
         backend.send('A task')
         self.wait(lambda:not backend.busy)
-        self.assertIsNone(self.engine)
+        self.assertEqual(self.engine.spoken,['I will inspect the task.'])
 
     def test_real_qt_mock_plugin_is_only_injected_in_tests(self):
         if 'mock' not in QTextToSpeech.availableEngines():
