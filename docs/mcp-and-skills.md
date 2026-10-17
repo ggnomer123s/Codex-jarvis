@@ -97,6 +97,22 @@ The installer copies `skills/tigo-desktop/SKILL.md` to `~/.agents/skills/tigo-de
 
 It also appends a managed block to `CODEX_HOME/AGENTS.md` (default `~/.codex/AGENTS.md`), preserving and backing up any existing instructions. New Codex sessions discover these instructions and installed MCPs. The Skill now routes requests involving real app interactions to the GUI backend automatically, including drag selection and region screenshots. For exact workflows, see [GUI Operator](gui-operator.md). The managed `AGENTS.md` block is refreshed safely on reinstall, preserving personal instructions.
 
+The Tigo Skill and managed instructions require capability discovery before an
+assistant reports that browser/desktop access is missing. Browser integration,
+desktop MCP and a shell executable are independent: `hypruse` can be absent
+from PATH while its MCP is available through uvx. A missing/disconnected browser
+integration should lead to inspection of the session's available desktop MCP
+and a read-only inventory before declaring the task impossible. A refusal,
+authentication requirement or ownership hold still stops that action; this is
+not a workaround for access restrictions. Opening a URL and inspecting its
+images are separate outcomes and require separate evidence.
+
+Normal installers already copy the Skill and refresh only the managed AGENTS
+blocks with backups, preserving personal instructions. No new dependency or
+access grant is required for this instruction update. Restart Tigo and start a
+new conversation to load changed instructions; a resumed conversation may keep
+its older context.
+
 Open a **fresh Codex session** after changing MCPs or Skills:
 
 ~~~sh

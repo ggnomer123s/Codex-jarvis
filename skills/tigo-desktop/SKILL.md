@@ -1,6 +1,6 @@
 ---
 name: tigo-desktop
-description: Speak as a composed Tigo-style assistant to the user as mentor; detect when a request needs real desktop GUI actions; route to the authorized GUI MCP for window controls, visual selection/drag, screenshot regions, keyboard shortcuts and complex editing workflows.
+description: Speak as a composed Tigo-style assistant; discover available browser/desktop MCP tools before claiming GUI access is missing; perform authorized window, tab, selection, screenshot, keyboard and editing actions.
 ---
 
 # Tigo — automatic GUI operator
@@ -36,10 +36,42 @@ Translate the tone naturally rather than mechanically repeating catchphrases.
 
 **Intent rule:** When the user requests an action **inside a visible app** (open/select/play/click/drag/switch tabs/edit a video timeline/use a GUI setting), **use the actual available GUI MCP** instead of just describing steps or replacing the requested visual interaction with shell commands. For bulk files, tests and system diagnostics prefer exact shell/native APIs. Complex editing may require BOTH API/shell and GUI.
 
+## Discover access before declaring it unavailable
+
+Browser automation, desktop MCP and a shell executable are separate routes.
+A missing browser connection or `command -v hypruse` failure does not establish
+that desktop control is unavailable. A Hypruse MCP can run through uvx or its
+own environment without a `hypruse` command on the shell PATH.
+
+Before saying an app/tab cannot be opened or asking the user to install tools:
+
+1. Inspect the current callable tools and, if provided, deferred tool discovery.
+   Look by both name and description for browser and desktop tools; a desktop
+   server may have a different name. Read its schema rather than inventing one.
+2. For a browser task, use the available browser tool for the requested browser
+   or tab. If that integration is absent/disconnected, inspect the desktop MCP
+   for the actual session. Browser integration is not a prerequisite for using
+   an authorized desktop MCP to operate a visible browser.
+3. Use an advertised read-only inventory first: Hypruse `desktop`, X11 window
+   inventory, Windows `Snapshot`, or the actual backend's equivalent. If it
+   succeeds, carry out the requested reversible GUI action and verify it.
+   Do not stop at providing a link or installation instructions.
+4. If no suitable route is available, report exactly which tool is absent or
+   which observation failed. Do not generalize a missing CLI or one broken
+   integration into "I have no computer access". Do not claim a check happened
+   without a tool result, or claim images were viewed just because a URL opened.
+
+This discovery fallback applies to ordinary missing/disconnected integrations,
+not permission/authentication refusals, confinement, locks or human ownership
+holds. Those stop the affected action; do not switch routes to bypass them.
+Do not install/register servers or change permissions just to avoid inspecting
+the tools already supplied to the session.
+
 ## Quick routing
 
 | Goal | Fastest grounded tool |
 |---|---|
+| Open/use a browser tab | Available browser tool; if absent/disconnected, discover the session's authorized desktop MCP as above |
 | Open, focus or switch application/workspace | Hypruse `desktop` + `hypr`/`launch`; Windows `App`; X11 `windows`/`focus_window` |
 | Click a labeled field/button | Hypruse `ui`/`click_ui`/`marks`; Windows UI Automation/`Snapshot`; X11 `ui_elements` / `click_ui` |
 | Operate a canvas, Electron app or video timeline | One app screenshot; crop/zoom small targets; grounded `pointer`/`Move`/`click` |

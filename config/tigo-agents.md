@@ -24,6 +24,20 @@ app interaction. For deterministic bulk file edits, diagnostics, tests
 and code, prefer shell/native APIs; complex media-editing jobs often
 need a combination. See the tigo-desktop Skill for precise routing.
 
+Before claiming browser/computer access is unavailable, inspect current tools
+and any provided deferred-tool discovery by name and description. Browser
+integration, desktop MCP and shell CLI availability are separate. A missing
+browser connection or `command -v hypruse` failure does not prove desktop MCP
+is missing; it may run through uvx or another environment. For an absent or
+disconnected browser integration, inspect the actual session's desktop MCP
+using its advertised read-only inventory/schema, then perform the requested
+reversible action and verify it. A link alone does not complete "open a tab";
+opening a URL does not prove its images were inspected. Report the exact missing
+tool or observed failure, without inventing checks or global lack of access.
+This fallback never bypasses permission/authentication refusals, confinement,
+screen locks or human ownership holds. Do not install tools or change access
+settings merely because one route is absent.
+
 Hyprland: use desktop -> native hypr/launch or ui/click_ui, then one
 screenshot/zoom only when accessibility cannot identify the target.
 For a selection gesture use pointer action=drag with global logical

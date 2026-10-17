@@ -8,6 +8,31 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Discover desktop MCP before denying browser access
+
+- Updated the Tigo desktop Skill and managed AGENTS rules to inspect current and
+  available deferred tools before claiming browser/computer control is missing.
+  Browser integration, desktop MCP and shell PATH are independent: a missing
+  browser connection or hypruse executable is not evidence that desktop MCP is
+  absent. A suitable advertised read-only inventory precedes GUI actions;
+  missing/disconnected integrations can use the authorized desktop route.
+- Kept authentication, confinement, lock and human ownership refusals as stopping
+  conditions. The discovery fallback cannot bypass these guards. Instructions
+  require reporting actual tool evidence, distinguish opening a URL from viewing
+  its images, and avoid substituting a link for a requested reversible GUI action.
+- Updated the Skill discovery description, MCP/Skills guide and AI-maintainer
+  context. Existing installers already deploy both instruction files; no runtime,
+  dependency, launcher or permission change is needed. Applied the instructions
+  to the local installed Skill and managed AGENTS with backups, preserving
+  personal instructions. No confirmed-fix memory database was changed.
+- Verification: Skill quick_validate passed; all 17 existing managed-instruction /
+  X11 regression tests passed, including managed-block replacement, preservation,
+  backup and idempotence fixtures. Installed Skill bytes and managed blocks were
+  checked against the repository; English-only docs/scripts and diff checks pass.
+  This instruction change is not a new model-behavior benchmark or proof of
+  browser availability on every installation. Start a new Tigo conversation to
+  load the revised instructions; no real browser action was requested/tested.
+
 ## 2026-10-17 — Short/quiet wake-name repair and diagnostics (GUI 0.13.1)
 
 - Reproduced the common local/online failure before transcription: the fixed

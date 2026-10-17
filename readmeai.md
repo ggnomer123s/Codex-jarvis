@@ -13,6 +13,14 @@ This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
 
+**Tool discovery correction (2026-10-17):** The Tigo Skill and managed AGENTS
+block now distinguish browser integration, desktop MCP and shell PATH. Inspect
+current/deferred tools and an advertised read-only desktop inventory before
+claiming no browser/computer access. An absent browser connection or CLI is not
+proof that the desktop MCP is absent. This fallback never bypasses auth/scope/
+ownership refusals. Normal installers already deploy these instruction files;
+new sessions are required to load them. No runtime/dependency change is needed.
+
 The context-rollover handover was published as `e970515`. The subsequent user
 request adds full CachyOS/Windows update commands that check/install dependencies;
 see section 13 and the newest change report for those bootstrap scripts. Runtime
