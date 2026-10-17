@@ -9,11 +9,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check Bash syntax
-        run: for script in scripts/*.sh; do bash -n "$script" || exit; done
+        run: for script in install.sh scripts/*.sh; do bash -n "$script" || exit; done
       - name: Check PowerShell syntax
         shell: pwsh
         run: |
-          Get-ChildItem scripts -Filter '*.ps1' | ForEach-Object {
+          @(Get-ChildItem scripts -Filter '*.ps1'; Get-Item install.ps1) | ForEach-Object {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
@@ -27,7 +27,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          paths = [Path("README.md"), *Path("docs").glob("*.md"), *Path("config").glob("*.md"),
+          paths = [Path("README.md"), Path("install.sh"), Path("install.ps1"), Path("install.cmd"), *Path("docs").glob("*.md"), *Path("config").glob("*.md"),
                    *Path("skills").rglob("*.md"), *Path("scripts").glob("*.sh"),
                    *Path("scripts").glob("*.ps1"), *Path("scripts").glob("*.py")]
           for path in paths:

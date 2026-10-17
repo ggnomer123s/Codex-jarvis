@@ -18,6 +18,20 @@ first: X11 needs `xdotool`, `wmctrl`, `maim`; Hyprland needs `grim`, `wtype`
 and compositor tools; other Wayland desktops need their portal backend.
 Existing MCP permissions are retained.
 
+## Simplest setup: one command or script
+
+Use the [one-step installation and Update Center guide](updates.md#one-step-install-or-update)
+for Windows 11 and the supported Linux families. The new root entry points
+`install.ps1` / `install.cmd` and `install.sh` prepare dependencies and clone or
+update a clean checkout. The GUI's **Updates** button or **Ctrl+U** checks versions,
+shows changes and starts installation in a visible terminal after Tigo closes.
+
+The universal Linux bootstrap adds Debian/Ubuntu/Mint, Fedora and openSUSE
+dispatch alongside the existing CachyOS/Arch updater. It uses a compatible Node
+22+ installation, or a checksum-verified private Node 22 runtime, and installs
+uv when absent. It retains settings/login and stops on local Git changes. These
+are setup recipes with isolated tests, not full hardware certification.
+
 ## Automatic dependency-aware update: CachyOS and Windows 11
 
 First choose **Quit Tigo**, including the background listener. These bootstrap

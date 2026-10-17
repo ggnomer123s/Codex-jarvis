@@ -27,6 +27,7 @@ from .attachments import inspect_file, validate_files, MAX_FILES
 from .speech import Speech
 from .desktop_control import control_summary
 from .screen_activity import ScreenActivity
+from .updates import Updates
 from .compat import desktop_settings, environment, existing_path, LEGACY
 
 
@@ -45,6 +46,7 @@ class Backend(QObject):
     def __init__(self, settings=None, *, codex_command=None, voice_command=None, codex_home_override=None, start_hidden=False, tray_available=False, access_path=None, speech_engine_factory=None):
         super().__init__()
         self.settings = settings if settings is not None else desktop_settings()
+        self._reduced_motion = str(self.settings.value('reducedMotion', 'false')).lower() == 'true'
         try:
             font_size = int(self.settings.value("conversationFontSize", 14))
         except (TypeError, ValueError):
@@ -176,6 +178,7 @@ class Backend(QObject):
         self._ui_tick.setInterval(1000)
         self._ui_tick.timeout.connect(self.changed.emit)
         self.profile = FullProfile(self._codex_launch, self, home=self._normal_home)
+        self.updater = Updates(self)
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
         self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle" or self.speaker.active))
@@ -245,6 +248,33 @@ class Backend(QObject):
     @Property(str, notify=noticeChanged)
     def notice(self):
         return self._notice
+
+    @Property(QObject, constant=True)
+    def updates(self):
+        return self.updater
+
+    @Property(bool, notify=layoutChanged)
+    def reducedMotion(self):
+        return self._reduced_motion
+
+    @Slot(bool)
+    def setReducedMotion(self, value):
+        self._reduced_motion = value
+        self.settings.setValue('reducedMotion', value)
+        self.layoutChanged.emit()
+
+    @Slot(bool)
+    def installUpdate(self, has_draft=False):
+        if self._locked() or self._attachments or has_draft:
+            self._show_notice('Finish the current task and save or clear the draft and attachments before updating.')
+            return
+        self.speaker.stop()
+        self.updater.install()
+
+    @Slot()
+    def dismissNotice(self):
+        self._notice_timer.stop()
+        self._show_notice('')
 
     def _show_notice(self, text):
         self._notice = text
@@ -778,7 +808,7 @@ class Backend(QObject):
         return launch_command(self._codex, args)
 
     def _locked(self):
-        return self._busy or self._voice_state != "idle" or self.profile.busy
+        return self._busy or self._voice_state != "idle" or self.profile.busy or self.updater.installing
 
     def _guard(self, callback):
         epoch, task = self._epoch, self._task_id
@@ -1516,6 +1546,7 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self.updater.close()
         self.screen_activity.clear()
         self.speaker.shutdown()
         self._history_timer.stop()

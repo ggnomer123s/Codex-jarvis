@@ -8,6 +8,56 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Update Center, simpler setup and quiet GUI motion (GUI 0.11.0)
+
+- Added [Update Center](docs/updates.md) in the sidebar and Ctrl+U: running/main
+  version, new commits, recent plain-text change reports, compare link and last
+  installer result. Checks use an owned bounded worker, validate official origin,
+  root/main/clean working tree and fetch Git objects without changing working
+  files. Ahead/diverged histories and network errors remain explicit.
+- Update and restart prepares bootstraps from the reviewed Git commit, rechecks
+  that revision, opens a native terminal and waits for a readiness/approval
+  handshake before closing Tigo. A copied stdlib-only runner outside the venv
+  waits for the old process to exit, invokes the pinned dependency-aware setup
+  and requests relaunch. Missing terminals, unfinished tasks, drafts or attached
+  files prevent shutdown/installation. Failed installers keep their error in the
+  terminal; a bounded result record excludes terminal output and credentials.
+  No automatic reset, stash, rollback or silent elevation was added.
+- Added root [install.sh](install.sh), [install.ps1](install.ps1) and
+  [install.cmd](install.cmd), plus a common Linux bootstrap covering supported
+  Debian/Ubuntu/Mint, Fedora and openSUSE paths and delegating Arch/CachyOS to
+  its existing updater. Added optional official checksum-verified private Node
+  22 setup when a compatible Node/npm is absent. The GUI launcher includes this
+  private runtime; system Node and unmanaged user links are retained. The
+  Windows/CachyOS bootstraps accept a reviewed commit and suppress their own
+  launch when the detached runner owns restart. No new pip dependency was added;
+  the lock changes only the app version. Updated setup/dependency instructions.
+- Added restrained button press/hover/focus effects, popup fades/small scale
+  transitions, preference-tab fades, new-message fades and three activity dots.
+  These animate item properties, not the static grid or large image mask.
+  Preferences > Runtime > Reduce interface motion persists and freezes core
+  motion/disables the new effects. Added dismissible notices and compact sidebar
+  spacing. Updated history-opening tests to wait for the new enter transition.
+- Recorded the install-script/Update Center maintenance requirement in
+  [AGENTS.md](AGENTS.md) and maintainer context, and extended CI syntax/policy
+  checks to the root setup scripts. Added a synthetic screenshot of the actual
+  Update Center; its future-version values are explicitly illustrative.
+- Verification: root suite discovered 107 tests, 104 passed and three
+  Windows-only tests skipped; all 97 Qt/process/QML tests passed. New fixtures
+  use real local Git histories (dirty/current/ahead/diverged/changed remote),
+  real detached runners with harmless installers and parent processes, terminal
+  readiness/approval, cancellation, draft/motion/UI guards, package dispatch,
+  a dependency-aware Debian fixture and valid/invalid Node checksums. Frozen
+  lock, Bash/Python syntax, local links, English docs/scripts, whitespace and
+  production-window smoke checks passed. No live package-manager installation,
+  authenticated model request or new CI run was performed; Windows hardware
+  and real distro package availability were not established by these fixtures.
+- Started the installed 0.11.0 GUI on Linux/Hyprland and opened its actual Update
+  Center with Ctrl+U. A later Check for updates pointer action was refused by the
+  shared-seat guard after focus/cursor changed; no guard was bypassed. The
+  check/install logic was exercised in isolated fixtures instead of modifying
+  this uncommitted development checkout or launching a real system upgrade.
+
 ## 2026-10-16 — Screen activity frame and human task takeover (GUI 0.10.0)
 
 - Added a cyan/violet screen-edge frame, nonactivating banner and Return control

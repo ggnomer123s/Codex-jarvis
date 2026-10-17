@@ -9,6 +9,7 @@ CheckBox {
         width: 18; height: 18; radius: 5
         color: control.checked ? "#2cd9ce" : "#0b1b25"
         border.color: control.checked ? "#63f1df" : "#345463"
+        Behavior on color { enabled: typeof bridge === "undefined" || !bridge.reducedMotion; ColorAnimation { duration: 140 } }
         Text { anchors.centerIn: parent; text: control.checked ? "✓" : ""; color: "#071a20"; font.pixelSize: 13; font.bold: true }
     }
     contentItem: Text {

@@ -15,3 +15,10 @@ before changing the project.
   removed packages, system prerequisites, model downloads and any upgrade steps.
 - A change is not complete until its change report and any affected installation
   instructions are up to date.
+- Keep the one-step entry points `install.sh`, `install.ps1` and `install.cmd`,
+  platform installers/updaters and GUI Update Center compatible whenever setup,
+  dependencies, supported systems, launch paths or update behavior changes.
+  Update these scripts and their documented commands as part of the same task
+  when needed. Preserve existing settings/login and never reset or stash user
+  work to make an update succeed. Test changed installer/update paths with
+  isolated fixtures before reporting them as ready.

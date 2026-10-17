@@ -59,8 +59,17 @@ function Update-TigoCheckout([string]$path) {
         if ($LASTEXITCODE -ne 0 -or $branch -ne 'main') { throw 'Select main manually after saving your work; detached or other branches are not updated.' }
         $changes = & $git -C $path status --porcelain
         if ($LASTEXITCODE -ne 0 -or $changes) { throw 'Local changes found or status failed. Save/commit your work before updating; nothing was discarded.' }
-        Invoke-TigoNative $git @('-C',$path,'pull','--ff-only','origin','main')
+        if ($env:TIGO_UPDATE_EXPECTED_REV) {
+            if ($env:TIGO_UPDATE_EXPECTED_REV -notmatch '^[0-9a-f]{40}$') { throw 'Invalid reviewed update revision.' }
+            Invoke-TigoNative $git @('-C',$path,'fetch','--no-tags','origin','main')
+            $revision = & $git -C $path rev-parse FETCH_HEAD
+            if ($LASTEXITCODE -ne 0 -or $revision -ne $env:TIGO_UPDATE_EXPECTED_REV) { throw 'The update changed. Check again in Tigo.' }
+            Invoke-TigoNative $git @('-C',$path,'merge','--ff-only',$env:TIGO_UPDATE_EXPECTED_REV)
+        } else {
+            Invoke-TigoNative $git @('-C',$path,'pull','--ff-only','origin','main')
+        }
     } else {
+        if ($env:TIGO_UPDATE_EXPECTED_REV) { throw 'The reviewed checkout is missing.' }
         Invoke-TigoNative $git @('clone','--branch','main','https://github.com/ggnomer123s/Codex-jarvis.git',$path)
     }
 }
@@ -104,7 +113,9 @@ function Main {
     # Kept as a compatibility switch; neural speech needs no Windows voice component.
     Invoke-TigoNative (Get-Command uv.exe).Source @('run','--project',(Join-Path $path 'gui'),'--frozen','--extra','voice','python','-m','tigo_gui.speech_models')
     Write-Host 'Tigo updated. Existing settings and login are reused. Whisper models download on first voice use.'
-    Invoke-TigoNative 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $path 'scripts\tigo-gui-windows.ps1'))
+    if ($env:TIGO_UPDATE_NO_LAUNCH -ne '1') {
+        Invoke-TigoNative 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $path 'scripts\tigo-gui-windows.ps1'))
+    }
 }
 
 if ($MyInvocation.InvocationName -ne '.') { Main }

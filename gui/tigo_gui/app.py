@@ -70,6 +70,7 @@ def main() -> int:
 
     if not args.smoke_test:
         instance.activated.connect(show_window)
+        backend.updater.quitRequested.connect(app.quit)
         instance.controlRequested.connect(backend.takeControl)
         overlay = ScreenOverlay(backend, app)
         app.aboutToQuit.connect(overlay.close)

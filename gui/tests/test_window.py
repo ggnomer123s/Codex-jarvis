@@ -237,7 +237,7 @@ class TestWindow(unittest.TestCase):
                 backend.removeAttachment(0)
                 history_popup = window.findChild(QObject, "historyPopup")
                 self.assertTrue(QMetaObject.invokeMethod(history_popup, "open"))
-                QTest.qWait(80)
+                QTest.qWait(200)
                 self.assertTrue(history_popup.property("opened"))
                 self.assertTrue(QMetaObject.invokeMethod(history_popup, "close"))
                 self.assertEqual(warnings, [])

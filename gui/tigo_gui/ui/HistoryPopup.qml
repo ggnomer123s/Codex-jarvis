@@ -4,6 +4,8 @@ import QtQuick.Layouts
 
 Popup {
     id: history
+    enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: bridge.reducedMotion ? 0 : 160 } }
+    exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: bridge.reducedMotion ? 0 : 100 } }
     objectName: "historyPopup"
     anchors.centerIn: parent
     width: Math.min(760, parent.width - 60); height: Math.min(720, parent.height - 60)

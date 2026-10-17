@@ -10,6 +10,7 @@ ComboBox {
     background: Rectangle {
         radius: 9; color: "#0a1720"
         border.color: control.activeFocus || control.hovered ? "#3b877d" : "#2b4654"
+        Behavior on border.color { enabled: typeof bridge === "undefined" || !bridge.reducedMotion; ColorAnimation { duration: 140 } }
     }
     contentItem: TextField {
         text: control.editable ? control.editText : control.displayText
@@ -38,6 +39,7 @@ ComboBox {
         y: control.height + 4; width: control.width
         padding: 4; implicitHeight: Math.min(contentItem.implicitHeight + 8, 260)
         background: Rectangle { radius: 9; color: "#10212c"; border.color: "#365761" }
+        enter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: typeof bridge === "undefined" || !bridge.reducedMotion ? 100 : 0 } }
         contentItem: ListView {
             clip: true; implicitHeight: contentHeight
             model: control.popup.visible ? control.delegateModel : null

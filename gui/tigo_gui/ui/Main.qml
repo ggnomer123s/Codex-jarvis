@@ -12,7 +12,7 @@ ApplicationWindow {
     color: "#080e14"
     font.family: "Segoe UI"
     property bool voiceActive: bridge.voiceState !== "idle"
-    property bool locked: bridge.busy || voiceActive || bridge.fullProfile.busy
+    property bool locked: bridge.busy || voiceActive || bridge.fullProfile.busy || bridge.updates.installing
     property bool compact: width < 1250
     property real coreSize: Math.min(compact ? 280 : 360, Math.max(220, height - 440), Math.max(220, corePanel.width - 30))
     property string liveTranscript: ""
@@ -36,6 +36,7 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+O"; enabled: !window.locked; onActivated: bridge.chooseAttachments() }
     Shortcut { sequence: "Ctrl+Shift+V"; enabled: !window.locked; onActivated: bridge.pasteImage() }
     Shortcut { sequence: "Ctrl+N"; enabled: !window.locked; onActivated: bridge.newSession() }
+    Shortcut { sequence: "Ctrl+U"; onActivated: updateCenter.open() }
     Connections {
         target: bridge
         function onTranscriptReady(text) {
@@ -57,7 +58,7 @@ ApplicationWindow {
         function onChanged() { wakeToggle.checked = bridge.wake.enabled }
     }
 
-    // Static drafting grid: the animated core is the only moving decoration.
+    // Static drafting grid; transitions animate item transforms, never this canvas.
     Canvas {
         anchors.fill: parent
         onWidthChanged: requestPaint()
@@ -82,7 +83,7 @@ ApplicationWindow {
             Rectangle { anchors.right: parent.right; height: parent.height; width: 1; color: "#1a2b36" }
             ColumnLayout {
                 anchors.fill: parent; anchors.margins: 22
-                spacing: 12
+                spacing: window.height < 860 ? 6 : 12
                 RowLayout {
                     Layout.topMargin: 12; spacing: 11
                     Rectangle {
@@ -108,6 +109,7 @@ ApplicationWindow {
                 HudButton { Layout.fillWidth: true; text: "Resume previous"; enabled: bridge.canResume; onClicked: bridge.resumePrevious() }
                 HudButton { Layout.fillWidth: true; text: "Workspace"; glyph: "⌑"; enabled: !window.locked; onClicked: bridge.chooseFolder() }
                 HudButton { Layout.fillWidth: true; text: "Preferences"; glyph: "⚙"; enabled: !bridge.busy && !window.voiceActive; onClicked: preferences.open() }
+                HudButton { Layout.fillWidth: true; objectName: "updatesButton"; text: "Updates"; glyph: "↗"; onClicked: updateCenter.open() }
                 Item { Layout.fillHeight: true }
                 Rectangle {
                     Layout.fillWidth: true; implicitHeight: workspaceLabel.implicitHeight + 66; radius: 12; color: "#101e27"; border.color: "#213640"
@@ -204,7 +206,7 @@ ApplicationWindow {
                         listening: bridge.voiceState === "recording"
                         targetLevel: bridge.audioLevel
                         stage: bridge.fullProfile.busy ? "connecting" : bridge.stage
-                        animate: corePanel.visible && window.visible && window.visibility !== Window.Minimized
+                        animate: corePanel.visible && window.visible && window.visibility !== Window.Minimized && !bridge.reducedMotion
                     }
                     RowLayout {
                         Layout.alignment: Qt.AlignHCenter; spacing: 8
@@ -297,6 +299,7 @@ ApplicationWindow {
                                 id: conversation; objectName: "conversation"
                                 anchors.fill: parent; clip: true; spacing: 16
                                 model: bridge.messageModel
+                                add: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: bridge.reducedMotion ? 0 : 180 } }
                                 onHeightChanged: if (window.followConversation) scrollDelay.restart()
                                 onWidthChanged: if (window.followConversation) scrollDelay.restart()
                                 onMovementStarted: window.followConversation = false
@@ -312,7 +315,26 @@ ApplicationWindow {
                         Rectangle { Layout.fillWidth: true; height: 1; color: "#20333f" }
                         RowLayout {
                             Layout.fillWidth: true
-                            BusyIndicator { running: bridge.busy || window.voiceActive || bridge.speech.active; visible: running; implicitWidth: 24; implicitHeight: 24 }
+                            Row {
+                                id: activityDots; objectName: "activityDots"
+                                visible: bridge.busy || window.voiceActive || bridge.speech.active
+                                spacing: 4; Layout.rightMargin: 6
+                                Repeater {
+                                    model: 3
+                                    Rectangle {
+                                        required property int index
+                                        width: 4; height: 4; radius: 2; color: "#82e4d4"
+                                        SequentialAnimation on opacity {
+                                            running: activityDots.visible && window.visible && !bridge.reducedMotion
+                                            loops: Animation.Infinite
+                                            PauseAnimation { duration: index * 140 }
+                                            NumberAnimation { to: 0.25; duration: 350; easing.type: Easing.InOutSine }
+                                            NumberAnimation { to: 1; duration: 350; easing.type: Easing.InOutSine }
+                                            PauseAnimation { duration: 280 - index * 140 }
+                                        }
+                                    }
+                                }
+                            }
                             ColumnLayout {
                                 Layout.fillWidth: true; spacing: 4
                                 Text { text: bridge.taskStatus.title + (bridge.taskStatus.elapsed ? "  ·  " + bridge.taskStatus.elapsed : ""); color: bridge.taskStatus.state === "failed" ? "#ff9baf" : "#8ae0d1"; font.pixelSize: 12 }
@@ -326,7 +348,15 @@ ApplicationWindow {
                             HudButton { visible: !window.followConversation; text: "Latest ↓"; implicitHeight: 28; font.pixelSize: 10; onClicked: { window.followConversation = true; conversation.positionViewAtEnd() } }
                         }
                         Text { Layout.fillWidth: true; visible: bridge.speech.state === "error"; text: bridge.speech.status; color: "#f0b0a2"; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
-                        Text { Layout.fillWidth: true; visible: bridge.notice.length > 0; text: bridge.notice; color: "#efc389"; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
+                        Rectangle {
+                            Layout.fillWidth: true; visible: bridge.notice.length > 0
+                            implicitHeight: noticeRow.implicitHeight + 16; radius: 10; color: "#25271f"; border.color: "#4c4933"
+                            RowLayout {
+                                id: noticeRow; anchors.fill: parent; anchors.margins: 8
+                                Text { Layout.fillWidth: true; text: bridge.notice; color: "#e6c996"; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight }
+                                HudButton { objectName: "dismissNoticeButton"; text: "Dismiss"; implicitHeight: 26; font.pixelSize: 10; onClicked: bridge.dismissNotice() }
+                            }
+                        }
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: bridge.attachments.length > 0 ? 232 : 174
                         radius: 16; color: "#111f29"; border.color: composer.activeFocus ? "#40867f" : "#2a404c"
@@ -447,6 +477,7 @@ ApplicationWindow {
     }
 
     HistoryPopup { id: historyPopup }
+    UpdateCenter { id: updateCenter; hasDraft: composer.text.trim().length > 0; taskLocked: bridge.busy || window.voiceActive || bridge.fullProfile.busy }
     AttachmentPreview { id: attachmentPreview }
     DropArea {
         anchors.fill: parent
@@ -464,6 +495,13 @@ ApplicationWindow {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         background: Rectangle { radius: 18; color: "#111f2b"; border.color: "#345463" }
         Overlay.modal: Rectangle { color: "#b0081018" }
+        enter: Transition {
+            ParallelAnimation {
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: bridge.reducedMotion ? 0 : 160 }
+                NumberAnimation { property: "scale"; from: 0.985; to: 1; duration: bridge.reducedMotion ? 0 : 200; easing.type: Easing.OutCubic }
+            }
+        }
+        exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: bridge.reducedMotion ? 0 : 100 } }
         function applyWake() {
             return bridge.wake.configure(wakeToggle.checked, wakeAutostart.checked, wakeModel.editText.trim(),
                 wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked)
@@ -513,7 +551,14 @@ ApplicationWindow {
                 }
             }
             StackLayout {
+                id: preferencePages
                 currentIndex: preferenceTabs.currentIndex
+                onCurrentIndexChanged: if (!bridge.reducedMotion) tabFade.restart()
+                SequentialAnimation {
+                    id: tabFade
+                    PropertyAction { target: preferencePages; property: "opacity"; value: 0.65 }
+                    NumberAnimation { target: preferencePages; property: "opacity"; to: 1; duration: 140; easing.type: Easing.OutCubic }
+                }
                 Layout.fillWidth: true; Layout.fillHeight: true
                 ColumnLayout {
                     spacing: 14
@@ -626,6 +671,7 @@ ApplicationWindow {
                 ColumnLayout {
                     spacing: 12
                     Text { Layout.fillWidth: true; text: "Task timings and connection state"; color: "#bde5de"; font.pixelSize: 14 }
+                    HudCheckBox { objectName: "reducedMotionToggle"; text: "Reduce interface motion"; checked: bridge.reducedMotion; onClicked: bridge.setReducedMotion(checked) }
                     ScrollView {
                         Layout.fillWidth: true; Layout.fillHeight: true; clip: true
                         TextArea { text: bridge.runtimeDetails; readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap; color: "#bad4dc"; font.pixelSize: 12; background: Rectangle { color: "#0a1720"; radius: 8 } }

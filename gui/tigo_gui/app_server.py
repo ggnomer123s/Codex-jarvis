@@ -10,6 +10,8 @@ import os
 import signal
 import time
 
+from . import __version__
+
 from PySide6.QtCore import QObject, QProcess, QTimer, Signal
 
 MAX_RECORD = 8 * 1024 * 1024
@@ -77,7 +79,7 @@ class AppServer(QObject):
     def _initialize(self):
         if self._closing:
             return
-        self.request("initialize", {"clientInfo": {"name": "tigo_desktop", "title": "Tigo", "version": "0.10.0"},
+        self.request("initialize", {"clientInfo": {"name": "tigo_desktop", "title": "Tigo", "version": __version__},
                                     "capabilities": {"experimentalApi": False}}, self._initialized)
 
     def _initialized(self, result, error):

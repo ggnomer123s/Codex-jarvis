@@ -47,7 +47,7 @@ tool=Path(sys.argv[0]).name
 args=sys.argv[1:]
 with Path(os.environ['TIGO_TEST_LOG']).open('a') as log:log.write(json.dumps({'tool':tool,'args':args})+'\\n')
 if tool=='git':
- if 'rev-parse' in args:print(os.environ['TIGO_TEST_REPO'])
+ if 'rev-parse' in args:print(os.environ.get('TIGO_TEST_REV','a'*40) if 'FETCH_HEAD' in args else os.environ['TIGO_TEST_REPO'])
  elif 'get-url' in args:print(os.environ.get('TIGO_TEST_ORIGIN','https://github.com/ggnomer123s/Codex-jarvis.git'))
  elif 'symbolic-ref' in args:print(os.environ.get('TIGO_TEST_BRANCH','main'))
  elif 'status' in args:print(os.environ.get('TIGO_TEST_DIRTY',''),end='')
@@ -118,6 +118,19 @@ if tool=='node':sys.exit(int(os.environ.get('TIGO_TEST_OLD_NODE','0')))
                 result=subprocess.run(command,env={**self.env,option:value},capture_output=True,text=True,timeout=10)
                 self.assertNotEqual(result.returncode,0)
                 self.assertFalse(any('pull' in x['args'] or 'clone' in x['args'] for x in self.calls()))
+
+    def test_reviewed_revision_is_pinned_and_changed_remote_is_not_merged(self):
+        for current in ('a'*40, 'b'*40):
+            self.log.unlink(missing_ok=True)
+            command=['bash','-c','source "$1"; prepare_checkout "$2"','fixture',str(SCRIPT),str(self.repo)]
+            result=subprocess.run(command,env={**self.env,'TIGO_UPDATE_EXPECTED_REV':'a'*40,'TIGO_TEST_REV':current},capture_output=True,text=True,timeout=10)
+            merges=[x for x in self.calls() if x['tool']=='git' and 'merge' in x['args']]
+            if current=='a'*40:
+                self.assertEqual(result.returncode,0,result.stderr)
+                self.assertEqual(merges[0]['args'][-3:],['merge','--ff-only','a'*40])
+            else:
+                self.assertNotEqual(result.returncode,0)
+                self.assertFalse(merges)
 
 
 @unittest.skipUnless(os.name=='nt' and shutil.which('powershell.exe'), 'Windows PowerShell 5 bootstrap fixture')

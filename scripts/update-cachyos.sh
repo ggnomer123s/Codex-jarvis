@@ -15,8 +15,16 @@ prepare_checkout() {
         branch="$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD)" || fail 'Detached checkout; select main manually first.'
         [[ "$branch" == main ]] || fail 'The checkout is not on main; save your work and switch branches manually.'
         [[ -z "$(git -C "$repo_dir" status --porcelain)" ]] || fail 'Local changes found. Save or commit them before updating; no files were discarded.'
-        git -C "$repo_dir" pull --ff-only origin main
+        if [[ -n "${TIGO_UPDATE_EXPECTED_REV:-}" ]]; then
+            [[ "$TIGO_UPDATE_EXPECTED_REV" =~ ^[0-9a-f]{40}$ ]] || fail 'Invalid reviewed update revision.'
+            git -C "$repo_dir" fetch --no-tags origin main
+            [[ "$(git -C "$repo_dir" rev-parse FETCH_HEAD)" == "$TIGO_UPDATE_EXPECTED_REV" ]] || fail 'The update changed. Check again in Tigo.'
+            git -C "$repo_dir" merge --ff-only "$TIGO_UPDATE_EXPECTED_REV"
+        else
+            git -C "$repo_dir" pull --ff-only origin main
+        fi
     else
+        [[ -z "${TIGO_UPDATE_EXPECTED_REV:-}" ]] || fail 'The reviewed checkout is missing.'
         git clone --branch main https://github.com/ggnomer123s/Codex-jarvis.git "$repo_dir"
     fi
 }
@@ -62,7 +70,7 @@ main() {
     fi
     uv run --project "$repo_dir/gui" --frozen --extra voice python -m tigo_gui.speech_models
     echo 'Tigo updated. Whisper models download on first voice use; saved settings and login are reused.'
-    exec "$HOME/.local/bin/tigo-gui"
+    [[ "${TIGO_UPDATE_NO_LAUNCH:-}" == 1 ]] || exec "$HOME/.local/bin/tigo-gui"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then main "$@"; fi

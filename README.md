@@ -5,6 +5,10 @@ voice activation is enabled. See [rename and upgrade compatibility](docs/rename.
 
 Implementation history and verification results: [changes.md](changes.md).
 
+**Install or update:** use the [one-command Windows/Linux setup](docs/updates.md#one-step-install-or-update),
+or the root `install.cmd`, `install.ps1` and `install.sh` scripts. Inside the GUI,
+open **Updates** or press **Ctrl+U** to review and install an update.
+
 **For an AI taking over development:** read [readmeai.md](readmeai.md) first for
 the current product, architecture, constraints, source map and verification steps.
 It also includes a resume card, current Windows incident, implementation history,
