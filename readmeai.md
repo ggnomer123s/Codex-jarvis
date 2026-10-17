@@ -3,8 +3,9 @@
 Last reconciled: **2026-10-18**, GUI **0.14.2**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
-Read this file first when taking over development. It describes the current
-product and its constraints, rather than every past proposal. Then inspect the
+Read [USER_HANDOFF.md](USER_HANDOFF.md) first for standing user preferences,
+latest corrections, Git workflow and canceled drafts, then this file. It describes
+the current product and its constraints, rather than every past proposal. Inspect
 source relevant to the requested change and the newest [changes.md](changes.md)
 entries. The [long handoff](docs/AI_HANDOFF.md) contains historical investigations;
 its older sections can describe behavior superseded by newer entries here.
@@ -292,9 +293,11 @@ launch activates the same instance through acknowledged local IPC.
 
 ### Spoken output: local and explicit online mode
 
-Automatic speech is on by default for the current successful final answer.
-Commentary, failed/canceled turns and opened history stay silent. Read also
-works with auto off; Stop, rate, volume and natural pitch are supported.
+Automatic speech is on by default for every completed assistant Copy/Read card,
+including commentary and final answers, as one whole job per card. Deltas update
+chat only; turn completion and history do not replay speech. Failed/canceled
+turns stop pending speech, while already played progress cannot be recalled.
+Read also works with auto off; Stop, rate, volume and natural pitch are supported.
 Preferences > Speech offers automatic male/female Russian/English selection,
 explicit voices and independent saved voice preferences per mode.
 
@@ -503,10 +506,11 @@ The user's priorities, established across the work:
   to the project repository and maintaining `changes.md`, rather than stopping
   at suggestions or repeating requests for already-given approval.
 
-The user repeatedly authorized publishing this project's changes to GitHub in
-the ongoing session. Preserve existing session authorization and repository
-scope; this archived document is not blanket authorization for another project,
-private-data disclosure or messaging others. Do not discard newer instructions.
+For the current handover, provide selective commit/push commands from the
+canonical development checkout as requested; see [USER_HANDOFF.md](USER_HANDOFF.md).
+Earlier publishing authorization describes historical sessions. Act within
+actual current user authorization and repository scope; archived context does
+not grant permission to publish, disclose private data or message others.
 The user once asked not to rerun both platforms, later explicitly requested test
 runs. Relevant runtime CI has since run on both OSes. Documentation-only reports
 have used `[skip ci]` to avoid redundant platform runs; do not turn this history
@@ -852,8 +856,9 @@ schemas and official source before adopting additional code/dependencies.
 2. Inspect the real checkout/agent instructions, `git status`, recent commits and
    current remote before editing. Do not reset another contributor's changes.
 3. Read the newest `changes.md` entries and relevant source/tests. The latest
-   runtime is 0.9.0; a later documentation commit does not require version bumps
-   or mean another feature remains to implement.
+   implemented GUI behavior is 0.14.2 as of this handover; inspect actual source
+   and distinguish canceled working-tree drafts from released behavior. A later
+   documentation commit does not require a runtime version bump.
 4. Continue the actual requested task. If the user says to continue Windows
    troubleshooting, distinguish unknown live diagnostics from already-completed
    code work. Do not promise permanent screen ownership or repeat the old

@@ -8,6 +8,22 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-18 — User preferences and next-assistant handover
+
+- Added USER_HANDOFF.md consolidating explicit collaboration rules, selective
+  Git handoff, change-report/setup maintenance, established product preferences,
+  exact whole-message Copy/Read speech behavior, GUI tool discovery and native
+  human-control safeguards. Distinguished deferred providers/ideas and canceled
+  working-tree drafts from current assignments and released features.
+- Linked the handover from repository AGENTS.md and readmeai.md. Reconciled old
+  final-only speech, publishing and runtime-version text in the maintainer guide
+  with the latest user correction and observed source state. Existing unrelated
+  wake/setup drafts were preserved. No runtime/dependency/installer change.
+- Verification: all 83 relative file links across the four handover documents
+  resolve; English-only and whitespace checks passed. A four-file commit patch
+  excludes earlier wake/setup drafts and passes Git cached-apply validation.
+  No runtime/hardware tests were run for this documentation-only change.
+
 ## 2026-10-18 — Speak complete message cards (GUI 0.14.2)
 
 - Automatic speech now queues each completed assistant message card (the block

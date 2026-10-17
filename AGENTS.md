@@ -1,7 +1,9 @@
 # Repository maintenance rules
 
-Read [readmeai.md](readmeai.md) for the current architecture and constraints
-before changing the project.
+Read [USER_HANDOFF.md](USER_HANDOFF.md) for the user's standing preferences,
+latest corrections and Git workflow, then [readmeai.md](readmeai.md) for the
+current architecture and constraints before changing the project. New direct
+user instructions supersede archived preferences; check actual source/status.
 
 - Record every implemented change in [changes.md](changes.md), including code,
   configuration, dependencies, documentation and installation scripts. Use a
