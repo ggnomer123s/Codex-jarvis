@@ -18,6 +18,13 @@ first: X11 needs `xdotool`, `wmctrl`, `maim`; Hyprland needs `grim`, `wtype`
 and compositor tools; other Wayland desktops need their portal backend.
 Existing MCP permissions are retained.
 
+GUI 0.13.1 reuses the voice extra's already locked `webrtcvad-wheels` for wake
+phrase detection as well as speech-end detection. Both local/online voice
+preflight checks require it; there is no additional model, system package or API
+key for the wake fix. Existing installers/updaters already install/check this
+extra. Quit Tigo before updating and relaunch it afterward to replace the
+running listener; see [wake diagnostics](voice-activation.md#short-names-and-microphone-diagnostics).
+
 ## Simplest setup: one command or script
 
 Use the [one-step installation and Update Center guide](updates.md#one-step-install-or-update)

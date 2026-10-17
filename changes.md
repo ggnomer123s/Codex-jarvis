@@ -8,6 +8,48 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Short/quiet wake-name repair and diagnostics (GUI 0.13.1)
+
+- Reproduced the common local/online failure before transcription: the fixed
+  0.01 RMS gate discarded four quiet synthetic name samples entirely. Replaced
+  it with the existing WebRTC VAD in 20 ms frames, a 160 ms speech minimum,
+  660 ms ending pause, four-second cap and 240 ms pre-roll/cap overlap. Capture
+  blocks are re-framed without losing partial frames. Separate short clicks do
+  not accumulate into a qualifying phrase.
+- Added bounded gain for speech-qualified PCM before either provider (maximum
+  12x, peak-limited). Silence stays unchanged; existing queues, confidence
+  checks, pause generations and eight-second wake cooldown remain in place.
+- Exact names now handle mixed Latin/Cyrillic name letters emitted by ASR.
+  Tolerant matching adds observed Tido/Tiga substitutions and Russian equivalents;
+  no arbitrary edit-distance match is used. Similar ordinary words/substrings
+  remain rejected. Tolerant variants can still cause false activations.
+- Preferences > Wake now shows input level, speech activity, phrase count and
+  content-free match/unclear results. Meter events are throttled to four per
+  second and use a separate Qt notification signal. Pausing clears the meter;
+  restart resets counters. Ordinary transcripts/audio are not exposed or saved.
+  Invalid diagnostic payloads and diagnostics received while paused are ignored.
+- Both voice dependency preflight checks now include the already locked
+  webrtcvad import. No new package/model/system dependency was added; existing
+  one-step installers, platform updaters and Update Center already install/check
+  the voice extra. Updated version metadata/lock to 0.13.1, the installation and
+  wake guides and readmeai. Existing settings/login/provider choices are retained.
+- Verification: 137 root tests discovered, 134 passed and 3 Windows-only tests
+  skipped; 111 Qt/process/QML tests passed, including new owned-process diagnostic
+  validation. Relevant final wake tests also passed after matcher refinements.
+  Existing isolated installer/update fixtures are included in the root suite.
+  Production QML diagnostic preview was rendered and visually inspected without
+  opening a microphone or contacting a transcription service.
+- Real CPU WebRTC/Whisper checks used four synthetic Russian/English male/female
+  name samples at normal and 0.03 gain. On the same four quiet samples, old/new
+  capture produced 0/4 versus 4/4 phrases. Final small/ru tolerant recognition
+  matched 8/8 positive cases; two ordinary-speech and three silence/noise/tone
+  controls produced no wake. This small synthetic check is not an accuracy
+  guarantee: base still misrecognized one synthetic name; other voices/noise may
+  fail. Online normalization/dispatch was tested with a simulated service, not a
+  live Google accuracy test. No user audio was recorded, Windows microphone tested
+  or system package installed. The separately installed running app requires the
+  normal update followed by Quit/relaunch to load the fix.
+
 ## 2026-10-17 — Wake transcription, hidden startup and hands-free voice (GUI 0.13.0)
 
 - Recorded the user's explicitly deferred Claude Code / Antigravity / direct API

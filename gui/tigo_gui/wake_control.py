@@ -1,5 +1,6 @@
 """Qt owner for the opt-in background microphone worker."""
 import json
+import math
 from pathlib import Path
 import sys
 import time
@@ -18,6 +19,7 @@ def saved_bool(settings, key, default=False):
 
 class WakeControl(QObject):
     changed = Signal()
+    diagnosticsChanged = Signal()
     activated = Signal()
 
     def __init__(self, settings, parent=None, *, command=None, register=None):
@@ -45,6 +47,10 @@ class WakeControl(QObject):
         self._callbacks = []
         self._buffer = b''
         self._last_wake = -8.0
+        self._level = 0.0
+        self._speech_detected = False
+        self._phrases = 0
+        self._recognition = 'Waiting for speech.'
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self._read)
         self.process.readyReadStandardError.connect(lambda: self.process.readAllStandardError())
@@ -85,8 +91,23 @@ class WakeControl(QObject):
     @Property(str, notify=changed)
     def status(self): return self._status
 
+    @Property(float, notify=diagnosticsChanged)
+    def inputLevel(self): return self._level
+
+    @Property(bool, notify=diagnosticsChanged)
+    def speechDetected(self): return self._speech_detected
+
+    @Property(int, notify=diagnosticsChanged)
+    def phraseCount(self): return self._phrases
+
+    @Property(str, notify=diagnosticsChanged)
+    def recognitionStatus(self): return self._recognition
+
     def _set_status(self, state, text):
         self._state, self._status = state, text
+        if state != 'listening':
+            self._level, self._speech_detected = 0.0, False
+            self.diagnosticsChanged.emit()
         self.changed.emit()
 
     @Slot(bool, bool, str, str, str, bool, str, bool, result=bool)
@@ -140,6 +161,9 @@ class WakeControl(QObject):
             self._set_status('error', 'Saved voice activation settings are invalid. Apply settings again.')
             return
         self._buffer = b''
+        self._phrases = 0
+        self._recognition = 'Waiting for speech.'
+        self.diagnosticsChanged.emit()
         self._restart = False
         self._set_status('loading', 'Preparing local wake model; first use may download model files.' if self._provider == 'local' else 'Preparing online wake listener; speech phrases will be sent to Google.')
         args = [*self.command[1:], '--model', self._model, '--language', self._language,
@@ -211,7 +235,28 @@ class WakeControl(QObject):
             if not isinstance(value, dict) or self._closing or not self._enabled:
                 continue
             kind = value.get('type')
-            if kind == 'wake' and not self._suspended and self._state == 'listening':
+            if kind in ('level', 'phrase', 'recognition'):
+                if self._suspended or self._state != 'listening':
+                    continue
+                if kind == 'level':
+                    level = value.get('level')
+                    if type(level) not in (int, float) or not math.isfinite(level):
+                        continue
+                    self._level = max(0.0, min(1.0, level))
+                    self._speech_detected = value.get('speech') is True
+                elif kind == 'phrase':
+                    self._phrases += 1
+                    self._recognition = 'Recognizing a speech phrase...'
+                else:
+                    statuses = {'matched': 'Tigo name recognized.',
+                                'no_match': 'Speech recognized; no Tigo name.',
+                                'unrecognized': 'Speech unclear; try saying Tigo again.'}
+                    result = value.get('result')
+                    if not isinstance(result, str) or result not in statuses:
+                        continue
+                    self._recognition = statuses[result]
+                self.diagnosticsChanged.emit()
+            elif kind == 'wake' and not self._suspended and self._state == 'listening':
                 now = time.monotonic()
                 if now - self._last_wake >= 8:
                     self._last_wake = now

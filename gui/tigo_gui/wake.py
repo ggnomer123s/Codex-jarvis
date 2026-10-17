@@ -27,54 +27,106 @@ COOLDOWN = 8.0
 NAMES = ("tigo", "\u0442\u0438\u0433\u043e")
 # Four-letter names are too short for arbitrary one-edit matching: it would
 # activate on ordinary words such as "time", "taco" or Russian "togo".
-ALIASES = (*NAMES, "teego", "tiggo", "tygo", "\u0442\u0438\u0433\u0433\u043e")
+# Tido/Tiga are observed short-name Whisper substitutions, tolerant mode only.
+ALIASES = (*NAMES, "teego", "tiggo", "tygo", "tido", "tiga",
+           "\u0442\u0438\u0433\u0433\u043e", "\u0442\u0438\u0434\u043e", "\u0442\u0438\u0433\u0430")
+NAME_LETTERS = str.maketrans(NAMES[1], NAMES[0])
+NORMALIZED_ALIASES = {alias.translate(NAME_LETTERS) for alias in ALIASES}
 
 
 def contains_wake_name(text, fuzzy=True):
     words = re.findall(r"[a-z\u0430-\u044f\u0451]+", unicodedata.normalize("NFKC", str(text)[:4000]).casefold())[:300]
-    if any(word in NAMES for word in words):
+    # Multilingual ASR can emit a single mixed-script name, e.g. Cyrillic T
+    # followed by Latin igo. Fold only the four name letters, not edit distance.
+    words = [word.translate(NAME_LETTERS) for word in words]
+    if 'tigo' in words:
         return True
     if not fuzzy:
         return False
-    if any(word in ALIASES for word in words):
+    if any(word in NORMALIZED_ALIASES for word in words):
         return True
-    return any(a + b in NAMES for a, b in zip(words, words[1:]))
+    return any(a + b == 'tigo' for a, b in zip(words, words[1:]))
+
+
+def audio_rms(raw):
+    samples = array('h', raw)
+    if sys.byteorder != 'little':
+        samples.byteswap()
+    return math.sqrt(sum(x * x for x in samples) / len(samples)) / 32768 if samples else 0.0
+
+
+def normalize_phrase(raw):
+    """Bounded gain for speech-qualified PCM; never amplify more than 12x."""
+    samples = array('h', raw)
+    if sys.byteorder != 'little':
+        samples.byteswap()
+    peak = max((abs(x) for x in samples), default=0)
+    rms = audio_rms(raw)
+    if not peak or not rms:
+        return raw
+    gain = min(12.0, 0.06 / rms, 32000 / peak)
+    if gain <= 1:
+        return raw
+    result = array('h', (int(x * gain) for x in samples))
+    if sys.byteorder != 'little':
+        result.byteswap()
+    return result.tobytes()
 
 
 class PhraseBuffer:
-    """Energy-gated phrases: 0.65 s silence or 4 s maximum, 256 ms overlap."""
+    """Local WebRTC speech gate, 20 ms frames, 660 ms pause, 4 s cap.
 
-    def __init__(self, threshold=0.01):
-        self.threshold = threshold
+    Capture blocks need not align with VAD frames. Short names need only 160 ms
+    of speech; isolated clicks cannot accumulate across separate phrases.
+    """
+
+    FRAME_BYTES = 640
+
+    def __init__(self, *, classifier=None):
+        if classifier is None:
+            import webrtcvad
+            classifier = webrtcvad.Vad(1).is_speech
+        self.classify = classifier
         self.reset()
 
     def reset(self):
-        self.pre = deque(maxlen=4)
+        self.pre = deque(maxlen=12)
+        self.pending = bytearray()
         self.parts = []
-        self.duration = self.silence = self.voiced = 0.0
+        self.duration = self.silence = self.voiced = 0
+        self.speech = False
 
     def feed(self, raw):
-        samples = array('h', raw)
-        if sys.byteorder != 'little':
-            samples.byteswap()
-        if not samples:
-            return None
-        duration = len(samples) / SAMPLE_RATE
-        speech = math.sqrt(sum(x * x for x in samples) / len(samples)) / 32768 >= self.threshold
+        self.pending.extend(raw)
+        result = None
+        offset = 0
+        while len(self.pending) - offset >= self.FRAME_BYTES:
+            frame = bytes(self.pending[offset:offset + self.FRAME_BYTES])
+            offset += self.FRAME_BYTES
+            phrase = self._frame(frame)
+            if phrase:
+                result = phrase
+        del self.pending[:offset]
+        return result
+
+    def _frame(self, raw):
+        speech = self.speech = self.classify(raw, SAMPLE_RATE)
         if not self.parts:
             if not speech:
                 self.pre.append(raw)
                 return None
             self.parts = list(self.pre)
-            self.duration = sum(len(x) for x in self.parts) / (SAMPLE_RATE * 2)
+            self.duration = len(self.parts) * 20
         self.parts.append(raw)
         self.pre.append(raw)
-        self.duration += duration
-        self.voiced += duration if speech else 0
-        self.silence = 0 if speech else self.silence + duration
-        if self.silence >= 0.65 or self.duration >= 4.0:
-            result = b''.join(self.parts) if self.voiced >= 0.25 else None
+        self.duration += 20
+        self.voiced += 20 if speech else 0
+        self.silence = 0 if speech else self.silence + 20
+        if self.silence >= 660 or self.duration >= 4000:
+            result = b''.join(self.parts) if self.voiced >= 160 else None
             self.parts = []
+            if self.silence >= 660:
+                self.pre.clear()
             self.duration = self.silence = self.voiced = 0
             return result
         return None
@@ -138,6 +190,7 @@ class WakeListener:
             if generation != self.generation or not self.allowed.is_set():
                 continue
             try:
+                raw = normalize_phrase(raw)
                 if self.provider == 'online':
                     from .transcription import transcribe_online
                     # Short wake phrases need at least one second for the service.
@@ -152,13 +205,17 @@ class WakeListener:
                                     if getattr(s, 'no_speech_prob', 0) < 0.6 and getattr(s, 'avg_logprob', 0) > -1.0)[:4000]
                     del audio, segments
                 now = time.monotonic()
-                if (not self.shutdown.is_set() and generation == self.generation and self.allowed.is_set()
-                        and now - self.last_wake >= COOLDOWN and contains_wake_name(text, self.fuzzy)):
-                    self.last_wake = now
-                    self.output('wake')
+                if not self.shutdown.is_set() and generation == self.generation and self.allowed.is_set():
+                    matched = contains_wake_name(text, self.fuzzy)
+                    self.output('recognition', result='matched' if matched else 'no_match')
+                    if now - self.last_wake >= COOLDOWN and matched:
+                        self.last_wake = now
+                        self.output('wake')
                 # Do not send ordinary transcripts over IPC, print or retain them.
                 del text, raw
             except UnrecognizedSpeech:
+                if not self.shutdown.is_set() and generation == self.generation and self.allowed.is_set():
+                    self.output('recognition', result='unrecognized')
                 continue  # Unintelligible speech is not a service outage.
             except Exception as exc:
                 if self.shutdown.is_set() or generation != self.generation or not self.allowed.is_set():
@@ -184,6 +241,7 @@ class WakeListener:
                 overflow = threading.Event()
                 phrases = PhraseBuffer()
                 generation = self.generation
+                last_level = 0.0
 
                 def callback(data, nframes, info, status):
                     if status:
@@ -206,7 +264,14 @@ class WakeListener:
                         except queue.Empty:
                             continue
                         phrase = phrases.feed(raw)
+                        now = time.monotonic()
+                        if now - last_level >= 0.25:
+                            rms = audio_rms(raw)
+                            level = max(0.0, min(1.0, (20 * math.log10(max(rms, 1e-6)) + 60) / 60))
+                            self.output('level', level=round(level, 3), speech=bool(phrases.speech))
+                            last_level = now
                         if phrase:
+                            self.output('phrase')
                             try:
                                 self.jobs.put_nowait((generation, phrase))
                             except queue.Full:

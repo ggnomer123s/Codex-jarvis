@@ -10,7 +10,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'gui'))
-from tigo_gui.wake import contains_wake_name, PhraseBuffer, WakeListener
+from tigo_gui.wake import contains_wake_name, PhraseBuffer, WakeListener, audio_rms, normalize_phrase
 from tigo_gui.autostart import set_autostart, MARKER, RUN_NAME
 
 
@@ -20,27 +20,54 @@ class TestWakeName(unittest.TestCase):
             self.assertTrue(contains_wake_name(text, False), text)
 
     def test_similar_names_and_split_words(self):
-        for text in ['teego', 'tiggo', 'tygo', 'ti go', '\u0442\u0438 \u0433\u043e', '\u0442\u0438\u0433\u0433\u043e']:
+        for text in ['teego', 'tiggo', 'tygo', 'tido', 'tiga', '\u0442\u0438\u0434\u043e', '\u0442\u0438\u0433\u0430', 'ti go', '\u0442\u0438 \u0433\u043e', '\u0442\u0438\u0433\u0433\u043e']:
             self.assertTrue(contains_wake_name(text), text)
             self.assertFalse(contains_wake_name(text, False), text)
 
+    def test_mixed_latin_cyrillic_name_from_multilingual_asr(self):
+        for text in ['\u0422igo.', 'T\u0438go', 'Ti\u0433o', 'Tig\u043e', '\u0422\u0438g\u043e']:
+            self.assertTrue(contains_wake_name(text, False), text)
+        for text in ['\u0422ime', '\u0442\u043e\u0433\u043e', '\u0442\u0438\u0445\u043e', '\u0422iger', 'a\u0422igo']:
+            self.assertFalse(contains_wake_name(text), text)
+
     def test_unrelated_words_and_substrings_do_not_wake(self):
         for text in ['', 'hello there', 'service', 'time', 'taco', 'togo', 'tiger', 'atigocode',
+                     '\u0422\u0430\u0439\u0433\u0430', '\u0421\u0438\u0433\u0430',
                      '\u0442\u043e\u0433\u043e', '\u0442\u0438\u0445\u043e', 'jarvis',
                      '\u0434\u0436\u0430\u0440\u0432\u0438\u0441', 'javascript']:
             self.assertFalse(contains_wake_name(text), text)
 
 
 class TestPhraseBuffer(unittest.TestCase):
+    @staticmethod
+    def buffer():
+        # Inject speech decisions, not a hardware/model-dependent DC waveform.
+        return PhraseBuffer(classifier=lambda frame, rate: any(frame))
+
     def test_silence_and_short_noise_do_not_transcribe(self):
-        buffer = PhraseBuffer()
+        buffer = self.buffer()
         for _ in range(200):
             self.assertIsNone(buffer.feed(bytes(2048)))
         self.assertIsNone(buffer.feed(array('h', [2000] * 1024).tobytes()))
         self.assertFalse(any(buffer.feed(bytes(2048)) for _ in range(20)))
 
+    def test_quiet_short_name_reaches_recognition_and_framing_is_exact(self):
+        seen = []
+        def classify(frame, rate):
+            seen.append((len(frame), rate))
+            return any(frame)
+        buffer = PhraseBuffer(classifier=classify)
+        # 180 ms at -60 dBFS: the previous .01 RMS gate discarded it.
+        speech = array('h', [32, -32] * 1440).tobytes()
+        raw = bytes(6400) + speech + bytes(32000)
+        phrases = [buffer.feed(raw[p:p+2048]) for p in range(0, len(raw), 2048)]
+        self.assertEqual(sum(x is not None for x in phrases), 1)
+        self.assertIn(speech, next(x for x in phrases if x))
+        self.assertTrue(all(x == (640, 16000) for x in seen))
+        self.assertLess(len(buffer.pending), 640)
+
     def test_speech_flushes_after_pause_and_continuous_speech_is_bounded(self):
-        buffer = PhraseBuffer()
+        buffer = self.buffer()
         raw = array('h', [2000] * 1024).tobytes()
         for _ in range(8):
             self.assertIsNone(buffer.feed(raw))
@@ -50,8 +77,25 @@ class TestPhraseBuffer(unittest.TestCase):
         results = [buffer.feed(raw) for _ in range(200)]
         phrases = [x for x in results if x]
         self.assertGreaterEqual(len(phrases), 3)
-        self.assertTrue(all(len(x) <= 129024 for x in phrases))
-        self.assertLessEqual(len(buffer.parts), 64)
+        self.assertTrue(all(len(x) <= 128000 for x in phrases))
+        self.assertLessEqual(len(buffer.parts), 200)
+
+    def test_separated_clicks_cannot_accumulate_into_speech(self):
+        buffer = self.buffer()
+        for _ in range(20):
+            self.assertIsNone(buffer.feed(array('h', [2000] * 320).tobytes()))
+            for _ in range(12):
+                self.assertIsNone(buffer.feed(bytes(2048)))
+
+    def test_gain_is_bounded_no_clipping_and_silence_unchanged(self):
+        self.assertEqual(normalize_phrase(bytes(1000)), bytes(1000))
+        quiet = array('h', [32, -32] * 1600).tobytes()
+        louder = normalize_phrase(quiet)
+        self.assertAlmostEqual(audio_rms(louder) / audio_rms(quiet), 12)
+        loud = array('h', [-32768, 32767] * 320).tobytes()
+        self.assertEqual(normalize_phrase(loud), loud)
+        spike = array('h', [100] * 1600 + [30000]).tobytes()
+        self.assertLessEqual(max(array('h', normalize_phrase(spike))), 32000)
 
 
 class Audio:
@@ -82,10 +126,11 @@ class TestWakeWorker(unittest.TestCase):
         with mock.patch('tigo_gui.transcription.transcribe_online',side_effect=['ordinary private words','Tigo']) as transcribe:
             worker.jobs.put((0,b'\0'*16000));worker.jobs.put((0,b'\0'*16000))
             thread=threading.Thread(target=worker._infer);thread.start()
-            self.wait(lambda:bool(events))
+            self.wait(lambda:any(e['type'] == 'wake' for e in events))
             worker.command({'command':'shutdown'});thread.join(1)
         model.transcribe.assert_not_called()
-        self.assertEqual(events,[{'type':'wake'}])
+        self.assertEqual([e for e in events if e['type'] == 'wake'],[{'type':'wake'}])
+        self.assertTrue(all(set(e) <= {'type', 'result'} for e in events))
         self.assertEqual(transcribe.call_args.args,(b'\0'*32000,'ru'))
 
     def test_unintelligible_online_phrase_does_not_disable_listener(self):
@@ -94,10 +139,11 @@ class TestWakeWorker(unittest.TestCase):
         with mock.patch('tigo_gui.transcription.transcribe_online',side_effect=[UnrecognizedSpeech('unclear'),'Tigo']):
             worker.jobs.put((0,b'\0'*32000));worker.jobs.put((0,b'\0'*32000))
             thread=threading.Thread(target=worker._infer);thread.start()
-            self.wait(lambda:bool(events))
+            self.wait(lambda:any(e['type'] == 'wake' for e in events))
             worker.command({'command':'shutdown'});thread.join(1)
         self.assertFalse(worker.failed)
-        self.assertEqual(events,[{'type':'wake'}])
+        self.assertEqual([e for e in events if e['type'] == 'wake'],[{'type':'wake'}])
+        self.assertTrue(all(set(e) <= {'type', 'result'} for e in events))
 
     def test_repeated_speech_cooldown_and_no_transcript_ipc(self):
         worker, model, events = self.worker()
@@ -105,12 +151,36 @@ class TestWakeWorker(unittest.TestCase):
         worker.jobs.put((0, bytes(16000)))
         thread = threading.Thread(target=worker._infer)
         thread.start()
-        self.wait(lambda: model.transcribe.call_count == 2)
+        self.wait(lambda: len([e for e in events if e['type'] == 'recognition']) == 2)
         worker.command({'command': 'shutdown'})
         thread.join(1)
-        self.assertEqual(events, [{'type': 'wake'}])
+        self.assertEqual([e for e in events if e['type'] == 'wake'], [{'type': 'wake'}])
+        self.assertEqual([e['result'] for e in events if e['type'] == 'recognition'], ['matched', 'matched'])
         self.assertEqual(model.transcribe.call_args.kwargs['language'], 'ru')
         self.assertFalse(thread.is_alive())
+
+    def test_quiet_short_phrase_is_amplified_for_both_providers(self):
+        quiet = array('h', [32, -32] * 1440).tobytes()
+        raw = bytes(6400) + quiet + bytes(32000)
+        for provider in ('local', 'online'):
+            with self.subTest(provider=provider):
+                buffer = PhraseBuffer(classifier=lambda frame, rate: any(frame))
+                phrases = [buffer.feed(raw[p:p+2048]) for p in range(0, len(raw), 2048)]
+                phrase = next(p for p in phrases if p)
+                worker, _, events = self.worker(provider)
+                received = []
+                worker.np = types.SimpleNamespace(int16=int, float32=float,
+                    frombuffer=lambda raw, **kw: received.append(raw) or Audio())
+                def online(raw, language):
+                    received.append(raw)
+                    return '\u0422\u0438\u0433\u043e'
+                with mock.patch('tigo_gui.transcription.transcribe_online', side_effect=online):
+                    worker.jobs.put((0, phrase))
+                    thread = threading.Thread(target=worker._infer); thread.start()
+                    self.wait(lambda: any(e['type'] == 'wake' for e in events))
+                    worker.command({'command': 'shutdown'}); thread.join(1)
+                self.assertEqual(max(array('h', received[0])), 384)
+                self.assertTrue(all(set(e) <= {'type', 'result'} for e in events))
 
     def test_pausing_during_inference_discards_late_recognition(self):
         worker, model, events = self.worker()
@@ -146,6 +216,10 @@ class TestWakeWorker(unittest.TestCase):
         self.assertFalse(worker.failed)
         self.assertEqual(events,[])
 
+    @staticmethod
+    def buffer_for_pause():
+        return PhraseBuffer(classifier=lambda frame, rate: False)
+
     def test_pause_acknowledges_microphone_closed(self):
         worker, _, events = self.worker()
         closed = threading.Event()
@@ -162,7 +236,8 @@ class TestWakeWorker(unittest.TestCase):
                 self.assertTrue(closed.is_set())
                 worker.command({'command': 'shutdown'})
         worker.output = output
-        self.assertEqual(worker.run(), 0)
+        with mock.patch('tigo_gui.wake.PhraseBuffer', side_effect=self.buffer_for_pause):
+            self.assertEqual(worker.run(), 0)
         self.assertEqual([e['type'] for e in events], ['listening', 'paused'])
         self.assertEqual(events[-1]['token'], 'test')
 

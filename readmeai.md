@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-17**, GUI **0.13.0**. Repository:
+Last reconciled: **2026-10-17**, GUI **0.13.1**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -19,7 +19,18 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** GUI 0.13.0 adds independent local/keyless-online wake
+**Current state:** GUI 0.13.1 fixes quiet/short wake phrases dropped by the old
+fixed RMS gate. Wake uses existing local WebRTC VAD (20 ms frames, 160 ms speech,
+660 ms pause, four-second cap, 240 ms pre-roll/overlap) and bounded speech gain
+before either provider. Mixed-script name tokens and finite tolerant Tido/Tiga
+variants are recognized; do not widen to arbitrary edit-distance matching.
+Preferences > Wake has content-free level/speech/phrase/result diagnostics on a
+separate signal; ordinary transcripts/audio remain transient. Both voice
+preflight checks require the existing locked webrtcvad import. No new dependency
+or installer change is required. Quit/relaunch after an update to replace the
+old worker. Synthetic checks are not evidence of live microphone accuracy.
+
+GUI 0.13.0 adds independent local/keyless-online wake
 transcription, explicitly hidden listener startup and opt-in wake-to-dictation /
 voice-send-after-pause. WebRTC VAD works locally for both dictation providers;
 only a detected speech-ending pause can auto-submit, and existing/edited drafts,

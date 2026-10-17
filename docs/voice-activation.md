@@ -38,6 +38,39 @@ cannot be recalled. This is speech transcription, not speaker identification or
 a dedicated low-power wake-word model. Speech from media/another person may
 activate it; recognition can miss names.
 
+## Short names and microphone diagnostics
+
+Wake capture uses the existing local WebRTC detector in 20 ms frames, rather
+than a fixed loudness cutoff. At least 160 ms of detected speech qualifies;
+about 660 ms of silence finishes a phrase. A phrase is capped at four seconds,
+with 240 ms of pre-roll/overlap to retain the beginning of a name. Bounded gain
+(up to 12x, without clipping) helps quiet speech before either transcription
+provider. This runs locally even when Online is selected.
+
+Exact matching accepts whole Tigo tokens, their Russian spelling and mixed
+Latin/Cyrillic name letters emitted by multilingual recognition. Tolerant mode
+also accepts a finite set of observed spellings, including Tido/Tiga and their
+Russian equivalents. It does not accept arbitrary one-letter edits or ordinary
+similar words such as time, tiger or the Russian words for quiet/taiga. Tolerant
+mode can still wake on another person's speech or an accepted name variant.
+
+While listening, the bottom of Preferences > Wake shows a microphone meter,
+speech detection, a phrase count and a content-free recognition result:
+
+- An empty meter while speaking suggests the wrong/muted microphone or missing
+  OS microphone permission. Check the selected device and system input level.
+- A moving meter without speech phrases suggests noise, very quiet/short speech
+  or insufficient pause. Say Tigo clearly, then pause for about one second.
+- Increasing phrases with no name match means capture reached recognition. Set
+  Russian or English explicitly; try Local small and tolerant matching.
+- An unclear result means the online service did not understand the phrase.
+  A service error stops listening; Apply voice activation retries the worker.
+
+The meter and result do not expose/save recordings or transcripts; counters are
+in-memory and reset on listener restart. Pausing clears the live meter. Recognition
+is not guaranteed in noise or for every voice. After updating, Quit Tigo and
+launch it again: hiding the window leaves the old listener running.
+
 ## Wake, record and send
 
 Enable Start recording a request after Tigo wakes. Say Tigo, wait for the window

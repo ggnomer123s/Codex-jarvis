@@ -32,6 +32,13 @@ for line in sys.stdin:
  elif value['command'] == 'resume': emit('listening')
  elif value['command'] == 'test-wake':
   emit('wake'); emit('wake')
+ elif value['command'] == 'test-diagnostics':
+  emit('level', level=.4, speech=True)
+  emit('phrase')
+  emit('recognition', result='no_match', text='must not be retained')
+ elif value['command'] == 'test-invalid-diagnostics':
+  emit('level', level='bad'); emit('level', level=float('nan'))
+  emit('recognition', result=['bad'])
  elif value['command'] == 'shutdown': break
 '''
 
@@ -89,6 +96,30 @@ class TestWakeControl(unittest.TestCase):
         self.control.set_suspended(False)
         self.wait(lambda: self.control.state == 'listening')
         self.assertEqual(self.control.process.processId(), pid)
+
+    def test_live_diagnostics_are_content_free_and_ignored_while_paused(self):
+        self.enable()
+        self.control._write('test-diagnostics')
+        self.wait(lambda: self.control.phraseCount == 1)
+        self.wait(lambda: 'no Tigo' in self.control.recognitionStatus)
+        self.assertEqual(self.control.inputLevel, .4)
+        self.assertTrue(self.control.speechDetected)
+        self.assertNotIn('must not', self.control.recognitionStatus)
+        self.assertEqual(self.names, [])
+        self.control._write('test-invalid-diagnostics')
+        QTest.qWait(80)
+        self.assertEqual(self.control.inputLevel, .4)
+        self.control.reserve_microphone(lambda: None)
+        self.wait(lambda: self.control.state == 'paused')
+        self.assertEqual(self.control.inputLevel, 0)
+        self.assertFalse(self.control.speechDetected)
+        self.control._write('test-diagnostics')
+        QTest.qWait(80)
+        self.assertEqual(self.control.phraseCount, 1)
+        self.control.set_suspended(False)
+        self.wait(lambda: self.control.state == 'listening')
+        self.enable('tiny')
+        self.wait(lambda: self.control.phraseCount == 0)
 
     def test_cancelled_manual_request_does_not_open_mic_on_late_ack(self):
         self.enable()

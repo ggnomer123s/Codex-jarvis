@@ -722,6 +722,7 @@ ApplicationWindow {
                     Text { Layout.fillWidth: true; text: "Save only workflows you reviewed. The executor stops on changed preconditions, refusal or failed verification. It does not bypass MCP guards or retry actions automatically."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                 }
                 ScrollView {
+                    objectName: "wakeScroll"
                     clip: true; contentWidth: availableWidth
                     ColumnLayout {
                         width: parent.width; spacing: 12
@@ -773,6 +774,20 @@ ApplicationWindow {
                         HudComboBox { id: wakeMic; Layout.fillWidth: true; editable: true; model: bridge.microphones; textRole: "label"; valueRole: "id" }
                         Text { Layout.fillWidth: true; text: "List microphones with Prepare saved provider in the Voice tab, or enter a device ID/name. Login startup stays hidden, including without a tray. Open Tigo normally to restore it. Closing an open window keeps listening in the tray (minimized without a tray). Quit Tigo stops it; disabling voice activation also removes its login startup entry."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         Text { objectName: "wakeStatus"; Layout.fillWidth: true; text: bridge.wake.status; color: bridge.wake.state === "error" ? "#ff8ba9" : "#84dec9"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 6
+                            visible: bridge.wake.enabled
+                            Text { text: bridge.wake.speechDetected ? "Microphone level / speech detected" : "Microphone level"; color: "#8eafbb"; font.pixelSize: 11 }
+                            Rectangle {
+                                objectName: "wakeInputMeter"; Layout.fillWidth: true; height: 5; radius: 2.5; color: "#152933"
+                                Rectangle {
+                                    width: parent.width * bridge.wake.inputLevel; height: parent.height; radius: parent.radius
+                                    color: bridge.wake.speechDetected ? "#84dec9" : "#507e8b"
+                                }
+                            }
+                            Text { objectName: "wakeRecognitionStatus"; Layout.fillWidth: true; text: "Speech phrases: " + bridge.wake.phraseCount + " / " + bridge.wake.recognitionStatus; color: "#8eafbb"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                            Text { Layout.fillWidth: true; text: "Say Tigo, then leave a short pause. If the meter stays empty, check the microphone/device and system permissions. If phrases appear without a match, select Russian or English explicitly; try Local small. Counters reset when the listener restarts. Audio and transcripts are not saved."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        }
                         HudButton { text: "Quit Tigo / stop listening"; onClicked: Qt.quit() }
                     }
                 }

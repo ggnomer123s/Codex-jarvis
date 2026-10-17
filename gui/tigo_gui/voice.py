@@ -247,7 +247,7 @@ def emit(kind: str, **fields):
 
 
 def dependencies_available(provider="local") -> bool:
-    names = ("numpy", "sounddevice", "faster_whisper") if provider == "local" else ("numpy", "sounddevice", "speech_recognition")
+    names = ("numpy", "sounddevice", "webrtcvad", "faster_whisper") if provider == "local" else ("numpy", "sounddevice", "webrtcvad", "speech_recognition")
     return all(importlib.util.find_spec(name) is not None for name in names)
 
 
