@@ -8,6 +8,71 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Windows-MCP and Tigo indicator coexistence
+
+- Moved the Windows Tigo screen-control banner to the bottom center of each
+  monitor's usable work area, above taskbars, leaving Windows-MCP's top-center
+  ownership notice in its own area. The Tigo border is inset past the native
+  56-physical-pixel edge glow plus a logical margin, using per-monitor DPI.
+  Windows banners wrap text and stack the stop button on narrow displays.
+- Refresh active native overlays on monitor geometry, work-area and logical-DPI
+  changes. Closed overlays cannot reappear from later geometry notifications.
+  X11 keeps its original edge border/top-center banner and Wayland is unchanged.
+  No Windows-MCP settings, window stacking, ownership guards, native shortcuts,
+  permissions or dependencies were changed. Return control still invokes the
+  existing task cancellation path; edges remain input-transparent and windows
+  do not request focus.
+- Updated [screen-control documentation](docs/screen-control.md). Reviewed the
+  upstream native overlay/artwork layout rather than disabling its indicator or
+  repeatedly raising windows above it. The installed Windows-MCP version may
+  differ from that source; native Windows coexistence still needs a live check.
+- Verification: all 11 targeted Qt screen-control/hotkey/IPC tests passed,
+  including real widget placement, negative monitor coordinates, 100/150/200%
+  scale assumptions, bottom/top/left taskbars, narrow screens, stop callbacks,
+  geometry/work-area/DPI refresh and close cleanup. The fix was also tested
+  separately over an isolated clean HEAD, without the unfinished wake/setup
+  drafts below. A synthetic two-indicator Qt layout preview was rendered and
+  visually inspected; it is not a Windows desktop screenshot or a native
+  z-order test. Syntax, English-only guide and diff checks pass.
+- This fix changes only screen_overlay.py, its screen-control tests, the screen
+  guide and this change report. Earlier canceled wake/setup drafts remain
+  uncommitted and are not part of this fix; do not use git add -A to publish it.
+
+## 2026-10-17 — Unfinished wake/setup work; user resolved the reported issue
+
+Work stopped after the user reported repairing the issue themselves. The
+following working-tree changes are drafts, not a ready release or an installed
+repair. They were not committed, pushed or installed on the user's computers.
+GUI source/lock version metadata was provisionally changed to 0.13.2; this is not
+a published version. Review or explicitly discard these drafts before the next
+commit/install; do not present the entire working tree as production-ready.
+
+- Draft wake changes add default-on responsive detection (120 ms speech / 500 ms
+  pause, with saved balanced opt-out), a shared two-second cooldown and native
+  microphone format negotiation/conversion using existing PyAV. GUI dictation
+  uses the same native-rate/stereo conversion. Missing wake audio callbacks
+  produce an error. Added root/Qt audio, sensitivity and cooldown fixtures;
+  updated Windows, wake, dictation and maintainer notes. Existing dependency
+  manifests already include PyAV; no new dependency was installed.
+- Wake-stage verification before setup work: 144 root tests discovered, 141
+  passed and 3 Windows-only tests skipped; 115 Qt/process/QML tests passed.
+  Real PyAV conversion was checked at 44.1/48 kHz mono/stereo with synthetic
+  audio; local/online worker routing used simulated transcription services.
+  No Windows microphone or user audio was captured. These results predate the
+  additional setup drafts and are not validation of the final combined tree.
+- Unfinished setup drafts add an install-state helper, live-owner checks, a
+  version/path/commit receipt, canonical per-checkout GUI environments, Windows
+  shortcut readback, downloaded-bootstrap cache avoidance and rejection of local
+  commits ahead of fetched main. Root entry points, Linux/Windows GUI installers,
+  launchers and full updaters were edited. Installer fixture adaptation, Update
+  Center bundle compatibility, complete documentation and final combined checks
+  were not completed. Default recognition-model preloading was discussed but
+  has not been implemented. Do not claim it is present.
+- Basic Bash/Python syntax and diff checks were run during setup editing; the
+  modified setup paths have not passed complete isolated fixtures or native
+  Windows validation. No system packages, startup entries, permissions, login,
+  user settings or installed application were changed by this draft work.
+
 ## 2026-10-17 — Discover desktop MCP before denying browser access
 
 - Updated the Tigo desktop Skill and managed AGENTS rules to inspect current and

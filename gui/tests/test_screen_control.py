@@ -9,7 +9,7 @@ import unittest
 from unittest import mock
 import uuid
 
-from PySide6.QtCore import QProcess, QSettings, Qt
+from PySide6.QtCore import QObject, QProcess, QRect, QSettings, Qt, Signal
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QPushButton
 
@@ -17,7 +17,7 @@ from tigo_gui.activation import Instance
 from tigo_gui.backend import Backend
 from tigo_gui.control_hotkey import ControlHotkey
 from tigo_gui.screen_activity import ScreenActivity, desktop_call
-from tigo_gui.screen_overlay import NativeOverlay
+from tigo_gui.screen_overlay import NativeOverlay, ScreenOverlay, overlay_bounds
 
 APP = QApplication.instance() or QApplication([])
 
@@ -95,6 +95,97 @@ class TestScreenActivity(unittest.TestCase):
         finally:
             overlay.hide()
         self.assertEqual(overlay.windows, [])
+
+    def test_windows_banner_avoids_native_notice_and_taskbars_at_mixed_dpi(self):
+        layouts = [
+            (QRect(0, 0, 1920, 1080), QRect(0, 0, 1920, 1032), 1.0),
+            (QRect(-1280, 0, 1280, 720), QRect(-1280, 0, 1280, 688), 1.5),
+            (QRect(0, -1080, 1920, 1080), QRect(64, -1080, 1856, 1080), 2.0),
+            (QRect(0, 0, 800, 600), QRect(0, 40, 800, 560), 1.0),
+            (QRect(0, 0, 480, 720), QRect(0, 0, 480, 680), 1.5),
+        ]
+        stopped = []
+        overlay = NativeOverlay(lambda: stopped.append(True), platform='win32')
+        try:
+            for geometry, available, dpr in layouts:
+                screen = mock.Mock()
+                screen.geometry.return_value = geometry
+                screen.availableGeometry.return_value = available
+                screen.devicePixelRatio.return_value = dpr
+                with self.subTest(geometry=geometry, dpr=dpr), mock.patch('tigo_gui.screen_overlay.QGuiApplication.screens',return_value=[screen]):
+                    overlay.show(True, True)
+                    APP.processEvents()
+                    frame, room = overlay_bounds(geometry, available, True, dpr)
+                    banner = next(w for w in overlay.windows if w.objectName() == 'screenControlBanner')
+                    self.assertTrue(room.contains(banner.geometry()), (room, banner.geometry()))
+                    self.assertEqual(banner.geometry().bottom(), room.bottom())
+                    self.assertGreater((frame.left() - geometry.left()) * dpr, 56)
+                    for edge in overlay.windows[:-1]:
+                        self.assertTrue(frame.contains(edge.geometry()))
+                        self.assertTrue(edge.windowFlags() & Qt.WindowTransparentForInput)
+                    # Representative upstream top-center ownership notice (physical pixels).
+                    native_notice = QRect(geometry.center().x() - round(400/dpr),
+                                          geometry.top() + round(56/dpr), round(800/dpr), round(210/dpr))
+                    self.assertFalse(native_notice.intersects(banner.geometry()))
+                    self.assertTrue(banner.windowFlags() & Qt.WindowDoesNotAcceptFocus)
+                    self.assertIn('Ctrl+Alt+Shift+Backspace', banner.findChild(QObject,'screenControlHint').property('text'))
+                    banner.findChild(QPushButton,'returnControlButton').click()
+            self.assertEqual(len(stopped),len(layouts))
+        finally:
+            overlay.hide()
+
+    def test_x11_keeps_screen_edges_and_top_center_banner(self):
+        geometry = QRect(-800, 20, 800, 600)
+        available = QRect(-800, 60, 800, 560)
+        frame, _ = overlay_bounds(geometry, available, False, 2)
+        self.assertEqual(frame, geometry)
+        screen = mock.Mock()
+        screen.geometry.return_value, screen.availableGeometry.return_value = geometry, available
+        screen.devicePixelRatio.return_value = 2
+        overlay = NativeOverlay(lambda: None,platform='linux')
+        try:
+            with mock.patch('tigo_gui.screen_overlay.QGuiApplication.screens',return_value=[screen]):
+                overlay.show(False, True)
+            banner = next(w for w in overlay.windows if w.objectName() == 'screenControlBanner')
+            self.assertEqual(banner.y(),geometry.top()+16)
+            self.assertAlmostEqual(banner.geometry().center().x(),geometry.center().x(),delta=1)
+        finally:
+            overlay.hide()
+
+    def test_monitor_geometry_workarea_and_dpi_changes_refresh_active_overlay(self):
+        class Screen(QObject):
+            geometryChanged = Signal(QRect)
+            availableGeometryChanged = Signal(QRect)
+            logicalDotsPerInchChanged = Signal(float)
+        class Hotkey(QObject):
+            activated = Signal()
+            available = False
+            def start(self): pass
+            def verify(self): pass
+            def close(self): pass
+        screen = Screen()
+        backend = mock.Mock()
+        backend.screen_activity = ScreenActivity()
+        backend.language = 'en'
+        native = mock.Mock()
+        with mock.patch.dict('os.environ',{'WAYLAND_DISPLAY':''}), \
+             mock.patch('tigo_gui.screen_overlay.QGuiApplication.screens',return_value=[screen]), \
+             mock.patch('tigo_gui.screen_overlay.NativeOverlay',return_value=native):
+            overlay = ScreenOverlay(backend,hotkey=Hotkey())
+            try:
+                backend.screen_activity.handle_item('item/started',call())
+                self.assertEqual(native.show.call_count,1)
+                screen.geometryChanged.emit(QRect(0,0,1920,1080))
+                screen.availableGeometryChanged.emit(QRect(0,0,1920,1032))
+                screen.logicalDotsPerInchChanged.emit(144)
+                self.assertEqual(native.show.call_count,4)
+                backend.screen_activity.clear()
+                screen.geometryChanged.emit(QRect())
+                self.assertEqual(native.show.call_count,4)
+            finally:
+                overlay.close()
+            screen.logicalDotsPerInchChanged.emit(96)
+            self.assertEqual(native.show.call_count,4)
 
 
 class TestHotkey(unittest.TestCase):

@@ -38,6 +38,20 @@ input, then use Tigo's Return control to cancel the task. Native takeover holds
 desktop actions until the configured idle interval, whereas Tigo's stop ends
 the current task. See the [upstream ownership documentation](https://github.com/CursorTouch/Windows-MCP#-mcp-tools).
 
+On Windows, the Tigo banner sits at the bottom center of each monitor's usable
+work area, above the taskbar. Windows-MCP keeps its own top-center ownership
+notice. Tigo's thin border is inset past the native 56-physical-pixel edge glow,
+with an extra logical-pixel margin; the offset accounts for each screen's device
+pixel ratio. This avoids placing the two notices in the same area. The layout
+wraps text and stacks the button on narrow displays. Monitor/work-area/DPI
+changes refresh an active overlay without activating an application window.
+Linux X11 retains the original edge border/top-center banner; the Wayland helper
+is unchanged. No MCP window is hidden, reconfigured or repeatedly sent behind
+Tigo. Both takeover shortcuts and the Return control button keep their behavior.
+The native layout was reviewed in [Windows-MCP's ownership overlay source](https://github.com/CursorTouch/Windows-MCP/blob/main/src/windows_mcp/desktop/control_overlay.py)
+and [artwork dimensions](https://github.com/CursorTouch/Windows-MCP/blob/main/src/windows_mcp/desktop/control_overlay_art.py);
+third-party versions can change their appearance.
+
 Tigo's banner indicates observed tool activity, not proof of exclusive OS
 ownership. It does not disable Windows-MCP/Hypruse takeover guards, install
 input-blocking hooks, lock the session or prevent the human from interrupting.
@@ -60,7 +74,8 @@ full-screen input blocker is used as a fallback. OS secure desktops, lock screen
 and exclusive full-screen applications can prevent normal overlays from showing.
 
 The GUI cannot remove its overlay synchronously from third-party screenshots:
-the banner/border can appear in captures and cover a small top-center area.
+the banner/border can appear in captures and cover a small area (bottom center
+on Windows, top center on Linux).
 Windows-MCP hides its own native indicator during capture independently. No
 screenshots, screen recordings or user-input history are collected by this feature.
 
@@ -68,3 +83,11 @@ Verification on Linux used a simulated task to show the real layer-shell border
 over another workspace and click Return control. Windows registration/dispatch,
 IPC and cancellation are covered by fixtures; Windows hardware behavior remains
 unverified.
+
+
+The Windows coexistence layout has also been exercised with actual Qt widgets
+in offscreen fixtures: mixed 100/150/200% scale assumptions, negative monitor
+coordinates, bottom/top/left taskbars, a narrow display, input transparency,
+stop clicks and live geometry/work-area/DPI notifications. These checks validate
+placement and callbacks; they do not establish native Windows z-order behavior
+with a particular installed Windows-MCP version.
