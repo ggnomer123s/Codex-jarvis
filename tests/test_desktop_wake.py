@@ -60,14 +60,14 @@ class Audio:
 
 
 class TestWakeWorker(unittest.TestCase):
-    def worker(self):
+    def worker(self,provider="local"):
         events = []
         model = mock.Mock()
         model.transcribe.return_value = ([types.SimpleNamespace(text='hey tigo')], None)
         np = types.SimpleNamespace(frombuffer=lambda *a, **k: Audio(), int16=int, float32=float)
         with mock.patch.dict(sys.modules, {'numpy': np, 'sounddevice': types.SimpleNamespace()}):
             worker = WakeListener('base', 'ru', model_factory=mock.Mock(return_value=model),
-                                  output=lambda kind, **data: events.append({'type': kind, **data}))
+                                  output=lambda kind, **data: events.append({'type': kind, **data}),provider=provider)
         return worker, model, events
 
     def wait(self, condition):
@@ -75,6 +75,29 @@ class TestWakeWorker(unittest.TestCase):
         while not condition() and time.monotonic() < deadline:
             time.sleep(.005)
         self.assertTrue(condition())
+
+    def test_online_wake_uses_selected_language_and_discards_ordinary_transcripts(self):
+        worker, model, events = self.worker('online')
+        self.assertIsNone(worker.model)
+        with mock.patch('tigo_gui.transcription.transcribe_online',side_effect=['ordinary private words','Tigo']) as transcribe:
+            worker.jobs.put((0,b'\0'*16000));worker.jobs.put((0,b'\0'*16000))
+            thread=threading.Thread(target=worker._infer);thread.start()
+            self.wait(lambda:bool(events))
+            worker.command({'command':'shutdown'});thread.join(1)
+        model.transcribe.assert_not_called()
+        self.assertEqual(events,[{'type':'wake'}])
+        self.assertEqual(transcribe.call_args.args,(b'\0'*32000,'ru'))
+
+    def test_unintelligible_online_phrase_does_not_disable_listener(self):
+        from tigo_gui.transcription import UnrecognizedSpeech
+        worker, _, events = self.worker('online')
+        with mock.patch('tigo_gui.transcription.transcribe_online',side_effect=[UnrecognizedSpeech('unclear'),'Tigo']):
+            worker.jobs.put((0,b'\0'*32000));worker.jobs.put((0,b'\0'*32000))
+            thread=threading.Thread(target=worker._infer);thread.start()
+            self.wait(lambda:bool(events))
+            worker.command({'command':'shutdown'});thread.join(1)
+        self.assertFalse(worker.failed)
+        self.assertEqual(events,[{'type':'wake'}])
 
     def test_repeated_speech_cooldown_and_no_transcript_ipc(self):
         worker, model, events = self.worker()
@@ -106,6 +129,22 @@ class TestWakeWorker(unittest.TestCase):
         worker.command({'command': 'shutdown'})
         thread.join(1)
         self.assertEqual(events, [])
+
+    def test_late_online_failure_after_pause_does_not_stop_listener(self):
+        worker, _, events = self.worker('online')
+        entered, release, returned = threading.Event(), threading.Event(), threading.Event()
+        def recognize(*args):
+            entered.set();release.wait(2);returned.set()
+            raise RuntimeError('late service failure')
+        with mock.patch('tigo_gui.transcription.transcribe_online',side_effect=recognize):
+            worker.jobs.put((0,b'\0'*32000))
+            thread=threading.Thread(target=worker._infer);thread.start()
+            self.assertTrue(entered.wait(1))
+            worker.command({'command':'pause','token':'dictation'})
+            release.set();self.assertTrue(returned.wait(1))
+            worker.command({'command':'shutdown'});thread.join(1)
+        self.assertFalse(worker.failed)
+        self.assertEqual(events,[])
 
     def test_pause_acknowledges_microphone_closed(self):
         worker, _, events = self.worker()

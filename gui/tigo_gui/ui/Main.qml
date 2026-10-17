@@ -396,6 +396,7 @@ ApplicationWindow {
                                 TextArea {
                                     id: composer
                                     objectName: "composer"
+                                    onTextChanged: bridge.updateDraftState(text.trim().length > 0)
                                     placeholderText: "Ask Tigo anything, or use your voice..."
                                     placeholderTextColor: "#688291"
                                     color: "#e0f1f4"; font.pixelSize: 13
@@ -453,7 +454,7 @@ ApplicationWindow {
                                 Text {
                                     Layout.fillWidth: true; Layout.minimumWidth: 0
                                     visible: chatPane.width > 700
-                                    text: bridge.voiceState === "recording" ? "Listening · max 60 seconds" : (bridge.voiceState === "transcribing" ? (bridge.transcriptionProvider === "online" ? "Transcribing online..." : "Transcribing locally...") : (bridge.transcriptionProvider === "online" ? "Online dictation · audio sent to Google" : (bridge.voiceReady ? "Local voice model ready" : "Local dictation · review before Send")))
+                                    text: bridge.voiceState === "recording" ? (bridge.voiceAutoSend ? "Listening · pause to send · Escape cancels" : "Listening · max 60 seconds") : (bridge.voiceState === "transcribing" ? (bridge.transcriptionProvider === "online" ? "Transcribing online..." : "Transcribing locally...") : (bridge.transcriptionProvider === "online" ? "Online dictation · audio sent to Google" : (bridge.voiceReady ? "Local voice model ready" : "Local dictation · review before Send")))
                                     color: "#7897a7"; font.pixelSize: 9; elide: Text.ElideRight
                                 }
                                 HudButton {
@@ -505,7 +506,7 @@ ApplicationWindow {
         property string speechLanguageCode: bridge.language
         function applyWake() {
             return bridge.wake.configure(wakeToggle.checked, wakeAutostart.checked, wakeModel.editText.trim(),
-                wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked)
+                wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked, wakeProvider.currentIndex === 1 ? "online" : "local", wakeRecord.checked)
         }
         onOpened: {
             speechPage.sync()
@@ -524,6 +525,8 @@ ApplicationWindow {
             previewChoice.checked = bridge.voicePreview
             micChoice.currentIndex = micChoice.indexOfValue(bridge.microphone)
             workflowEditor.text = bridge.workflowsText
+            wakeProvider.currentIndex = bridge.wake.provider === "online" ? 1 : 0
+            wakeRecord.checked = bridge.wake.recordAfterWake
             wakeToggle.checked = bridge.wake.enabled
             wakeAutostart.checked = bridge.wake.autostart
             wakeFuzzy.checked = bridge.wake.fuzzy
@@ -625,7 +628,8 @@ ApplicationWindow {
                         id: previewChoice; visible: transcriptionChoice.currentIndex === 0; text: "Show provisional text while recording"; enabled: !window.locked && transcriptionChoice.currentIndex === 0
                         contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                     }
-                    Text { Layout.fillWidth: true; text: transcriptionChoice.currentIndex === 1 ? "Only explicit dictation uses the online service. Wake listening always stays local. Review the transcript before sending." : "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Wake listening always stays local. Review the transcript before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Text { Layout.fillWidth: true; text: transcriptionChoice.currentIndex === 1 ? "Only explicit dictation uses the online service. Wake transcription has its own Local / Online setting. Review the transcript before sending." : "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Wake transcription has its own Local / Online setting. Review the transcript before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    VoiceAutomation { objectName: "dictationAutomation"; Layout.fillWidth: true; enabled: !window.locked }
                     HudButton { text: bridge.voiceReady ? "Transcription ready" : "Prepare saved provider / list microphones"; enabled: !window.locked && bridge.voiceAvailable; onClicked: bridge.warmVoice() }
                     }
                 }
@@ -722,9 +726,19 @@ ApplicationWindow {
                     ColumnLayout {
                         width: parent.width; spacing: 12
                         Text { text: "Open Tigo by voice"; color: "#bde5de"; font.pixelSize: 15 }
+                        Text { text: "Wake transcription"; color: "#8eadbd"; font.pixelSize: 12 }
+                        HudComboBox {
+                            id: wakeProvider; objectName: "wakeProvider"
+                            Layout.fillWidth: true; model: ["Local Whisper (offline)", "Online Google Web Speech (no API key)"]
+                            enabled: !window.locked
+                            onActivated: if (wakeLanguage.currentIndex < 0) wakeLanguage.currentIndex = 0
+                        }
                         Text {
                             Layout.fillWidth: true
-                            text: "Optional background listening keeps your microphone on. Speech is transcribed locally in memory; only the wake name opens the window. Nothing is sent as a task or saved as a transcript."
+                            objectName: "wakePrivacy"
+                            text: wakeProvider.currentIndex === 1
+                                ? "Online wake listening sends speech phrases near the microphone to Google over HTTPS, including speech without the Tigo name. No personal API key is needed. Ordinary transcripts are discarded. Select Local Whisper to keep wake audio on this computer."
+                                : "Local wake listening transcribes bounded phrases on this computer. Ordinary transcripts are discarded. Say Tigo, wait for the listening indicator, then speak your request if automatic recording is enabled."
                             color: "#8eafbb"; font.pixelSize: 11; wrapMode: Text.WordWrap
                         }
                         HudCheckBox {
@@ -734,22 +748,30 @@ ApplicationWindow {
                             contentItem: Text { text: parent.text; color: "#b8eee4"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                         }
                         HudCheckBox {
-                            id: wakeAutostart; text: "Start listening when I sign in"
+                            id: wakeAutostart; objectName: "wakeAutostart"; text: "Start listener when I sign in (keep window hidden)"
                             contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                         }
+                        HudCheckBox {
+                            id: wakeRecord; objectName: "wakeRecordAfter"
+                            text: "Start recording a request after Tigo wakes"
+                            enabled: !window.locked
+                            contentItem: Text { text: parent.text; color: "#b8eee4"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
+                        }
+                        VoiceAutomation { objectName: "wakeAutomation"; Layout.fillWidth: true; enabled: !window.locked }
                         HudCheckBox {
                             id: wakeFuzzy; text: "Recognize similar pronunciations of Tigo"
                             contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                         }
                         Text { Layout.fillWidth: true; text: "Tolerant matching also handles Russian and small transcription errors. It can cause false activations. Turn it off for exact Tigo / Russian-name matching. Repeated activations have an 8-second cooldown."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         Text { text: "Wake language"; color: "#8eadbd"; font.pixelSize: 12 }
-                        HudComboBox { id: wakeLanguage; Layout.fillWidth: true; model: bridge.languageOptions; textRole: "label"; valueRole: "code" }
-                        Text { text: "Local wake model (CPU)"; color: "#8eadbd"; font.pixelSize: 12 }
-                        HudComboBox { id: wakeModel; Layout.fillWidth: true; editable: true; model: bridge.voiceModels }
-                        Text { Layout.fillWidth: true; text: "base balances speed and recognition; tiny uses fewer resources. First use downloads the model. Russian may work better with Russian selected explicitly."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        HudComboBox { id: wakeLanguage; objectName: "wakeLanguage"; Layout.fillWidth: true; model: wakeProvider.currentIndex === 1 ? bridge.languageOptions.filter(function(item) { return item.code !== "auto" }) : bridge.languageOptions;
+                            onModelChanged: Qt.callLater(function() { wakeLanguage.currentIndex = Math.max(0, wakeLanguage.indexOfValue(bridge.wake.language)) }); textRole: "label"; valueRole: "code" }
+                        Text { visible: wakeProvider.currentIndex === 0; text: "Local wake model (CPU)"; color: "#8eadbd"; font.pixelSize: 12 }
+                        HudComboBox { id: wakeModel; visible: wakeProvider.currentIndex === 0; Layout.fillWidth: true; editable: true; model: bridge.voiceModels }
+                        Text { visible: wakeProvider.currentIndex === 0; Layout.fillWidth: true; text: "base balances speed and recognition; tiny uses fewer resources. First use downloads the model. Russian may work better with Russian selected explicitly."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         Text { text: "Wake microphone / device ID"; color: "#8eadbd"; font.pixelSize: 12 }
                         HudComboBox { id: wakeMic; Layout.fillWidth: true; editable: true; model: bridge.microphones; textRole: "label"; valueRole: "id" }
-                        Text { Layout.fillWidth: true; text: "List microphones with Prepare saved model in the Voice tab, or enter a device ID/name. Closing the window keeps listening in the tray (minimized when the tray is unavailable). Quit Tigo stops it; disabling voice activation also removes its login startup entry."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        Text { Layout.fillWidth: true; text: "List microphones with Prepare saved provider in the Voice tab, or enter a device ID/name. Login startup stays hidden, including without a tray. Open Tigo normally to restore it. Closing an open window keeps listening in the tray (minimized without a tray). Quit Tigo stops it; disabling voice activation also removes its login startup entry."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         Text { objectName: "wakeStatus"; Layout.fillWidth: true; text: bridge.wake.status; color: bridge.wake.state === "error" ? "#ff8ba9" : "#84dec9"; font.pixelSize: 11; wrapMode: Text.WordWrap }
                         HudButton { text: "Quit Tigo / stop listening"; onClicked: Qt.quit() }
                     }

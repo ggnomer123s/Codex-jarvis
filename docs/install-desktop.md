@@ -284,8 +284,8 @@ models and troubleshooting.
 The voice extra now includes locked `SpeechRecognition` for online Google Web
 Speech. It needs no personal API key or account; this is a public personal-use
 service with possible quotas/availability changes, not Google Cloud Speech.
-Only explicitly selected online dictation uploads the completed microphone
-recording over HTTPS. Local Whisper remains the default; a new GUI profile uses
+Explicitly selected online dictation uploads the completed microphone
+recording over HTTPS; newer wake settings have their own provider choice below. Local Whisper remains the default; a new GUI profile uses
 small, while existing choices remain. The model downloads once before offline
 use. Review the transcript before Send. See [voice input](voice-input.md).
 
@@ -304,3 +304,21 @@ updaters include them. The lightweight installer reports missing prerequisites
 without changing system settings. Existing Hypruse and Windows-MCP supply their
 own accessibility tools. Restart Tigo/Codex sessions after updating tools and
 instructions. See [semantic targeting](gui-operator.md#semantic-interface-targeting).
+
+
+## Hands-free voice and listener startup (0.13)
+
+The locked voice extra now includes `webrtcvad-wheels` (import `webrtcvad`) for
+local speech-end detection on Windows/Linux. Normal one-step setup, Update
+Center and platform updaters install it and import-check it with the existing
+voice dependencies. No PyAudio, personal API key or new system audio service is
+required. Re-run `uv sync --project gui --frozen --extra voice` for a manual
+checkout upgrade. Existing settings/login and startup opt-ins are preserved.
+
+Preferences > Wake can independently select local Whisper or keyless online
+Google Web Speech, register listener-only hidden startup at user sign-in and
+start dictation after a wake. The optional automatic speech-end send checkbox
+in Voice/Wake applies to all voice requests and saves immediately. It is off by
+default. Online wake mode uploads nearby speech phrases to Google; local wake
+mode does not. See [voice activation](voice-activation.md) for the separate
+opt-ins, pause choices, draft preservation and XDG/Windows startup requirements.

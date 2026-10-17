@@ -1,132 +1,114 @@
-# Local voice activation
+# Voice activation and hands-free requests
 
-**Preferences > Wake** enables a background listener that opens the Tigo
-window when local transcription contains `Tigo`, its Russian name or an
-optional close spelling. It is off by default and uses existing faster-whisper
-dependencies. Codex app-server remains the only GUI model backend.
+Preferences > Wake configures the background listener. Local Whisper is the
+default; Online Google Web Speech is a separate explicit choice without a
+personal API key. Voice requests use the independent provider in Preferences >
+Voice. Listening, automatic recording and automatic sending are separate saved
+choices. New settings keep listening, automatic recording and automatic sending
+off until enabled.
 
-## Enable it
+## Configure the listener
 
-1. Update the checkout and use the voice-enabled launcher:
-   `bash scripts/tigo-gui-linux.sh` on Linux, or
-   `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\tigo-gui-windows.ps1`
-   on Windows 11. Linux also needs PortAudio; see the installation guide.
-2. Open **Preferences > Wake**. Select **Russian** for mostly Russian speech,
-   **English** for English, or **Auto detect** for mixed speech. Short names can
-   be harder to identify in Auto mode.
-3. Choose a multilingual model: `base` is the default, `tiny` uses fewer resources,
-   and `small` may improve recognition at higher CPU/memory cost. A converted
-   local model folder is accepted. Wake inference uses CPU int8 with at most
-   four CPU threads; the manual voice worker's CUDA setting is independent.
-4. Select a microphone or leave **System default**. To populate device choices,
-   use **Prepare saved model / list microphones** in the Voice tab first. An
-   input-device ID or name can also be entered directly.
-5. Keep **Recognize similar pronunciations** enabled for tolerant matching, or
-   disable it for exact English/Russian wake-name tokens. Keep **Start listening
-   when I sign in** checked if desired.
-6. Check **Listen for Tigo in the background**. This applies the displayed wake
-   settings immediately. Later model/language/microphone changes require
-   **Apply voice activation**. Wait for the microphone-on status; first use may
-   download the selected model.
+1. Choose a wake provider and language. Online requires a language such as
+   Russian; Auto detect is local-only. Local base uses CPU int8 with at most four
+   threads; tiny uses fewer resources, small may recognize difficult speech
+   better. Models download once and then work offline.
+2. Choose the microphone or System default. Use Prepare saved provider / list
+   microphones in the Voice tab to populate the list, or enter a device ID/name.
+3. Enable Listen for Tigo in the background and Apply voice activation. Optional
+   tolerant matching accepts a small explicit set of English/Russian wake-name
+   variants and split tokens; exact mode accepts only whole name tokens. An
+   eight-second cooldown suppresses duplicate activations.
+4. Enable Start listener when I sign in (keep window hidden) for login startup.
+   It applies only while background listening is enabled. This starts after
+   graphical user sign-in, not at the lock/login screen or as a system service.
 
-![Wake settings](images/tigo-wake-settings.png)
+Local mode processes bounded speech phrases on this computer. Explicit Online
+wake mode sends speech phrases near the microphone to Google over HTTPS,
+including phrases without the wake name. The public personal/testing service
+can impose limits or become unavailable; it is not the paid Cloud Speech API.
+Unintelligible speech is ignored; connection/service failures stop the listener
+with an error and require retrying settings. No account or personal API key is
+needed. Select Local to avoid uploading wake audio.
 
-Say the wake name in a short phrase. The existing window is restored. The rest
-of the sentence is not submitted as a task. Dictate a request with the existing
-microphone button, review it, then Send. Other speech is discarded after the
-local wake-name check.
+Ordinary wake transcripts are discarded: not displayed, logged, sent to Codex
+or saved in settings/history. Only wake/status events leave the worker. Audio
+buffers/queues are bounded in RAM; online audio already received by the service
+cannot be recalled. This is speech transcription, not speaker identification or
+a dedicated low-power wake-word model. Speech from media/another person may
+activate it; recognition can miss names.
 
-## Background and sign-in
+## Wake, record and send
 
-With voice activation enabled, closing the window leaves the listener running
-with a tray icon. Its menu restores the window, disables voice activation or
-quits. Without tray support, close and background login startup minimize the
-window instead, keeping the app reachable. The sidebar displays listener status.
+Enable Start recording a request after Tigo wakes. Say Tigo, wait for the window
+and listening indicator, then dictate the request. The listener closes its
+microphone before the dictation worker records, and pauses while a task runs or
+Tigo speaks. The wake phrase is not used as the command; words spoken before
+command recording begins are not recovered. Default behavior still places the
+recognized text in the composer for review and Send.
 
-**Quit Tigo** in the tray menu or **Quit Tigo / stop listening** in the Wake
-tab stops all app workers. A checked startup option still applies at the next
-sign-in. Uncheck background listening to stop the microphone and remove Tigo's
-own startup entry. A startup-cleanup error is reported without keeping the
-microphone enabled.
+For hands-free sending, enable Send voice requests automatically after a speech
+pause in Wake or Voice. This setting saves immediately and applies to all voice
+requests, including manually started recordings. Local WebRTC VAD identifies
+speech and waits for the selected 1.2 / 1.6 / 2.4 / 3.2-second pause (default 1.6).
+The VAD runs locally for both transcription providers. Then the normal Codex
+request path submits the recognized text once, without pressing Send. Background
+voices/noise and transcription errors can affect it; leave it off for review.
 
-Startup registration is per-user, without elevation:
+- Eight seconds without detected speech cancels without transcription/upload or
+  a request. Capture is capped at 60 seconds.
+- Manual Stop or the 60-second cap keeps the transcript for review. Only a
+  detected speech-ending pause qualifies for automatic sending.
+- Existing/edited drafts, attachments, another running task or interrupted
+  worker completion prevent automatic sending; the transcript is kept in the
+  composer. Draft contents and existing attachments are not sent by this mode.
+- Escape/Cancel stops recording/transcription and ignores late results. A task
+  already submitted uses normal Stop; completed actions are not undone.
+- Ordinary wake transcripts never submit commands. Automatic recording and
+  sending each require their own opt-in; enabling wake listening alone restores
+  the window only. The CLI `tigo voice` retains explicit YES confirmation.
 
-- Linux: `$XDG_CONFIG_HOME/autostart/tigo-voice.desktop`, defaulting to
+## Background startup, close and quit
+
+Login startup runs the current environment's Python with `-m tigo_gui
+--background` and keeps the main window hidden, even when no tray is available
+or the listener reports an error. A normal app launch restores the existing
+instance. When available, the tray shows status and Open/Disable/Quit actions.
+Closing an already-open window keeps listening in the tray, or minimizes without
+a tray. Quit Tigo stops all workers; disabling listening removes its owned login
+entry. A checked startup option applies again at next sign-in.
+
+Registration is per-user without elevation:
+
+- Linux: `$XDG_CONFIG_HOME/autostart/tigo-voice.desktop`, default
   `~/.config/autostart/tigo-voice.desktop`.
-- Windows 11: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value
-  `TigoVoiceActivation`, using the environment's `pythonw.exe`.
+- Windows: `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`, value
+  `TigoVoiceActivation`, using the environment's pythonw.exe.
 
-It launches the current environment's Python with `-m tigo_gui --background`.
-Keep the checkout and environment in place; reapply Wake settings after moving
-them. Unrelated startup files/values are not replaced. Linux requires a graphical
-session honoring XDG autostart; minimal window managers may require their own
-session-autostart support to be enabled.
-
-For bare Hyprland sessions that do not consume XDG autostart, an optional
-`exec-once` line in your own Hyprland configuration can launch the same saved
-opt-in. Replace the path with your actual checkout; Tigo does not edit the
-compositor configuration automatically:
+Unrelated entries are preserved. Keep the checkout/environment in place and
+reapply Wake settings after moving them. Minimal Linux compositors must consume
+XDG autostart; bare Hyprland may require an explicit exec-once entry in your own
+configuration. Tigo does not edit compositor settings automatically:
 
 ```ini
 exec-once = "/absolute/path/to/Tigo/gui/.venv/bin/python" -m tigo_gui --background
 ```
 
-Manual background start after setup:
+Manual background launch uses `bash scripts/tigo-gui-linux.sh --background` or
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File
+.\scripts\tigo-gui-windows.ps1 -Background`. Without saved listener opt-in it
+exits without opening a microphone. Same-user local IPC prevents two Tigo
+instances; no network listener is exposed.
 
-```bash
-bash scripts/tigo-gui-linux.sh --background
-```
+## Installation and verification limits
 
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\tigo-gui-windows.ps1 -Background
-```
+The voice extra includes locked webrtcvad-wheels for local endpoint detection
+and SpeechRecognition for keyless online transcription; platform updaters check
+their imports. No new audio drivers, personal keys or system service are needed.
+Existing microphones/OS permissions and native desktop ownership guards apply.
+See [dictation](voice-input.md) and [installation](install-desktop.md).
 
-Without saved opt-in, `--background` exits without opening a microphone. A second
-normal launch restores the existing instance through same-user local IPC; no
-network listener is exposed. Wayland/Windows focus policies may highlight/show
-the window rather than forcibly transferring keyboard focus.
-
-## Spoken replies and microphone coordination
-
-The local wake microphone pauses before Tigo speaks. Speech waits for the
-worker's pause acknowledgment and resumes listening after a 300 ms audio-tail
-cooldown. Manual push-to-talk interrupts output and waits for quiet before
-recording. This prevents ordinary self-activation; it is not full-duplex echo
-cancellation. External speakers or delayed room echoes can still warrant a
-headset. See [spoken replies](speech-output.md).
-
-## Audio and resource limits
-
-While enabled, the background microphone stays open. Its callback only queues
-PCM. Energy-based segmentation ends phrases after about 0.65 seconds of silence
-or a four-second maximum, with short overlap at boundaries. Whisper VAD and
-no-speech filters precede matching. This is local STT, not a dedicated low-power
-wake-word model or instantaneous online recognition.
-
-Only status/wake signals leave the worker. Ordinary transcripts are not logged,
-displayed, saved in settings/history or sent to Codex; audio stays in bounded
-RAM buffers. Model files are cached on disk and first download needs Internet;
-an existing converted model directory supports offline use. Normal pauses keep
-the wake model loaded. The separate manual worker may also retain its own model
-for five idle minutes.
-
-The listener closes its capture stream before manual voice input begins.
-Pause/resume generations discard stale inference. If pausing stalls for 1.5
-seconds, only the wake worker is killed before releasing the mic, then reloaded
-after manual voice finishes.
-
-An eight-second cooldown limits repeated activations. Tolerant matching accepts
-explicit Tigo transcription variants and split-name tokens; it can cause
-false activations. Exact mode accepts only whole English/Russian name tokens.
-Neither guarantees recognition of every utterance. Select the actual language,
-check the microphone and try `base`/`small` if names are missed. If CPU inference
-falls behind, a bounded queue skips older phrases and reports it; try `tiny` or
-reduce other CPU load.
-This does not identify speakers: the wake name in media or another person's
-speech near the microphone can also restore the window.
-
-OS microphone permissions apply. This does not operate at the Windows lock/login
-screen, submit tasks automatically, archive conversations or speak replies.
-Automated tests use simulated audio/model output, real Qt processes, local IPC
-and QML. Microphone accuracy, native login startup/tray and focus behavior still
-require testing on the target desktop.
+Tests use simulated audio/model/service results, real Qt processes, the actual
+QML and isolated startup files/registry fixtures. A synthetic audio check uses
+the real WebRTC detector. Real microphone accuracy, system-login startup and
+native tray/focus behavior still require target-desktop verification.

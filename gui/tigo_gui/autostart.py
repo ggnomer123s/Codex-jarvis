@@ -65,7 +65,7 @@ def set_autostart(enabled, command=None, *, platform=None, config_home=None):
             legacy.unlink()
         return
     content = ('[Desktop Entry]\n' + MARKER + '\nType=Application\nName=Tigo voice activation\n'
-               'Comment=Listen locally for the Tigo wake name\nExec=' + ' '.join(map(desktop_quote, command))
+               'Comment=Start the configured Tigo wake listener with its window hidden\nExec=' + ' '.join(map(desktop_quote, command))
                + '\nTerminal=false\nX-GNOME-Autostart-enabled=true\n')
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix='.tigo-voice-', dir=target.parent)

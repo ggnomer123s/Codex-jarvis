@@ -130,6 +130,30 @@ class TestPersistentVoice(unittest.TestCase):
         holder['worker'] = worker
         return worker, factory, events
 
+    def test_speech_end_stops_capture_and_marks_result_for_optional_submission(self):
+        worker, factory, events = self.worker()
+        endpoint = mock.Mock()
+        endpoint.feed.return_value = 'silence'
+        endpoint.started = True
+        with mock.patch('tigo_gui.voice_endpoint.SpeechEndpoint',return_value=endpoint):
+            worker.command({'command':'record','id':'endpoint','language':'ru','beam':3,'auto_stop':True,'silence_ms':1600})
+            worker.thread.join(2)
+        result = next(e for e in events if e['type']=='transcript')
+        self.assertEqual(result['endReason'],'silence')
+        self.assertEqual([e['type'] for e in events],['recording','speech_end','transcribing','transcript','idle'])
+
+    def test_silence_only_capture_never_transcribes(self):
+        worker, factory, events = self.worker()
+        endpoint = mock.Mock()
+        endpoint.feed.return_value = 'no_speech'
+        endpoint.started = False
+        with mock.patch('tigo_gui.voice_endpoint.SpeechEndpoint',return_value=endpoint):
+            worker.command({'command':'record','id':'empty','language':'ru','beam':3,'auto_stop':True})
+            worker.thread.join(2)
+        factory.return_value.transcribe.assert_not_called()
+        self.assertFalse(any(e['type']=='transcript' for e in events))
+        self.assertTrue(any(e['type']=='error' for e in events))
+
     def test_online_records_once_without_loading_whisper_or_uploading_previews(self):
         worker, factory, events = self.worker(provider="online")
         with mock.patch("tigo_gui.transcription.transcribe_online", return_value="Recognized online") as recognize:

@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-17**, GUI **0.12.0**. Repository:
+Last reconciled: **2026-10-17**, GUI **0.13.0**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -19,13 +19,24 @@ see section 13 and the newest change report for those bootstrap scripts. Runtime
 implementation **0.6.1** was published as `d63f53d`; its verification report is
 `b804dd0`. These are navigation baselines, not a claim about a future Git HEAD.
 
-**Current state:** GUI 0.12.0 adds explicit local/keyless online dictation and
+**Current state:** GUI 0.13.0 adds independent local/keyless-online wake
+transcription, explicitly hidden listener startup and opt-in wake-to-dictation /
+voice-send-after-pause. WebRTC VAD works locally for both dictation providers;
+only a detected speech-ending pause can auto-submit, and existing/edited drafts,
+attachments, cancellation or incomplete worker exit keep review behavior.
+Listening/auto-record/auto-send are separately saved and off by default.
+Startup --background no longer minimizes/shows the main window without a tray
+or on listener errors. Normal launch restores it via existing IPC. See
+[voice activation](docs/voice-activation.md). Provider expansion to Claude Code,
+Antigravity and direct APIs was explicitly deferred by the user and recorded in
+[roadmap](docs/roadmap.md); do not implement it without a fresh request.
+
+GUI 0.12.0 adds explicit local/keyless online dictation and
 semantic-first interface targeting. Online dictation uses SpeechRecognition's
 public personal-use Google Web Speech configuration, forced HTTPS, bounded
 in-memory audio and no personal API key. It is not a guaranteed Cloud API.
 Select a language; no online Auto detection or preview. Local Whisper defaults
-to small only for new GUI settings; saved model choices stay intact. Wake/CLI
-remain local and dictation still requires review and Send. See [voice input](docs/voice-input.md).
+to small only for new GUI settings; saved model choices stay intact. The CLI remains local; newer GUI wake/automation settings are described above. See [voice input](docs/voice-input.md).
 X11 adds scoped AT-SPI ui_elements/click_ui via a system-Python helper with
 PID/title/focus/state/ambiguity checks. Hypruse/Windows use existing native
 trees; shipped instructions prefer them for labeled controls. Runtime reports
@@ -129,9 +140,10 @@ not claim fictional identity or consciousness and does not widen permissions.
 - **Full Access defaults on.** The settings checkbox can disable it and saves
   the chosen sandbox mode for GUI and regular Tigo CLI launchers. Do not
   restore the old typed confirmation phrase or a separate account profile.
-- **Human-reviewed voice requests.** Push-to-talk fills the draft; the user
-  presses Send. Wake-name activation restores the window without submitting
-  the rest of the sentence as a task.
+- **Explicit voice automation.** Default dictation fills the draft for Send.
+  Separate saved opt-ins allow wake-triggered recording and local-VAD speech-end
+  automatic sending. Keep draft/attachment/cancellation safeguards; wake listening
+  alone never submits ordinary wake transcripts or the rest of the wake phrase.
 - **One assistant currently controls the desktop.** Specialized bots were
   discussed, not implemented. Claude Code and API-based providers are deferred.
   Remaining declined roadmap ideas are not authorization to implement them.
@@ -155,7 +167,8 @@ Typed request / reviewed push-to-talk transcript / reviewed local attachments
        -> local conversation history and content-free timing/checkpoint data
        -> successful final answer -> optional local / explicit online text-to-speech
 
-Optional local wake listener -> matching wake name -> restore existing window
+Optional local/explicit-online wake listener -> matching wake name -> restore window
+  -> optional dictation -> optional speech-end submission with draft guards
 Terminal tigo launchers -> interactive Codex CLI in the same Codex home
 ```
 
@@ -223,7 +236,7 @@ is released; missing tools/refusals do not trigger another input backend.
   Activity cards show phase, elapsed time, errors and Stop. Scrolling up disables
   automatic following; Latest restores it.
 
-### Voice input and local wake activation
+### Voice input and optional wake activation
 
 Push-to-talk uses a separate persistent worker. Local mode uses faster-whisper;
 explicit online mode uses keyless Google Web Speech over HTTPS, with a selected
@@ -240,10 +253,10 @@ multilingual model IDs and converted local directories are also accepted.
 Capture is bounded to 60 seconds. Audio callbacks enqueue bounded PCM data;
 inference runs separately. Audio remains in RAM. Optional provisional text is
 chunk/pause processing, not true online decoding. Final transcription goes to
-the draft and requires review and Send. The CLI `tigo voice` instead asks
+the draft by default; explicit auto-send can submit after VAD silence with draft/attachment guards. The CLI `tigo voice` instead asks
 for explicit YES before starting Codex with the transcript.
 
-**Preferences > Wake** separately enables continuous local capture/transcription
+**Preferences > Wake** separately enables opt-in local or explicit-online capture/transcription
 of bounded phrases. Exact/tolerant English and Russian wake-name matching opens
 the existing app. Ordinary wake transcripts are discarded, not displayed,
 persisted or sent to Codex. It is not a dedicated low-power wake-word model.

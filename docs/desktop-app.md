@@ -239,7 +239,7 @@ The same controls remain in Preferences > Intelligence.
 GUI 0.12 adds an explicit Local Whisper / Online Google Web Speech provider selector.
 See [dictation setup and privacy](voice-input.md). The local model defaults to small
 for new GUI settings; existing model/language choices are preserved. The CLI
-voice command and wake listener remain local.
+voice command remains local; the wake listener now has its own explicit provider choice.
 
 For optional continuous local listening that opens this window by name, see
 [voice activation](voice-activation.md). Enable it in **Preferences > Wake**;
@@ -255,7 +255,8 @@ supplied through `TIGO_VOICE_MODEL` for offline use. Audio is held in memory
 and is not saved to disk. Local mode does not upload it; the explicitly selected
 online provider sends the completed recording to Google.
 
-The transcript is placed in the composer and **never submitted automatically**.
+The transcript is placed in the composer by default. Explicit speech-end sending
+is described in [voice activation](voice-activation.md#wake-record-and-send).
 Review/edit it, then press Send to submit its text to Codex. Cancel is available
 during microphone startup, recording, downloading and transcription. Request
 microphone permission in Windows Privacy settings or your Linux desktop when
@@ -326,8 +327,8 @@ local converted model folder can be entered manually. English-only `.en` model
 names are not accepted. The saved model is supplied when the persistent worker starts; language is
 supplied per recording. Existing `TIGO_VOICE_*` variables seed the initial
 preferences. CPU/CUDA, beam size, microphone and optional provisional-text
-controls are described in [the runtime guide](runtime.md). Recordings remain capped at 60 seconds and are never submitted
-automatically.
+controls are described in [the runtime guide](runtime.md). Recordings remain capped at 60 seconds; default review is retained unless
+explicit automatic speech-end sending is enabled.
 
 ![Local voice preferences](images/tigo-voice-settings.png)
 

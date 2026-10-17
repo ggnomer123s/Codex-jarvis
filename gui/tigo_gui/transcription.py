@@ -16,6 +16,10 @@ LANGUAGE_TAGS = {"ru": "ru-RU", "en": "en-US", "uk": "uk-UA", "de": "de-DE",
 ENDPOINT = "https://www.google.com/speech-api/v2/recognize"
 
 
+class UnrecognizedSpeech(RuntimeError):
+    """Service received audio but could not recognize words."""
+
+
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         raise RuntimeError("Speech service redirected; audio was not forwarded.")
@@ -43,7 +47,7 @@ def transcribe_online(pcm, language, *, opener=None):
             raise ValueError("Online transcription returned no usable speech text.")
         return text.strip()
     except UnknownValueError:
-        raise RuntimeError("Online service could not recognize speech. Try again or select Local Whisper.") from None
+        raise UnrecognizedSpeech("Online service could not recognize speech. Try again or select Local Whisper.") from None
     except urllib.error.HTTPError as exc:
         code = exc.code
         exc.close()

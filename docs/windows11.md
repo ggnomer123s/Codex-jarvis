@@ -176,3 +176,15 @@ See [voice input](voice-input.md). Windows desktop targeting uses the existing
 Windows-MCP UI Automation `Snapshot`; screenshot recognition remains available
 for applications without a useful accessibility tree. Native ownership guards
 remain active.
+
+
+### Listener-only startup and hands-free requests
+
+Preferences > Wake offers Start listener when I sign in (keep window hidden),
+Start recording a request after Tigo wakes, and an independent wake provider.
+Automatic sending after a locally detected speech pause is a separate saved
+checkbox in Wake/Voice. It is off by default; existing/edited drafts and
+attachments retain review behavior. Startup uses the current user's owned HKCU
+Run entry with --background, never opens/minimizes the main window automatically
+and requires no Administrator rights. The normal updater includes the new
+webrtcvad-wheels dependency. See [voice activation](voice-activation.md).

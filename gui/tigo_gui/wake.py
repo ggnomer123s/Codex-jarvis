@@ -1,4 +1,4 @@
-"""Local background speech-to-text and tolerant wake-name detection.
+"""Explicit local/online background transcription and wake-name detection.
 
 Only wake/status events leave this process. Audio and ordinary transcripts are
 bounded, transient memory; nothing is submitted to Codex or written to history.
@@ -19,6 +19,7 @@ import time
 import unicodedata
 
 from .preferences import LANGUAGES, valid_voice_model
+from .transcription import UnrecognizedSpeech
 
 SAMPLE_RATE = 16000
 COOLDOWN = 8.0
@@ -80,15 +81,17 @@ class PhraseBuffer:
 
 
 class WakeListener:
-    def __init__(self, model, language='auto', microphone='', fuzzy=True, *, model_factory=None, output=None):
+    def __init__(self, model, language='auto', microphone='', fuzzy=True, *, model_factory=None, output=None, provider="local"):
         import numpy as np
         import sounddevice as sd
-        if model_factory is None:
+        self.provider = provider
+        if provider == "local" and model_factory is None:
             from faster_whisper import WhisperModel
             model_factory = WhisperModel
         self.np, self.sd = np, sd
-        self.model = model_factory(model, device='cpu', compute_type='int8',
+        self.model = (model_factory(model, device='cpu', compute_type='int8',
                                    cpu_threads=max(1, min(4, (os.cpu_count() or 2) // 2)), num_workers=1)
+                      if provider == 'local' else None)
         self.language, self.microphone, self.fuzzy = language, microphone, fuzzy
         self.output = output or emit
         self.allowed = threading.Event()
@@ -135,20 +138,31 @@ class WakeListener:
             if generation != self.generation or not self.allowed.is_set():
                 continue
             try:
-                audio = self.np.frombuffer(raw, dtype=self.np.int16).astype(self.np.float32) / 32768.0
-                segments, _ = self.model.transcribe(audio, language=None if self.language == 'auto' else self.language,
-                                                    beam_size=1, vad_filter=True, task='transcribe', condition_on_previous_text=False,
-                                                    initial_prompt='Tigo. ' + NAMES[1] + '.')
-                text = ' '.join(s.text.strip() for s in segments
-                                if getattr(s, 'no_speech_prob', 0) < 0.6 and getattr(s, 'avg_logprob', 0) > -1.0)[:4000]
+                if self.provider == 'online':
+                    from .transcription import transcribe_online
+                    # Short wake phrases need at least one second for the service.
+                    raw = raw + b'\0' * max(0, SAMPLE_RATE * 2 - len(raw))
+                    text = transcribe_online(raw, self.language)[:4000]
+                else:
+                    audio = self.np.frombuffer(raw, dtype=self.np.int16).astype(self.np.float32) / 32768.0
+                    segments, _ = self.model.transcribe(audio, language=None if self.language == 'auto' else self.language,
+                                                        beam_size=1, vad_filter=True, task='transcribe', condition_on_previous_text=False,
+                                                        initial_prompt='Tigo. ' + NAMES[1] + '.')
+                    text = ' '.join(s.text.strip() for s in segments
+                                    if getattr(s, 'no_speech_prob', 0) < 0.6 and getattr(s, 'avg_logprob', 0) > -1.0)[:4000]
+                    del audio, segments
                 now = time.monotonic()
                 if (not self.shutdown.is_set() and generation == self.generation and self.allowed.is_set()
                         and now - self.last_wake >= COOLDOWN and contains_wake_name(text, self.fuzzy)):
                     self.last_wake = now
                     self.output('wake')
                 # Do not send ordinary transcripts over IPC, print or retain them.
-                del text, audio, raw, segments
+                del text, raw
+            except UnrecognizedSpeech:
+                continue  # Unintelligible speech is not a service outage.
             except Exception as exc:
+                if self.shutdown.is_set() or generation != self.generation or not self.allowed.is_set():
+                    continue
                 self.failed = True
                 self.output('error', message='Wake transcription failed: ' + str(exc)[:400])
                 self.command({'command': 'shutdown'})
@@ -221,18 +235,19 @@ def emit(kind, **values):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Local Tigo background wake listener')
+    parser = argparse.ArgumentParser(description='Local or explicit keyless online Tigo wake listener')
     parser.add_argument('--model', default='base')
     parser.add_argument('--language', default='auto')
     parser.add_argument('--microphone', default='')
     parser.add_argument('--exact', action='store_true')
+    parser.add_argument('--provider', choices=('local','online'), default='local')
     args = parser.parse_args()
-    if not valid_voice_model(args.model) or args.language not in dict(LANGUAGES) or len(args.microphone) > 200:
+    if not valid_voice_model(args.model) or args.language not in dict(LANGUAGES) or len(args.microphone) > 200 or (args.provider == 'online' and args.language == 'auto'):
         emit('error', message='Choose a multilingual model, supported language and microphone.')
         return 2
     try:
         emit('loading')
-        return WakeListener(args.model, args.language, args.microphone, not args.exact).run()
+        return WakeListener(args.model, args.language, args.microphone, not args.exact, provider=args.provider).run()
     except Exception as exc:
         emit('error', message='Wake model unavailable: ' + str(exc)[:400])
         return 2

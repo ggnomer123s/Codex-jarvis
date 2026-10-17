@@ -105,7 +105,7 @@ main() {
     uv python install 3.12
     uv sync --project "$repo_dir/gui" --frozen --extra voice --python 3.12
     bash "$repo_dir/scripts/install-gui-linux.sh"
-    QT_QPA_PLATFORM=offscreen uv run --project "$repo_dir/gui" --frozen --extra voice python -c 'import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx, edge_tts, av, speech_recognition'
+    QT_QPA_PLATFORM=offscreen uv run --project "$repo_dir/gui" --frozen --extra voice python -c 'import PySide6.QtQuick, sounddevice, faster_whisper, sherpa_onnx, edge_tts, av, speech_recognition, webrtcvad'
     login_output="$(codex login status 2>&1)" || login_code=$?
     if (( login_code != 0 )); then
         [[ "${login_output,,}" == *'not logged in'* ]] || fail 'Could not verify the existing Codex login. Run codex login status; no replacement login was attempted.'

@@ -69,7 +69,8 @@ class VoiceWorker:
                 return True
             language = value.get("language", "auto")
             beam = value.get("beam", 3)
-            if not isinstance(recording_id, str) or not recording_id or len(recording_id) > 128 or language not in dict(LANGUAGES) or type(beam) is not int or beam not in (1, 3, 5):
+            auto_stop, silence_ms = value.get("auto_stop", False), value.get("silence_ms", 1600)
+            if not isinstance(recording_id, str) or not recording_id or len(recording_id) > 128 or language not in dict(LANGUAGES) or type(beam) is not int or beam not in (1, 3, 5) or type(auto_stop) is not bool or type(silence_ms) is not int or not 800 <= silence_ms <= 4000:
                 self.output("error", id=recording_id, message="Invalid recording options.")
                 self.output("idle", id=recording_id)
                 return True
@@ -98,6 +99,8 @@ class VoiceWorker:
         buffers = []
         count = 0
         started = time.monotonic()
+        endpoint = None
+        end_reason = "manual"
         # Preview only processes newly captured chunks, never a growing full buffer.
         previews = queue.Queue(maxsize=1)
         preview_done = threading.Event()
@@ -138,6 +141,9 @@ class VoiceWorker:
         last_preview = time.monotonic()
         last_speech = time.monotonic()
         try:
+            if options.get("auto_stop"):
+                from .voice_endpoint import SpeechEndpoint
+                endpoint = SpeechEndpoint(options.get("silence_ms", 1600))
             mic = options.get("microphone", "")
             device = int(mic) if mic and str(mic).isdigit() else (mic or None)
             with self.sd.RawInputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16", blocksize=1024,
@@ -149,12 +155,21 @@ class VoiceWorker:
                     try:
                         raw = frames.get(timeout=.05)
                     except queue.Empty:
+                        if endpoint and not endpoint.started and time.monotonic() - started >= 8:
+                            end_reason = "no_speech"
+                            break
                         if time.monotonic() - started >= MAX_SECONDS:
                             break
                         continue
                     raw = raw[:(SAMPLE_RATE * MAX_SECONDS - count) * 2]
                     buffers.append(raw)
                     count += len(raw) // 2
+                    if endpoint:
+                        reason = endpoint.feed(raw)
+                        if reason:
+                            end_reason = reason
+                            self.output("speech_end", id=recording_id, reason=reason)
+                            break
                     samples = self.np.frombuffer(raw, dtype=self.np.int16).astype(self.np.float32) / 32768.0
                     level = min(1.0, float(self.np.sqrt(self.np.mean(samples * samples))) * 8)
                     self.output("level", id=recording_id, value=level)
@@ -180,6 +195,10 @@ class VoiceWorker:
             preview_done.set()
             if self.cancelled.is_set():
                 return
+            if end_reason == "no_speech":
+                raise RuntimeError("No speech detected within eight seconds. Recording cancelled without sending a request.")
+            if count >= SAMPLE_RATE * MAX_SECONDS:
+                end_reason = "limit"
             if count < SAMPLE_RATE:
                 raise RuntimeError("Recording too short. Speak for at least one second.")
             capture_ms = round((time.monotonic() - started) * 1000, 1)
@@ -190,7 +209,7 @@ class VoiceWorker:
                 return
             if not text:
                 raise RuntimeError("No speech detected. Try again closer to the microphone.")
-            self.output("transcript", id=recording_id, text=text,
+            self.output("transcript", id=recording_id, text=text, endReason=end_reason,
                         timings={"captureMs": capture_ms, "transcribeMs": round((time.monotonic() - transcribe_started) * 1000, 1)})
         except Exception as exc:
             if not self.cancelled.is_set():

@@ -22,7 +22,7 @@ A native desktop interface is now available: an original animated woven-light co
 streaming Codex app-server chat with continuing conversation context, task cancellation, model/workspace
 and reasoning settings, Full Access on by default with a saved settings checkbox, and
 push-to-talk transcription through local Whisper or online Google Web Speech without a personal API key. There are 15 language presets including Russian. Voice text is
-reviewed before sending. The app uses your existing Codex login and MCP setup.
+reviewed before sending by default; optional speech-end sending is available. The app uses your existing Codex login and MCP setup.
 
 The GUI now keeps an owned **Codex app-server** connection between messages,
 keeps the selected transcription worker ready between recordings, and includes checked desktop workflow
@@ -49,11 +49,12 @@ the spoken copy to Microsoft and requires Internet. Both modes support Read,
 Stop, natural pitch, rate/volume and coordinated microphone pauses. See
 [speech setup and limitations](docs/speech-output.md).
 
-**Optional voice activation:** enable **Preferences > Wake** to listen locally
-for Tigo or its Russian name and restore the app from the background. Includes
-tolerant matching, microphone/model/language settings and per-user login startup.
-The microphone stays on while enabled; ordinary transcripts are discarded and
-waking opens the window without submitting a task. See [voice activation](docs/voice-activation.md).
+**Optional voice activation:** Preferences > Wake supports local Whisper or
+keyless online Google Web Speech, hidden listener startup at sign-in and an
+optional wake -> record -> send-after-pause flow. Each behavior has its own
+setting; default dictation still requires review and Send. Online wake mode
+uploads nearby speech phrases to Google. Ordinary wake transcripts are
+otherwise discarded. See [voice activation](docs/voice-activation.md).
 
 **Visible screen activity:** the GUI shows a cyan/violet screen border and a
 Return control banner during desktop MCP calls. Click the button, or use
@@ -158,7 +159,7 @@ Observed result / user-facing report
 | Window permissions | `scripts/hypruse-access.sh`; optional `tigo access all` or restricted/class-based Hypruse permissions, with explicit confirmation and config backup |
 | Native X11 desktop MCP | `scripts/x11_mcp.py`; screenshots, region crops, human-selected capture rectangle, focus-checked shortcuts, pointer click/drag/scroll and configurable input |
 | Voice | `gui/tigo_gui/voice.py` warm worker; `scripts/tigo_voice.py` one-shot CLI; local faster-whisper, review before submission |
-| Voice activation | Optional `wake.py` background local transcription; English/Russian tolerant name matching restores the GUI, with tray controls and user-level sign-in startup |
+| Voice activation | Optional local/keyless online `wake.py` transcription; English/Russian tolerant name matching restores the GUI, with tray controls and user-level sign-in startup |
 | Repair memory | `scripts/tigo_memory.py`; local JSON of **explicitly confirmed** fixes, manual add/search/list/delete |
 | Diagnostics | `tigo gui-check`; opt-in Linux systemd-user and Windows Application event watchers; read-only Codex analysis reports |
 | Maintenance | `scripts/sync_agents.py` refreshes only Tigo's AGENTS block with backups; GitHub Actions checks Bash/PowerShell/Python/tests |
@@ -175,7 +176,7 @@ Observed result / user-facing report
 
 ### What is NOT implemented yet
 
-General **task replay/rollback**, **Tigo Doctor auto-repair**, an **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and full-duplex spoken conversation remain unimplemented. Optional local background wake-name detection now opens the GUI without starting tasks. The GUI now provides content-free task/voice timings, an optional local reasoning heuristic, connection/MCP diagnostics, checked short workflows and explicit conversation checkpoint resume. Conversation resume does not replay desktop actions. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); validation is mostly static/unit CI and simulated desktop-frontend tests, plus a Linux app-server handshake/config probe, not broad hardware-level testing.
+General **task replay/rollback**, **Tigo Doctor auto-repair**, an **application-specific Premiere Pro/DaVinci editing bridge**, **continuous video understanding**, and full-duplex spoken conversation remain unimplemented. Optional background wake-name detection opens the GUI; separate opt-ins start dictation and submit a voice request after a detected pause. The GUI now provides content-free task/voice timings, an optional local reasoning heuristic, connection/MCP diagnostics, checked short workflows and explicit conversation checkpoint resume. Conversation resume does not replay desktop actions. Do not claim visual-agent benchmark superiority over [Microsoft UFO](https://github.com/microsoft/UFO), [Agent-S](https://github.com/simular-ai/Agent-S) or [E2B Desktop](https://github.com/e2b-dev/desktop); validation is mostly static/unit CI and simulated desktop-frontend tests, plus a Linux app-server handshake/config probe, not broad hardware-level testing.
 
 ### Instructions for the next coding agent
 
@@ -361,3 +362,5 @@ The Linux installer and X11 MCP are new cross-desktop additions. They are not cl
 ## Credits
 
 This project glues together third-party software; it does not own upstream MCP implementations. See the respective upstream repositories and their licenses. Source code is published here for review before installation.
+
+Deferred Claude Code, Antigravity and direct API support is recorded in the [roadmap](docs/roadmap.md); the current runtime remains Codex.

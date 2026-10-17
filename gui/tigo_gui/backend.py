@@ -95,6 +95,17 @@ class Backend(QObject):
         self._transcription_provider = str(self.settings.value("transcriptionProvider", "local"))
         if self._transcription_provider not in ("local", "online"):
             self._transcription_provider = "local"
+        self._voice_auto_send = str(self.settings.value("voiceAutoSend", "false")).lower() == "true"
+        try:
+            self._voice_silence_ms = max(800, min(4000, int(self.settings.value("voiceSilenceMs", 1600))))
+        except (TypeError, ValueError):
+            self._voice_silence_ms = 1600
+        self._draft_present = False
+        self._voice_auto_blocked = False
+        self._record_auto_send = False
+        self._pending_voice_submit = None
+        self._shutting_down = False
+        self._wake_record_token = 0
         self._auto_reasoning = str(self.settings.value("autoReasoning", "false")).lower() == "true"
         try:
             beam = int(self.settings.value("voiceBeam", 3))
@@ -186,7 +197,8 @@ class Backend(QObject):
         self.updater = Updates(self)
         self.profile.changed.connect(self.changed.emit)
         self.profile.error.connect(lambda text: self._message("error", text))
-        self.changed.connect(lambda: self.wake_control.set_suspended(self._voice_state != "idle" or self.speaker.active))
+        self.changed.connect(lambda: self.wake_control.set_suspended(self._shutting_down or self._voice_state != "idle" or self.speaker.active or self._busy))
+        self.wake_control.activated.connect(self._on_wake_activated)
         self._notice_timer = QTimer(self)
         self._notice_timer.setSingleShot(True)
         self._notice_timer.timeout.connect(lambda: self._show_notice(''))
@@ -655,6 +667,43 @@ class Backend(QObject):
     @Property(bool, notify=changed)
     def voiceAvailable(self):
         return dependencies_available() if self._transcription_provider == "local" else dependencies_available("online")
+
+    @Property(bool, notify=changed)
+    def voiceAutoSend(self):
+        return self._voice_auto_send
+
+    @Property(int, notify=changed)
+    def voiceSilenceMs(self):
+        return self._voice_silence_ms
+
+    @Slot(bool, int, result=bool)
+    def saveVoiceAutomation(self, auto_send, silence_ms):
+        if self._locked():
+            return False
+        if type(silence_ms) is not int or not 800 <= silence_ms <= 4000:
+            return self._settings_error("Choose a speech pause between 0.8 and 4 seconds.")
+        self._voice_auto_send, self._voice_silence_ms = auto_send, silence_ms
+        self.settings.setValue("voiceAutoSend", auto_send)
+        self.settings.setValue("voiceSilenceMs", silence_ms)
+        self.changed.emit()
+        return True
+
+    @Slot(bool)
+    def updateDraftState(self, present):
+        self._draft_present = present
+        if self._voice_state != "idle":
+            self._voice_auto_blocked = True
+
+    def _on_wake_activated(self):
+        if not self.wake_control.recordAfterWake or self._locked() or self._shutting_down:
+            return
+        self._wake_record_token += 1
+        token = self._wake_record_token
+        # App's wake slot shows the window synchronously; capture starts next tick.
+        def record():
+            if token == self._wake_record_token and self.wake_control.enabled and self.wake_control.recordAfterWake and not self._locked() and not self._shutting_down:
+                self.toggleVoice()
+        QTimer.singleShot(0, record)
 
     @Property(str, notify=changed)
     def transcriptionProvider(self):
@@ -1410,6 +1459,23 @@ class Backend(QObject):
             except OSError as exc:
                 self._message("error", "Could not export timings: " + str(exc))
 
+    def _record_voice(self):
+        self._voice_write("record", language=self._language, **self._voice_options,
+                          auto_stop=self._record_auto_send, silence_ms=self._voice_silence_ms)
+
+    def _complete_auto_voice(self):
+        pending, self._pending_voice_submit = self._pending_voice_submit, None
+        if not pending:
+            return
+        token, text = pending
+        if token != self._voice_id or self._voice_cancelled or self._shutting_down:
+            return
+        if (not self._voice_auto_blocked and not self._draft_present and not self._attachments
+                and self._voice_auto_send and not self._locked() and self.send(text)):
+            return
+        self.transcriptReady.emit(text)
+        self._show_notice("Voice request kept in the draft: review it and press Send. Existing draft, attachments or task state prevented automatic sending.")
+
     def _voice_write(self, command, **values):
         self.voice.write((json.dumps({"command": command, "id": self._voice_id, **values}) + "\n").encode())
 
@@ -1441,7 +1507,7 @@ class Backend(QObject):
         self._voice_idle_timer.stop()
         if self.voice.state() == QProcess.ProcessState.Running and self._voice_ready:
             if self._voice_state == "starting":
-                self._voice_write("record", language=self._language, **self._voice_options)
+                self._record_voice()
             else:
                 self._voice_state = "idle"
             return
@@ -1475,6 +1541,9 @@ class Backend(QObject):
             self._voice_id = str(uuid.uuid4())
             self._voice_cancelled = False
             self._voice_stop_requested = False
+            self._record_auto_send = self._voice_auto_send
+            self._voice_auto_blocked = self._draft_present or bool(self._attachments)
+            self._pending_voice_submit = None
             self._voice_state, self._activity = "starting", "Opening " + self._transcription_provider + " voice input"
             self._start_voice()
         self.changed.emit()
@@ -1484,6 +1553,8 @@ class Backend(QObject):
 
     @Slot()
     def cancelVoice(self):
+        self._wake_record_token += 1
+        self._pending_voice_submit = None
         self._voice_cancelled = True
         self._voice_id = str(uuid.uuid4())  # Late transcripts belong to the abandoned recording.
         self._close_voice()
@@ -1511,7 +1582,7 @@ class Backend(QObject):
                 self.profiler.voice["modelLoadMs"] = event.get("modelLoadMs", 0)
                 self._microphones = [{"id": "", "label": "System default"}, *event.get("microphones", [])]
                 if self._voice_state in ("starting", "transcribing") and not self._voice_cancelled:
-                    self._voice_write("record", language=self._language, **self._voice_options)
+                    self._record_voice()
                     if self._voice_stop_requested:
                         self._voice_write("stop")
                 else:
@@ -1527,7 +1598,9 @@ class Backend(QObject):
             if kind == "recording":
                 if not self._voice_stop_requested:
                     self._voice_state = "recording"
-                    self._activity = "Listening - click microphone to finish"
+                    self._activity = "Listening - pause to send; Escape cancels" if self._record_auto_send else "Listening - click microphone to finish"
+            elif kind == "speech_end":
+                self._voice_state, self._activity = "transcribing", "Speech ended; preparing transcription"
             elif kind == "transcribing":
                 self._voice_state, self._activity = "transcribing", "Transcribing " + ("locally" if self._transcription_provider == "local" else "online")
             elif kind == "level":
@@ -1536,20 +1609,31 @@ class Backend(QObject):
                 self.transcriptPreview.emit(str(event.get("text", "")))
             elif kind == "transcript":
                 self.profiler.voice.update(event.get("timings", {}))
-                self.transcriptReady.emit(str(event.get("text", "")))
-                self._activity = "Review your transcript, then press Send"
+                text = str(event.get("text", ""))[:60000].strip()
+                if self._record_auto_send and event.get("endReason") == "silence" and text:
+                    self._pending_voice_submit = (self._voice_id, text)
+                    self._activity = "Speech recognized; preparing voice request"
+                else:
+                    self.transcriptReady.emit(text)
+                    self._activity = "Review your transcript, then press Send"
             elif kind == "error":
+                self._pending_voice_submit = None
                 self._message("error", str(event.get("message", "Voice failed.")))
                 self._activity = "Voice unavailable"
             elif kind == "idle":
                 self._voice_state = "idle"
                 self._level = 0
                 self._voice_idle_timer.start()
+                self._complete_auto_voice()
             self.changed.emit()
 
     def _voice_finished(self, code, status):
         self._read_voice()
         self._voice_ready = False
+        pending, self._pending_voice_submit = self._pending_voice_submit, None
+        if pending and pending[0] == self._voice_id and not self._voice_cancelled and not self._shutting_down:
+            self.transcriptReady.emit(pending[1])
+            self._show_notice("Voice worker exited before completion; transcript kept for review.")
         if self._voice_state != "idle" and not self._voice_cancelled:
             self._message("error", "Voice worker stopped before producing a transcript. Check the model and microphone.")
             self._activity = "Voice unavailable"
@@ -1574,6 +1658,9 @@ class Backend(QObject):
 
     @Slot()
     def shutdown(self):
+        self._shutting_down = True
+        self._wake_record_token += 1
+        self._pending_voice_submit = None
         self.updater.close()
         self.screen_activity.clear()
         self.speaker.shutdown()

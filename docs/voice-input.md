@@ -2,8 +2,9 @@
 
 Open Preferences > Voice. The provider is separate from speaking voices in
 Preferences > Speech. Press the microphone button to start, again to finish.
-The final transcript fills the composer; review/edit it and press Send yourself.
-No recording submits a task automatically. Capture is limited to 60 seconds.
+By default the final transcript fills the composer for review/edit and Send.
+Explicit automatic sending is available after local speech-end detection; see
+[the hands-free flow](voice-activation.md#wake-record-and-send). Capture is limited to 60 seconds.
 
 ## Local Whisper (default)
 
@@ -30,7 +31,8 @@ the upstream shared service can impose limits or stop being available.
 Only a completed explicit dictation recording is encoded as FLAC and uploaded
 to Google. Recording buffers and the response are kept in RAM; Tigo does not
 write an audio file. The service processes the uploaded audio under its own
-policies. No online previews or background wake uploads occur. Online mode
+policies. Online dictation has no previews. Wake has its own explicit Local/Online choice;
+online wake listening uploads speech phrases while enabled. Online mode
 requires a chosen language; Auto detect is local-only. The existing microphone
 selection works for both providers. There is no automatic fallback upload,
 provider switch or request retry after errors. Select Local manually when offline.
@@ -48,6 +50,18 @@ No additional microphone library/PyAudio is used. Bundled FLAC converters cover
 supported Windows/Linux x86-64 setups. Other architectures may need a native
 `flac` executable; the one-step setup currently targets x86-64.
 
-Preferences > Runtime reports dictation timings. Wake-name listening and the
-`tigo voice` CLI remain local Whisper features. No provider choice changes
+Preferences > Runtime reports dictation timings. Wake-name listening has an independent provider and opt-in automation settings.
+The `tigo voice` CLI remains local Whisper with YES confirmation. No provider choice changes
 Codex login, MCP permissions, Full Access or saved speech-output voices.
+
+
+## Automatic speech-end sending
+
+The optional checkbox in Voice/Wake saves immediately. The local WebRTC VAD
+waits for speech and a configured pause, then the normal request path submits
+once. Existing or edited drafts, attachments, cancellation, errors, manual stop
+and a maximum-duration stop retain review behavior. Eight seconds without speech
+cancels before recognition/upload. Say the wake name, wait for the recording
+indicator, then speak; the wake phrase is not treated as the command. These
+controls require `webrtcvad-wheels` from the voice extra. See
+[voice activation](voice-activation.md) for timing, privacy and limitations.

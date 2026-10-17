@@ -88,13 +88,11 @@ def main() -> int:
             app.setQuitOnLastWindowClosed(not backend.wake.enabled)
             tray.setToolTip("Tigo: " + backend.wake.status[:180])
             tray.setVisible(tray_available and backend.wake.enabled)
-            if (not backend.wake.enabled and not window.isVisible()) or backend.wake.state == "error":
+            if not args.background and ((not backend.wake.enabled and not window.isVisible()) or backend.wake.state == "error"):
                 show_window()
 
         backend.wake.changed.connect(sync_wake)
         sync_wake()
-        if args.background and not tray_available:
-            window.showMinimized()
         QTimer.singleShot(0, backend.wake.start)
     if args.smoke_test:
         if args.settings_tab:

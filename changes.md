@@ -8,6 +8,61 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-17 — Wake transcription, hidden startup and hands-free voice (GUI 0.13.0)
+
+- Recorded the user's explicitly deferred Claude Code / Antigravity / direct API
+  provider plan in [roadmap](docs/roadmap.md), linked from README/readmeai. It is
+  not implemented or permission to start that work during unrelated changes.
+- Added an independent Local Whisper / Online Google Web Speech wake provider.
+  Online uses the existing keyless HTTPS adapter with a selected language and
+  bounded phrase queues; it does not load Whisper. Short wake phrases are padded
+  to the existing adapter's one-second minimum input size. Nearby speech phrases, including those
+  without the wake name, are uploaded only when online listening is explicitly
+  enabled; UI/docs explain this. Ordinary transcripts remain discarded, with
+  only wake/status IPC. Unintelligible speech is ignored; network/service errors
+  stop listening. Pause generations discard late recognition/errors.
+- Retained and clarified listener-only login startup: the owned per-user XDG
+  entry / Windows HKCU Run uses --background. Startup no longer shows a minimized
+  main window without a tray, or opens the window on listener errors. Normal
+  launch/wake restores the existing instance. Minimal compositors still need
+  XDG autostart support; no global desktop or login-screen service was added.
+- Added separately saved Start recording a request after Tigo wakes. Opening
+  the window precedes dictation start on the next event-loop tick. Existing
+  pause acknowledgment/generation handling releases the wake microphone before
+  recording. Listening now pauses during active tasks and shutdown as well as
+  dictation/spoken output. Say Tigo, wait for the recording indicator, then speak;
+  command audio before recording starts is not recovered from the wake phrase.
+- Added an explicit, default-off Send voice requests automatically after a
+  speech pause setting in Voice/Wake (saves immediately, shared by all dictation).
+  Local WebRTC VAD processes 20 ms frames with 1.2/1.6/2.4/3.2-second pause choices;
+  default 1.6 seconds. Eight seconds without detected speech cancels before
+  dictation transcription/upload. Recording remains bounded to 60 seconds.
+  Only a speech-ending pause can auto-submit via the existing normal Send path,
+  once and after worker idle. Manual Stop, duration cap, existing/edited draft,
+  attachments, cancellation, incomplete worker exit or invalid task state retain
+  review behavior. Late results never submit after cancellation. These are
+  opt-ins, not speaker identification or a promise against background voices.
+- Locked webrtcvad-wheels 2.0.14.post1 in the voice extra (other existing locked
+  versions retained). Updated Windows/Linux updater imports and installation,
+  voice, startup, desktop, README and AI-maintainer guides. Root setup scripts
+  and Update Center continue through the updated installers, preserving user
+  settings/login; no new API key, audio driver or system service is needed.
+- Verification: 132 root tests discovered, 129 passed and 3 Windows-only tests
+  skipped; 110 Qt/process/QML tests passed. New coverage includes VAD framing,
+  pauses/no-speech, online wake privacy/late-error generations, real owned-worker
+  wake-to-record-to-single-request flow against a fixture app-server, opt-out /
+  manual-stop / duration-cap review, draft edits/attachments, cancellation,
+  incomplete worker exit, production QML settings and actual --background app
+  startup with simulated wake error/no tray. Startup tests isolate registry/files,
+  IPC and the unrelated overlay. Existing installer/update fixtures pass.
+- A real native WebRTC detector recognized speech then the configured pause in
+  synthetic Russian audio and rejected silence; no microphone was opened for
+  that check. Production QML wake preview/smoke, Python/Bash syntax, frozen lock,
+  English-only managed docs and local links pass. No live system-login event,
+  Windows hardware/tray test, microphone/name accuracy benchmark, authenticated
+  model task or system-package installation is claimed. New automatic-record/send settings remain
+  off until configured; target-machine startup/audio verification is still needed.
+
 ## 2026-10-17 — Semantic interface targeting and keyless dictation (GUI 0.12.0)
 
 - Added native-X11 `ui_elements` / `click_ui` tools backed by a bounded AT-SPI

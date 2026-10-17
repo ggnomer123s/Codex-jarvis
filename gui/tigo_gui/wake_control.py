@@ -31,6 +31,10 @@ class WakeControl(QObject):
         self._enabled = saved_bool(settings, 'wake/enabled')
         self._autostart = saved_bool(settings, 'wake/autostart', True)
         self._fuzzy = saved_bool(settings, 'wake/fuzzy', True)
+        self._provider = str(settings.value('wake/provider', 'local'))
+        if self._provider not in ('local','online'):
+            self._provider = 'local'
+        self._record_after = saved_bool(settings, 'wake/recordAfterWake')
         self._model = str(settings.value('wake/model', 'base'))
         self._language = str(settings.value('wake/language', settings.value('language', 'auto')))
         self._microphone = str(settings.value('wake/microphone', settings.value('microphone', '')))
@@ -61,6 +65,12 @@ class WakeControl(QObject):
     def fuzzy(self): return self._fuzzy
 
     @Property(str, notify=changed)
+    def provider(self): return self._provider
+
+    @Property(bool, notify=changed)
+    def recordAfterWake(self): return self._record_after
+
+    @Property(str, notify=changed)
     def model(self): return self._model
 
     @Property(str, notify=changed)
@@ -79,13 +89,20 @@ class WakeControl(QObject):
         self._state, self._status = state, text
         self.changed.emit()
 
+    @Slot(bool, bool, str, str, str, bool, str, bool, result=bool)
     @Slot(bool, bool, str, str, str, bool, result=bool)
-    def configure(self, enabled, autostart, model, language, microphone, fuzzy):
+    def configure(self, enabled, autostart, model, language, microphone, fuzzy, provider=None, record_after=None):
         removal_error = ''
+        provider = self._provider if provider is None else provider
+        record_after = self._record_after if record_after is None else record_after
         try:
+            if provider not in ('local','online') or type(record_after) is not bool:
+                raise ValueError('Choose a supported wake provider.')
+            if enabled and provider == 'online' and language == 'auto':
+                raise ValueError('Select a wake language for online listening. Auto detect is local-only.')
             if enabled and (not valid_voice_model(model) or language not in dict(LANGUAGES) or len(microphone) > 200):
                 raise ValueError('Choose a multilingual model, supported language and microphone.')
-            if enabled and not dependencies_available():
+            if enabled and not (dependencies_available() if provider == "local" else dependencies_available("online")):
                 raise ValueError('Install voice dependencies using the voice-enabled Tigo launcher.')
             self.register(enabled and autostart)
         except (OSError, ValueError, ImportError) as exc:
@@ -96,9 +113,10 @@ class WakeControl(QObject):
             removal_error = ' Startup cleanup needs attention: ' + str(exc)
         self._off_message = 'Voice activation is off. Microphone is not listening.' + removal_error
         self._enabled, self._autostart, self._fuzzy = enabled, autostart, fuzzy
+        self._provider, self._record_after = provider, record_after
         self._model, self._language, self._microphone = model, language, microphone
         for key, value in dict(enabled=enabled, autostart=autostart, fuzzy=fuzzy, model=model,
-                               language=language, microphone=microphone).items():
+                               language=language, microphone=microphone, provider=provider, recordAfterWake=record_after).items():
             self.settings.setValue('wake/' + key, value)
         self.settings.sync()
         self._restart = enabled and not self._suspended
@@ -118,14 +136,14 @@ class WakeControl(QObject):
     def start(self):
         if not self._enabled or self._closing or self._suspended or self.process.state() != QProcess.NotRunning:
             return
-        if not valid_voice_model(self._model) or self._language not in dict(LANGUAGES):
+        if not valid_voice_model(self._model) or self._language not in dict(LANGUAGES) or (self._provider == 'online' and self._language == 'auto'):
             self._set_status('error', 'Saved voice activation settings are invalid. Apply settings again.')
             return
         self._buffer = b''
         self._restart = False
-        self._set_status('loading', 'Preparing local wake model; first use may download model files.')
+        self._set_status('loading', 'Preparing local wake model; first use may download model files.' if self._provider == 'local' else 'Preparing online wake listener; speech phrases will be sent to Google.')
         args = [*self.command[1:], '--model', self._model, '--language', self._language,
-                '--microphone', self._microphone]
+                '--microphone', self._microphone, '--provider', self._provider]
         if not self._fuzzy:
             args.append('--exact')
         self.process.start(self.command[0], args)
@@ -200,7 +218,7 @@ class WakeControl(QObject):
                     self.activated.emit()
             elif kind == 'listening':
                 if not self._suspended:
-                    self._set_status('listening', 'Microphone on: listening locally for the Tigo name.')
+                    self._set_status('listening', 'Microphone on: listening locally for the Tigo name.' if self._provider == 'local' else 'Microphone on: speech phrases sent to Google to recognize Tigo.')
                 elif self._pause_token:
                     self._write('pause', token=self._pause_token)
             elif kind == 'paused' and value.get('token') == self._pause_token:
