@@ -8,6 +8,27 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-18 — Speak complete message cards (GUI 0.14.2)
+
+- Automatic speech now queues each completed assistant message card (the block
+  with Copy and Read) as one job, including commentary/progress and final answers.
+  It starts after that card completes, while the overall task can still be busy.
+  Text deltas update chat only; the completed canonical text uses the same
+  sanitizer and existing 6,000-character speaking-copy limit as manual Read.
+- Removed the superseded sentence-speech assembler and its tests, retaining live
+  dictation assembly. Per-card completion deduplication and ordered playback
+  prevent repeats at turn completion. Stop clears/mutes remaining cards for the
+  current task; a new task can speak again. Incomplete cards and restored history
+  stay silent. Cancellation, error, microphone and quiet-tail guards remain.
+- Updated Speech settings text, speech guides, maintainer resume context and GUI
+  version/lock metadata. Dependencies and installation steps are unchanged.
+  Earlier canceled wake/setup drafts remain separate and are not included.
+- Verification: sixteen targeted speech/Qt tests passed. An isolated patch over
+  clean HEAD, excluding canceled drafts, passed all 120 GUI/process/QML tests and
+  138 root tests discovered (135 passed, three Windows-only skips). Frozen offline
+  lock, Python syntax, changed-guide English-only and diff checks passed. No live
+  Windows speaker, microphone or online service latency measurement is claimed.
+
 ## 2026-10-17 — Sentence-level speech and shorter playback gaps (GUI 0.14.1)
 
 - Wrapped lines and commas no longer split prose into single-word synthesis

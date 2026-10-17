@@ -160,49 +160,94 @@ for line in sys.stdin:
         self.assertEqual(self.engine.spoken,['I will inspect the task.','The task is complete.'])
         self.assertEqual(backend.process.state(),backend.process.ProcessState.Running)
 
-    def test_deltas_speak_before_turn_end_and_stop_mutes_remaining_stream(self):
+    def test_completed_cards_speak_whole_canonical_text_once_before_turn_end(self):
         backend=self.backend()
         backend._begin('codex')
         backend._thread_id,backend._turn_id='thread','turn'
-        def delta(text):
-            backend._notification('item/agentMessage/delta',{'threadId':'thread','turnId':'turn','itemId':'one','delta':text})
-        delta('First sentence. ')
+        scope={'threadId':'thread','turnId':'turn'}
+        greeting='Привет, наставник. Я на связи, готов к делу. Как ты?'
+        for char in greeting:
+            backend._notification('item/agentMessage/delta',dict(scope,itemId='one',delta=char))
+        QTest.qWait(50)
+        self.assertIsNone(self.engine)  # Even complete sentences wait for the card.
+        canonical=greeting+'\n\nВсё готово.\n```sh\nprivate command\n```'
+        item={'type':'agentMessage','id':'one','text':canonical,'phase':'commentary'}
+        backend._notification('item/completed',dict(scope,item=item))
         self.assertTrue(backend.busy)
-        self.assertEqual(self.engine.spoken,['First sentence.'])
-        delta('Second sentence. ')
-        self.assertEqual(self.engine.spoken,['First sentence.'])
+        self.assertEqual(self.engine.spoken,[greeting+'\n\nВсё готово.'])
+        self.assertEqual(backend._messages[backend._item_rows['one']]['text'],canonical)
+        backend._notification('item/completed',dict(scope,item=item))
+        final='The task is complete. You can review the result now.'
+        backend._notification('item/completed',dict(scope,item={
+            'type':'agentMessage','id':'two','text':final,'phase':'final_answer'}))
+        self.assertEqual(len(self.engine.spoken),1)
+        backend._finish('completed')
         self.engine.finish()
         self.wait(lambda:len(self.engine.spoken)==2)
-        backend.speaker.stop()
-        delta('Should remain silent. ')
-        backend._finish('completed')
-        QTest.qWait(350)
-        self.assertEqual(self.engine.spoken,['First sentence.','Second sentence.'])
+        self.assertEqual(self.engine.spoken[-1],final)
+        self.engine.finish()
+        self.wait(lambda:not backend.speaker.active)
+        self.assertEqual(len(self.engine.spoken),2)  # No duplicate at turn completion.
+        backend.readMessage(backend._item_rows['one'])
+        self.assertEqual(self.engine.spoken[-1],self.engine.spoken[0])
 
-    def test_sentence_queue_has_no_300ms_gap_or_repeated_microphone_pause(self):
+    def test_stop_mutes_remaining_cards_and_next_task_can_speak(self):
+        backend=self.backend()
+        def begin(turn):
+            backend._begin('codex')
+            backend._thread_id,backend._turn_id='thread',turn
+        def complete(turn,item_id,text):
+            backend._notification('item/completed',{'threadId':'thread','turnId':turn,
+                'item':{'type':'agentMessage','id':item_id,'text':text}})
+        begin('one')
+        complete('one','first','First block. More text.')
+        complete('one','queued','Queued block. More text.')
+        backend.speaker.stop()
+        complete('one','muted','Must remain silent.')
+        backend._finish('completed')
+        self.wait(lambda:not backend.speaker.active)
+        self.assertEqual(self.engine.spoken,['First block. More text.'])
+        begin('two')
+        complete('one','stale','Old turn stays silent.')
+        complete('two','new','New block. The next task can speak.')
+        self.assertEqual(self.engine.spoken[-1],'New block. The next task can speak.')
+        self.assertEqual(len(self.engine.spoken),2)
+        backend._finish('completed')
+
+    def test_unfinished_card_is_not_read_when_turn_ends(self):
+        backend=self.backend()
+        backend._begin('codex')
+        backend._thread_id,backend._turn_id='thread','turn'
+        backend._notification('item/agentMessage/delta',{'threadId':'thread','turnId':'turn',
+            'itemId':'incomplete','delta':'This card has not completed. Still writing...'})
+        backend._finish('completed')
+        QTest.qWait(50)
+        self.assertIsNone(self.engine)
+
+    def test_message_queue_has_no_300ms_gap_or_repeated_microphone_pause(self):
         prepared=[]
         def prepare(callback):
             prepared.append(True)
             callback()
         speech=self.speech(prepare=prepare)
         speech.begin_stream()
-        for text in ['Hello, mentor.','Ready for work.','How are you?']:
+        for text in ['Hello, mentor. Ready for work.','Next block. More details.','Last block. All done.']:
             speech.enqueue(text)
-        self.assertEqual(self.engine.spoken,['Hello, mentor.'])
+        self.assertEqual(self.engine.spoken,['Hello, mentor. Ready for work.'])
         self.engine.finish()
         QTest.qWait(50)
-        self.assertEqual(self.engine.spoken,['Hello, mentor.','Ready for work.'])
+        self.assertEqual(self.engine.spoken,['Hello, mentor. Ready for work.','Next block. More details.'])
         self.engine.finish()
         QTest.qWait(50)
-        self.assertEqual(self.engine.spoken,['Hello, mentor.','Ready for work.','How are you?'])
+        self.assertEqual(self.engine.spoken,['Hello, mentor. Ready for work.','Next block. More details.','Last block. All done.'])
         self.assertEqual(len(prepared),1)
         self.engine.finish()
         self.assertTrue(speech.active)
         QTest.qWait(50)
         self.assertTrue(speech.active)  # Final speaker tail still protects mic.
-        speech.enqueue('A late sentence.')
+        speech.enqueue('A late block. More details.')
         QTest.qWait(50)
-        self.assertEqual(self.engine.spoken[-1],'A late sentence.')
+        self.assertEqual(self.engine.spoken[-1],'A late block. More details.')
         self.assertEqual(len(prepared),1)
         self.engine.finish()
         self.wait(lambda:not speech.active)

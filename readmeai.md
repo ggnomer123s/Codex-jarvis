@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-17**, GUI **0.14.0**. Repository:
+Last reconciled: **2026-10-18**, GUI **0.14.2**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read this file first when taking over development. It describes the current
@@ -13,7 +13,12 @@ This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
 
-GUI 0.14.0 adds live composer dictation and sentence-level speech for all assistant messages. See [Live voice](docs/live-voice.md) for settings, privacy and limits.
+GUI 0.14.2 queues each completed assistant Copy/Read message card as one speech
+job, including progress/commentary, before the overall turn ends. Deltas update
+chat only; completion and history never replay speech. See [Live voice](docs/live-voice.md)
+for settings, privacy and bounds. Live dictation from 0.14.0 is preserved; online
+recognition uses repeated phrase requests rather than a persistent streaming API.
+The earlier canceled setup/wake drafts in the working tree remain separate.
 
 **Tool discovery correction (2026-10-17):** The Tigo Skill and managed AGENTS
 block now distinguish browser integration, desktop MCP and shell PATH. Inspect

@@ -21,7 +21,6 @@ from .profiles import FullProfile
 from .runtime import Checkpoints, Profiler
 from .workflows import WorkflowRunner, match_workflow, validate_workflows
 from .wake_control import WakeControl
-from .live_text import SpeechSentences
 from .access import codex_home, access_file, read_access, write_access
 from .history import History
 from .attachments import inspect_file, validate_files, MAX_FILES
@@ -75,10 +74,6 @@ class Backend(QObject):
         self.speaker.changed.connect(self.changed.emit)
         self._speech_handoff = ''
         self._speech_start_row = 0
-        self._final_speech_text = ''
-        self._speech_commentary_ids = set()
-        self._speech_streams = {}
-        self._speech_seen = {}
         self._speech_completed = set()
         saved = str(self.settings.value("folder", str(Path.home())))
         self._folder = saved if Path(saved).is_dir() else str(Path.home())
@@ -989,10 +984,6 @@ class Backend(QObject):
     def _begin(self, kind):
         self.speaker.stop()
         self._speech_start_row = len(self._messages)
-        self._final_speech_text = ''
-        self._speech_commentary_ids.clear()
-        self._speech_streams.clear()
-        self._speech_seen.clear()
         self._speech_completed.clear()
         self.speaker.begin_stream()
         self._task_id = str(uuid.uuid4())
@@ -1081,17 +1072,6 @@ class Backend(QObject):
         self.server.request("turn/start", turn_options(self._thread_id, prompt, self._chosen_effort(prompt), self._model, self._turn_attachments), self._guard(started), 60000)
         self.changed.emit()
 
-    def _speak_delta(self, item_id, text, final=False):
-        if item_id in self._speech_completed:
-            return
-        stream = self._speech_streams.setdefault(item_id, SpeechSentences())
-        self._speech_seen[item_id] = self._speech_seen.get(item_id, '') + text
-        for sentence in stream.feed(text, final):
-            self.speaker.enqueue(sentence)
-        if final:
-            self._speech_completed.add(item_id)
-            self._speech_streams.pop(item_id, None)
-
     def _notification(self, method, params):
         if method == "tigo/requestDeclined":
             self._message("system", "A request needing additional input/approval was declined. Use the interactive CLI for that request.")
@@ -1119,7 +1099,6 @@ class Backend(QObject):
         if method == "item/agentMessage/delta":
             item_id, delta = params.get("itemId"), params.get("delta")
             if isinstance(item_id, str) and isinstance(delta, str):
-                self._speak_delta(item_id, delta)
                 self.profiler.mark("firstText")
                 self._activity = "Writing the answer"
                 self._pending_text[item_id] = self._pending_text.get(item_id, "") + delta
@@ -1134,14 +1113,12 @@ class Backend(QObject):
                 self._flush_text()
                 text = item.get("text", "")
                 if isinstance(text, str):
-                    seen = self._speech_seen.get(item_id, '')
-                    self._speak_delta(item_id, text[len(seen):] if text.startswith(seen) else (text if not seen else ''), final=True)
-                    if item.get('phase') == 'final_answer':
-                        self._final_speech_text = text
-                    elif item.get('phase') == 'commentary':
-                        self._speech_commentary_ids.add(item_id)
                     self.profiler.mark("firstText")
                     self._set_item_text(item_id, text, replace=True)
+                    # One speech job per completed Copy/Read message card.
+                    if item_id not in self._speech_completed:
+                        self._speech_completed.add(item_id)
+                        self.speaker.enqueue(text)
             elif kind in ("mcpToolCall", "commandExecution", "fileChange", "webSearch"):
                 name = str(item.get("tool", kind))
                 if method == "item/started":
@@ -1208,13 +1185,10 @@ class Backend(QObject):
             if self._task_kind != 'desktop-check':
                 self._needs_deep = False
         self._save_history()
-        if not error and status == 'completed' and self._task_kind == 'codex':
-            for item_id in list(self._speech_streams):
-                self._speak_delta(item_id, '', final=True)
-        elif not error and status == 'completed' and self._task_kind == 'workflow':
+        if not error and status == 'completed' and self._task_kind == 'workflow':
             reply = next((m['text'] for m in reversed(self._messages[self._speech_start_row:]) if m['role'] == 'assistant'), '')
             self.speaker.enqueue(reply)
-        else:
+        elif error or status != 'completed' or self._task_kind != 'codex':
             self.speaker.stop()
         self.changed.emit()
 

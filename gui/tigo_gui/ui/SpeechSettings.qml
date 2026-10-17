@@ -50,6 +50,6 @@ ScrollView {
             HudButton { text: "Stop speech"; implicitHeight: 34; font.pixelSize: 11; danger: true; enabled: bridge.speech.active; onClicked: bridge.speech.stop() }
         }
         Text { objectName: "speechStatus"; Layout.fillWidth: true; text: bridge.speech.status; color: bridge.speech.state === "error" ? "#ffa2af" : "#82d7c9"; font.pixelSize: 12; wrapMode: Text.WordWrap }
-        Text { Layout.fillWidth: true; text: "Automatic speech reads every assistant message, including progress, as sentences arrive. Local and Online speech both support this queue. Code blocks and raw URLs stay in chat. Read reads a selected reply even with automatic speech off. The wake microphone pauses until speech ends; recording interrupts speech before opening the mic."; color: "#799eac"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+        Text { Layout.fillWidth: true; text: "Automatic speech reads every assistant message, including progress, once each complete message card is ready. Local and Online speech both support this queue. Code blocks and raw URLs stay in chat. Read reads a selected reply even with automatic speech off. The wake microphone pauses until speech ends; recording interrupts speech before opening the mic."; color: "#799eac"; font.pixelSize: 11; wrapMode: Text.WordWrap }
     }
 }

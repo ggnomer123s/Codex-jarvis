@@ -1,4 +1,4 @@
-# Live dictation and incremental speech
+# Live dictation and complete-message speech
 
 Preferences > Voice selects Local Whisper or keyless Online Google Web Speech.
 Enable **Live text while recording (provisional)** and save. This defaults on for
@@ -22,30 +22,37 @@ cannot recall audio already uploaded. Ordinary wake recognition stays separate.
 No automatic provider fallback or microphone opening is added.
 
 Preferences > Speech independently selects local neural, online Microsoft or
-legacy system speech. With automatic speech enabled, all assistant messages,
-including progress/commentary, enter one ordered queue as complete sentences arrive. Wrapped lines and commas stay within their
-sentence; several sentences in one delta are dispatched separately. The remaining fragment is flushed when the message ends. Code
-fences, raw URLs and reasoning/tool payloads are not read. Completed messages
-are not replayed at turn completion; opening history remains silent. A manual
-Read action replaces pending speech. Stop speech mutes subsequent chunks of the
-current turn; a new task resets that mute. Starting dictation waits for playback
-and microphone handoff before capture.
+legacy system speech. With automatic speech enabled, each completed assistant
+message card (the block with **Copy** and **Read**) enters one ordered speech
+queue as a whole. This includes progress/commentary and the final answer.
+Speech starts when that card completes, without waiting for the entire task.
+Incoming text deltas update chat only; words, wrapped lines and individual
+sentences are not separate automatic speech jobs. The completed card text is
+authoritative, using the same speaking copy as **Read**. Code fences, raw URLs
+and reasoning/tool payloads are not read.
 
-Existing online speech sends queued spoken text to Microsoft; local neural
+Each card is queued once. Turn completion does not replay messages; opening
+history stays silent. A manual Read action replaces pending speech. Stop speech
+clears the queue and mutes subsequent cards of the current turn; a new task resets
+that mute. A failed/canceled task stops pending speech; already played progress
+cannot be recalled. Starting dictation waits for playback and microphone handoff
+before capture. A card that never completes is not automatically read.
+
+Existing online speech sends the spoken card text to Microsoft; local neural
 speech remains on the computer after voice downloads. Queue capacity is bounded
-(256 fragments / 64,000 queued characters); exceeding it stops with a visible
-error instead of growing indefinitely. Long text chunks retain the existing
-speech sanitizer/length bound. This is sentence-level audio generation; playback
-can lag text depending on the selected voice, CPU, downloads and network.
+(256 messages / 64,000 queued characters); exceeding it stops with a visible
+error. Each card retains the Read action's existing 6,000-character speaking-copy
+limit, with a notice directing the listener to chat for longer text. Synthesis
+workers can internally process bounded audio phrases; they receive one whole
+card job. Playback can lag text depending on the voice, CPU, downloads and network.
+
+Queued messages start at the next event-loop opportunity when the engine is
+quiet, without a fixed 300 ms pause or another microphone reservation between
+messages. The 300 ms speaker tail remains at the end before microphone release.
+Stop/Cancel still clear queued speech. Synthesis/network and speaker latency
+remain; removing the scheduling gap does not eliminate them.
 
 Install/update with the existing voice extra. No dependency or platform setup
 change is required. Verification uses simulated model/service results, real Qt
 processes/QML and fake audio playback. It is not a Windows microphone benchmark
 or a live online service latency/accuracy test.
-
-
-In 0.14.1 queued sentences start at the next event-loop opportunity when the
-engine is quiet, without a fixed 300 ms pause or another microphone reservation
-for each sentence. The 300 ms speaker tail remains at the end of playback before
-microphone release. Stop/Cancel still clear queued speech. Synthesis/network and
-speaker latency remain; removing the scheduling gap does not eliminate them.
