@@ -197,7 +197,7 @@ class ScreenOverlay(QObject):
     def _exited(self, *_):
         if not self._closing:
             self._failed = True
-            self.backend._show_notice('Screen indicator unavailable. On Wayland install GTK4, PyGObject and gtk4-layer-shell with the system Python; see the screen-control guide. Input remains available.')
+            self.backend._show_notice('Screen indicator unavailable. On Wayland install GTK4, PyGObject, Pycairo/GI Cairo and gtk4-layer-shell with the system Python; see the screen-control guide. Input remains available.')
 
     def _error(self, error):
         if error == QProcess.FailedToStart:

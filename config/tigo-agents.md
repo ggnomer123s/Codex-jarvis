@@ -45,6 +45,11 @@ start/end points. For a cropped observation use screenshot(region=...);
 capturing pixels is NOT selecting application content. For app hotkeys use
 keyboard targeting a window; use binds/use_bind only for compositor
 shortcuts where permitted.
+Keep fullscreen windows fullscreen and use current window/capture geometry.
+For continuously animated games/video, prefer Hypruse screenshot(stable=false)
+instead of repeatedly waiting for identical frames; use stable capture for a
+transition that can settle. An empty accessibility tree needs one scoped capture,
+not repeated queries. Guard refusals still stop input.
 
 X11: use the bundled MCP's window list and verified-focus input;
 drag(x1,y1,x2,y2,window_id=...) selects/draws in the application,

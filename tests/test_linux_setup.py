@@ -41,7 +41,7 @@ class TestLinuxSetup(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
         calls = self.f.calls()
         packages = next(x['args'] for x in calls if x['tool']=='sudo' and x['args'][:2]==['apt-get','install'])
-        self.assertTrue({'python3-gi','gir1.2-atspi-2.0','at-spi2-core'} <= set(packages))
+        self.assertTrue({'python3-gi','python3-gi-cairo','gir1.2-atspi-2.0','at-spi2-core'} <= set(packages))
         self.assertTrue(any(x['tool']=='git' and 'pull' in x['args'] for x in calls))
         self.assertTrue(any(x['tool']=='uv' and '--frozen' in x['args'] for x in calls))
         self.assertEqual(sum(x['tool']=='installer' for x in calls), 1)
@@ -59,8 +59,38 @@ system_packages
                                     env={**os.environ,'TIGO_TEST_MANAGER':manager},capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertIn(manager,result.stdout)
+            if manager == 'apt-get':
+                self.assertIn('python3-gi-cairo',result.stdout)
+            elif manager == 'dnf':
+                self.assertIn('python3-cairo',result.stdout)
             for other in {'apt-get','dnf','zypper'}-{manager}:
                 self.assertNotIn(other,result.stdout)
+
+    def test_gui_installer_checks_cairo_and_reports_optional_helper_failure(self):
+        source=(ROOT/'scripts/install-gui-linux.sh').read_text()
+        probe=self.f.bin/'wayland-probe'
+        probe.write_text('#!'+sys.executable+'\n'+'''import json,os,sys
+from pathlib import Path
+with Path(os.environ['TIGO_TEST_LOG']).open('a') as log:
+ log.write(json.dumps({'tool':'wayland-probe','args':sys.argv[1:]})+'\\n')
+sys.exit(int(os.environ.get('TIGO_TEST_HELPER_EXIT','0')))
+''')
+        probe.chmod(0o755)
+        import shlex
+        script=self.f.repo/'scripts/install-gui-linux.sh'
+        script.write_text(source.replace('! /usr/bin/python3 -c', '! '+shlex.quote(str(probe))+' -c'))
+        (self.f.repo/'scripts/install-linux.sh').write_text('#!/bin/sh\nexit 0\n')
+        for exit_code in ('0','42'):
+            self.f.log.unlink(missing_ok=True)
+            result=subprocess.run(['bash',str(script)], env={**self.f.env,
+                'WAYLAND_DISPLAY':'fixture-wayland','TIGO_TEST_HELPER_EXIT':exit_code},
+                capture_output=True,text=True,timeout=10)
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+            checks=[c for c in self.f.calls() if c['tool']=='wayland-probe']
+            self.assertEqual(len(checks),1)
+            self.assertIn('import cairo',checks[0]['args'][1])
+            self.assertIn('require_foreign("cairo")',checks[0]['args'][1])
+            self.assertEqual('Pycairo/GI Cairo' in result.stdout, exit_code!='0')
 
     def test_node_checksum_is_verified_before_private_runtime_installation(self):
         for bad in (False, True):

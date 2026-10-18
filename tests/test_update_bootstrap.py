@@ -76,6 +76,7 @@ if tool=='node':sys.exit(int(os.environ.get('TIGO_TEST_OLD_NODE','0')))
         self.assertEqual(package[:4],['pacman','-Syu','--needed','--noconfirm'])
         self.assertIn('speech-dispatcher',package)
         self.assertIn('portaudio',package)
+        self.assertIn('python-cairo',package)
         self.assertNotIn('nodejs',package)  # A working user-selected Node is retained.
         self.assertTrue(any(x['tool']=='git' and 'pull' in x['args'] and '--ff-only' in x['args'] for x in calls))
         self.assertTrue(any(x['tool']=='uv' and x['args']==['python','install','3.12'] for x in calls))

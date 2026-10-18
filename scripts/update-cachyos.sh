@@ -37,7 +37,7 @@ main() {
     (( $# <= 1 )) || fail 'Usage: bash update-cachyos.sh [checkout-path]'
     local repo_dir packages login_output login_code=0
     repo_dir="$(realpath -m -- "${1:-$HOME/Tigo}")"
-    packages=(git curl uv python gtk4 gtk4-layer-shell python-gobject at-spi2-core portaudio libpulse speech-dispatcher espeak-ng
+    packages=(git curl uv python gtk4 gtk4-layer-shell python-gobject python-cairo at-spi2-core portaudio libpulse speech-dispatcher espeak-ng
               grim wtype xdotool wmctrl maim mesa libglvnd libxcb libxkbcommon-x11
               xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil)
     if ! command -v node >/dev/null || ! node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 22 ? 0 : 1)'; then

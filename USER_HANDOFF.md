@@ -192,7 +192,12 @@ missing, while desktop MCP was available. This mistake must not recur.
 
 ## 7. Dated state at this handover
 
-- Latest implemented GUI behavior is **0.14.2**, committed as `d5a2ff2` in the
+- GUI **0.14.3** adds full-output Wayland frame geometry and explicit input
+  regions (only Return control receives clicks). Linux helper setup adds system
+  Pycairo/GI Cairo. Fullscreen/animated capture guidance avoids repeated stable
+  frame waits; native Hypruse guards stay enabled. This does not establish game
+  input accuracy or model-latency performance. Check `changes.md` for verification.
+- Previous GUI behavior **0.14.2** was committed as `d5a2ff2` in the
   observed checkout. This records source state; check Git/remote/installed process
   again rather than assuming publication or deployment.
 - For that speech change, an isolated clean-HEAD patch passed 120 GUI/process/QML
@@ -206,9 +211,9 @@ missing, while desktop MCP was available. This mistake must not recur.
   untracked audio-input/install-state helpers, and a `readmeai.md` paragraph
   describing 0.13.2 wake changes. That paragraph is not proof of a released feature.
   Inspect the actual diff; filenames and status can change after this handover.
-- This handover adds no runtime feature, new dependency or installation step.
-  Keep it updated when the user changes standing rules or clarifies behavior;
-  record each update in `changes.md`.
+- The original preferences handover was documentation-only; later runtime
+  additions are identified above. Keep this file updated when the user changes
+  standing rules or clarifies behavior; record each update in `changes.md`.
 - The opt-in confirmed-repair database is separate from this file. Read it only
   when relevant as historical data; do not add/edit/delete repair memories without
   explicit user approval. New installations use

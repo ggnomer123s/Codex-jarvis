@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-18**, GUI **0.14.2**. Repository:
+Last reconciled: **2026-10-18**, GUI **0.14.3**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read [USER_HANDOFF.md](USER_HANDOFF.md) first for standing user preferences,
@@ -13,6 +13,13 @@ Source, tests and observed behavior take precedence over dated summaries.
 This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
+
+GUI 0.14.3 makes the Wayland activity frame use the full output (exclusive
+zone -1), not the panel-reserved work area. Edges and banner text have explicit
+click-through input regions; only Return control captures mouse input, refreshed
+after GTK allocation/remapping. Linux setup now includes Pycairo/GI Cairo; see
+[screen control](docs/screen-control.md). Hypruse guards/input transport remain
+unchanged; frame geometry/protocol checks are not a game-latency benchmark.
 
 GUI 0.14.2 queues each completed assistant Copy/Read message card as one speech
 job, including progress/commentary, before the overall turn ends. Deltas update

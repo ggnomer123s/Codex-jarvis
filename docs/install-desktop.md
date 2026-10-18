@@ -95,7 +95,7 @@ dependencies are already prepared.
 ## CachyOS, Arch, Manjaro, EndeavourOS
 
 ```bash
-sudo pacman -Syu --needed git uv python gtk4 gtk4-layer-shell python-gobject at-spi2-core nodejs npm portaudio libpulse speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
+sudo pacman -Syu --needed git uv python gtk4 gtk4-layer-shell python-gobject python-cairo at-spi2-core nodejs npm portaudio libpulse speech-dispatcher espeak-ng grim wtype xdotool wmctrl maim mesa libxcb libxkbcommon-x11 xcb-util-cursor xcb-util-wm xcb-util-image xcb-util-keysyms xcb-util-renderutil
 export PATH="$HOME/.local/bin:$PATH"
 npm install --global --prefix "$HOME/.local" @openai/codex
 "$HOME/.local/bin/codex" login
@@ -233,17 +233,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$env:USERPROFILE\Tigo\s
 
 The GUI now shows a screen-edge indicator and Return control button during
 recognized desktop MCP calls. On Hyprland/Wayland the separate layer-shell
-helper requires distribution packages `gtk4`, `gtk4-layer-shell` and
-`python-gobject` (PyGObject), available to `/usr/bin/python3`. The CachyOS updater
+helper requires distribution packages `gtk4`, `gtk4-layer-shell`,
+`python-gobject` (PyGObject) and `python-cairo`, available to `/usr/bin/python3`.
+Pycairo supplies explicit mouse input regions: edges and banner text must pass
+clicks to the application; only Return control receives input. The CachyOS updater
 and Arch-family recipe above install them. Existing Arch/CachyOS installations
 can add them with:
 
 ```bash
-sudo pacman -Syu --needed gtk4 gtk4-layer-shell python-gobject
+sudo pacman -Syu --needed gtk4 gtk4-layer-shell python-gobject python-cairo
 ```
 
-Other Wayland distributions need the corresponding GTK4, PyGObject and
-Gtk4LayerShell 1.0 typelib packages and a compositor supporting layer-shell.
+Other Wayland distributions need GTK4, PyGObject with Cairo interoperability,
+Pycairo and Gtk4LayerShell 1.0 typelibs on a layer-shell compositor. Debian/Ubuntu
+needs `python3-gi-cairo` (pulling in `python3-cairo`); Fedora uses
+`python3-gobject python3-cairo`. On other distributions install the matching
+GI Cairo bridge/Pycairo package with the documented GTK typelibs.
 Package names/availability vary; GNOME does not provide this protocol. The
 helper reports unavailable rather than claiming a working overlay. These system
 bindings are separate from the locked uv environment; no pip package is added.

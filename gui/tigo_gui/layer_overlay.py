@@ -5,8 +5,27 @@ surface, keyboard grab, session lock, screenshot or physical-input hook.
 Parent-owned stdin controls visibility; EOF removes every surface.
 """
 import json
+import math
 import os
 import sys
+
+
+def clickable_rect(bounds, width, height):
+    """Outward-rounded button bounds clipped to surface-local logical pixels.
+
+    None means an empty input region, never the GDK default of full input.
+    Monitor offsets and device pixel scale do not belong in this coordinate space.
+    """
+    if bounds is None or not all(math.isfinite(v) for v in (*bounds, width, height)):
+        return None
+    x, y, w, h = bounds
+    if w <= 0 or h <= 0:
+        return None
+    left, top = max(0, math.floor(x)), max(0, math.floor(y))
+    right, bottom = min(width, math.ceil(x + w)), min(height, math.ceil(y + h))
+    if right <= left or bottom <= top:
+        return None
+    return left, top, int(right - left), int(bottom - top)
 
 
 def main():
@@ -15,7 +34,10 @@ def main():
     # libwayland-client, so its protocol hooks are installed in the right order.
     from ctypes import CDLL
     CDLL('libgtk4-layer-shell.so.0')
+    import cairo
     import gi
+    gi.require_foreign('cairo')
+    gi.require_version('Gdk', '4.0')
     gi.require_version('Gtk', '4.0')
     gi.require_version('Gtk4LayerShell', '1.0')
     from gi.repository import Gdk, GLib, Gtk, Gtk4LayerShell as Layer
@@ -39,23 +61,63 @@ button { background: #19505d; color: #e7ffff; border: 1px solid #53cbd1;
     windows, hints = [], []
     visible = False
 
-    def surface(monitor, edges, child, name):
+    def surface(monitor, edges, child, name, button=None):
         win = Gtk.Window(title='Tigo screen activity')
+        win.set_decorated(False)
         Layer.init_for_window(win)
         Layer.set_namespace(win, 'tigo-screen-' + name)
         Layer.set_layer(win, Layer.Layer.OVERLAY)
         Layer.set_monitor(win, monitor)
         Layer.set_keyboard_mode(win, Layer.KeyboardMode.NONE)
-        Layer.set_exclusive_zone(win, 0)
+        # 0 avoids panels' reserved work area; -1 reaches the actual output
+        # edges, including when a fullscreen window covers the panels.
+        Layer.set_exclusive_zone(win, -1)
         for edge in edges:
             Layer.set_anchor(win, edge, True)
         win.set_child(child)
+        pending = [None, 0]
+
+        def input_region(*_):
+            if pending[0] is not None:
+                pending[0].disconnect(pending[1])
+                pending[:] = [None, 0]
+            native = win.get_surface()
+            if native is not None:
+                region = cairo.Region()  # Edges and banner text pass clicks through.
+                if button is not None and button.get_width() > 1 and button.get_height() > 1:
+                    ok, rect = button.compute_bounds(win)
+                    bounds = (rect.get_x(), rect.get_y(), rect.get_width(), rect.get_height()) if ok else None
+                    target = clickable_rect(bounds, native.get_width(), native.get_height())
+                    if target is not None:
+                        region.union(cairo.RectangleInt(*target))
+                native.set_input_region(region)
+                win.queue_draw()  # Commit the region computed after allocation.
+
+        def schedule_input(*_):
+            clock = win.get_frame_clock()
+            if pending[0] is None and clock is not None:
+                # Idle can run before GTK's first allocation (a 1x1 button).
+                # One after-paint callback sees final widget coordinates without
+                # a continuous tick/polling loop or a guessed settle timeout.
+                pending[:] = [clock, clock.connect('after-paint', input_region)]
+
+        def realized(*_):
+            win.get_surface().connect('layout', schedule_input)
+            input_region()
+
+        def unmapped(*_):
+            if pending[0] is not None:
+                pending[0].disconnect(pending[1])
+                pending[:] = [None, 0]
+
+        win.connect('realize', realized)
+        win.connect('map', schedule_input)
+        win.connect('unmap', unmapped)
         windows.append(win)
         return win
 
     def takeover(*_):
-        for win in windows:
-            win.set_visible(False)
+        apply({**last, 'active': False})
         print('{"takeover":true}', flush=True)
 
     def rebuild(*_):
@@ -85,10 +147,11 @@ button { background: #19505d; color: #e7ffff; border: 1px solid #53cbd1;
             labels.append(heading)
             labels.append(hint)
             button = Gtk.Button(label='Return control')
+            button.set_focusable(False)
             button.connect('clicked', takeover)
             banner.append(labels)
             banner.append(button)
-            win = surface(monitor, [Layer.Edge.TOP], banner, 'banner')
+            win = surface(monitor, [Layer.Edge.TOP], banner, 'banner', button=button)
             Layer.set_margin(win, Layer.Edge.TOP, 16)
             hints.append((heading, hint, button))
         apply(last)

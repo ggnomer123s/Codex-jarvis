@@ -8,6 +8,42 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-18 — Hyprland fullscreen indicator and responsive observation (GUI 0.14.3)
+
+- Wayland layer surfaces now use exclusive zone -1, so the border reaches the
+  full monitor instead of avoiding panel-reserved work areas. On the observed
+  1920x1080 Hyprland output, old edges began at (56,8); new edges span (0,0)
+  through the actual screen boundaries, including over a fullscreen window.
+- Explicit empty GDK input regions make all four edges click-through. Banner
+  background/text also pass clicks through; only Return control accepts input.
+  Its clipped logical rectangle updates after GTK allocation/remapping, including
+  translation changes; no polling loop, fullscreen input surface or keyboard
+  grab is added. Return control hides the saved helper state before signaling.
+- Added fullscreen/animated-window guidance to the shipped desktop Skill/managed
+  AGENTS and GUI operator guide: use current geometry, avoid repeated empty-tree
+  queries and stable-frame waiting for continuously changing games/video.
+  This removes avoidable observation waits, not Codex inference latency. The
+  existing Hypruse transport, strict seat/auth/lock guards and user takeover
+  remain unchanged. No camera/relative-pointer game backend is introduced.
+- Added system Pycairo/GI Cairo to the CachyOS/Debian/Fedora setup paths and
+  Wayland preflight/diagnostics; updated installation/screen guides, maintainer
+  context, handover and GUI version/lock metadata. Windows dependencies/layout
+  are unchanged. Earlier canceled wake/setup drafts remain separate.
+- Verification: the isolated feature patch passed all 120 GUI/process/QML tests
+  and 142 root tests discovered (138 passed, four skips including the opt-in live
+  helper test). Installer fixtures check Cairo packages and both successful and
+  missing-helper preflight flows without real installation. The mixed working
+  tree's separate Debian flow still fails on the canceled setup-state draft;
+  that draft was excluded, preserved and not repaired by this task. Frozen lock,
+  shell/Python syntax, Skill validation, documentation links/English-only and
+  whitespace checks passed.
+- Three targeted live/geometry tests passed with the native helper on Hyprland,
+  checking full-output edges, empty edge input masks, localized button masks,
+  visibility/remapping and EOF cleanup. Final desktop inventory confirmed the
+  disposable test window and indicators were removed. A live test click was
+  refused after cursor/focus changed; it was not retried or bypassed. No
+  successful end-to-end fullscreen click or game-latency measurement is claimed.
+
 ## 2026-10-18 — User preferences and next-assistant handover
 
 - Added USER_HANDOFF.md consolidating explicit collaboration rules, selective

@@ -4,8 +4,8 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 for tool in uv uvx python3 codex; do command -v "$tool" >/dev/null || { echo "Missing $tool; see docs/install-desktop.md." >&2; exit 1; }; done
 uv sync --project "$ROOT/gui" --frozen --extra voice
-if [[ -n "${WAYLAND_DISPLAY:-}" ]] && ! /usr/bin/python3 -c 'from ctypes import CDLL; CDLL("libgtk4-layer-shell.so.0"); import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Gtk4LayerShell", "1.0")' 2>/dev/null; then
-  echo '[notice] The Wayland screen indicator needs GTK4, PyGObject and gtk4-layer-shell for /usr/bin/python3. See docs/install-desktop.md; other features remain available.'
+if [[ -n "${WAYLAND_DISPLAY:-}" ]] && ! /usr/bin/python3 -c 'from ctypes import CDLL; CDLL("libgtk4-layer-shell.so.0"); import cairo, gi; gi.require_foreign("cairo"); gi.require_version("Gtk", "4.0"); gi.require_version("Gtk4LayerShell", "1.0")' 2>/dev/null; then
+  echo '[notice] The Wayland screen indicator needs GTK4, PyGObject, Pycairo/GI Cairo and gtk4-layer-shell for /usr/bin/python3. See docs/install-desktop.md; other features remain available.'
 fi
 echo 'Neural voices are included. Models download on first speech use; see docs/speech-output.md.'
 echo 'Updating the shared Codex profile and desktop backend.'

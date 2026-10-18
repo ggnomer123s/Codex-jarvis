@@ -90,6 +90,20 @@ the tools already supplied to the session.
 3. **Act:** use native GUI MCP only; prefer `sequence` for short, known, reversible steps; use `then='ui'`/`then='desktop'` for combined verification or `wait_for` for asynchronous changes where supported. For selection, obtain accurate start **and** end positions before `drag`.
 4. **Verify:** for simple reversible actions check final state once; for complex editing/exports use milestone checks. After two failed attempts, stop with the precise issue, don't repeat blind clicks.
 
+## Fullscreen and continuously animated windows
+
+Keep the target fullscreen unless the user asks otherwise; use its current
+window geometry and capture metadata, rather than a panel-reduced work area.
+For Hypruse captures of games/video/other continuously changing content, prefer
+`stable=false`: waiting for identical frames can repeatedly reach the tool's
+settling timeout. Use `stable=true` when a finite transition should actually
+settle. If accessibility reports no tree, switch to one scoped capture instead
+of probing it again for each click. Ground small targets with zoom and use a
+short supported sequence for known reversible steps, then verify the outcome.
+A locked/relative game pointer is not ordinary absolute menu clicking; do not
+promise camera/game control absent an advertised tool. Seat/auth/lock refusals
+still stop the affected input; never turn off guards to improve responsiveness.
+
 ## Selection and keyboard details
 
 **Hypruse:** `pointer(action='drag',x=START_X,y=START_Y,to_x=END_X,to_y=END_Y,button='left')` for selection/moving an object; `screenshot(region='x,y,WxH')` for observation; `zoom(x,y,window=ADDRESS)` before small targets. App shortcuts: `keyboard(action='key',keys='ctrl+s',window=ADDRESS)`. Hyprland **Super** binds require an allowed `use_bind` after `binds` or direct `hypr` IPC, not a synthetic app shortcut. Do not bypass Hypruse confinement/auth/seat guards via raw shell input.

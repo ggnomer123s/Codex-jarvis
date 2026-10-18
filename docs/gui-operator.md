@@ -20,6 +20,14 @@ The upstream Hypruse MCP already implements these tools.
 4. `pointer(action="drag", x=START_X, y=START_Y, to_x=END_X, to_y=END_Y, button="left")`: draw a selection or drag an item. The upstream tool checks BOTH endpoints against Hypruse confinement/authentication rules.
 5. `screenshot(region="x,y,WxH")`: capture a rectangle for visual inspection. `zoom(x,y,window="ADDRESS")` crops and enlarges small targets. A screenshot **does not** affect a GUI selection.
 
+For fullscreen games or continuously animated video, use
+`screenshot(window="ADDRESS", stable=False)` to observe the current frame;
+waiting for identical frames can reach the tool's settling timeout each time.
+Keep fullscreen mode, use current capture geometry/scale and try accessibility
+only once if it reports no tree. This reduces avoidable observation waits, not
+model inference time or a game's own input latency. Native seat/auth/lock guards
+remain in force. See [fullscreen diagnostics](screen-control.md#fullscreen-input-and-diagnostics-on-hyprland).
+
 These are example **MCP arguments**, not executable Python code. The live tool schema is authoritative. Global Hyprland logical coordinates must be derived from the screenshot's `geometry` and `scale`: `global = origin + image_pixel / scale`. The source of the request is never permission to bypass a seat or authentication refusal.
 
 ### Native X11 / bundled tigo-x11
