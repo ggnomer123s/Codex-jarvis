@@ -17,7 +17,7 @@ from .app_server import AppServer, terminate_tree
 from .core import find_codex, launch_command, thread_options, turn_options
 from .messages import Messages
 from .voice import dependencies_available
-from .preferences import LANGUAGES, VOICE_MODELS, REASONING, cached_models, elevated, valid_model_id, valid_voice_model
+from .preferences import LANGUAGES, VOICE_MODELS, REASONING, REQUESTED_MODELS, cached_models, elevated, saved_custom_models, valid_model_id, valid_voice_model
 from .profiles import FullProfile
 from .runtime import Checkpoints, Profiler
 from .workflows import WorkflowRunner, match_workflow, validate_workflows
@@ -121,11 +121,15 @@ class Backend(QObject):
             self._voice_options["beam"] = 3
         self._normal_home = Path(codex_home_override) if codex_home_override else codex_home()
         self._models = cached_models(self._normal_home)
+        self._custom_models = saved_custom_models(self.settings.value('customModels', []))
+        self._configured_model = ''
+        self._configured_folder = ''
         self._model_efforts = {}
         self._models_generation = 0
         self._models_loading = False
         self._models_connecting = False
         self._models_updated_at = 0.0
+        self._models_folder = ''
         self._models_status = 'Saved Codex catalog. Open the model picker to check for new models.'
         self._codex = environment("GUI_CODEX") or find_codex() or ""
         self._codex_command = codex_command
@@ -612,9 +616,25 @@ class Backend(QObject):
     @Property("QStringList", notify=changed)
     def models(self):
         names = list(self._models)
-        if self._model and self._model not in names:
-            names.append(self._model)
+        configured = self._configured_model if self._configured_folder == self._folder else ''
+        for name in (configured, *self._custom_models, *REQUESTED_MODELS, self._model):
+            if name and name not in names:
+                names.append(name)
         return ["Codex default", *names]
+
+    @Property(str, notify=changed)
+    def modelSelectionStatus(self):
+        return self.modelStatus(self._model)
+
+    @Slot(str, result=str)
+    def modelStatus(self, model):
+        if not model or model == 'Codex default':
+            return 'Uses your existing Codex configuration.'
+        if self._models_updated_at and model in self._models:
+            return 'Reported by the last Codex catalog. Codex checks account/provider access when you send.'
+        if model == self._configured_model and self._configured_folder == self._folder:
+            return 'Configured in Codex, but not reported by the live catalog. Access is checked when you send.'
+        return 'Custom model ID, not confirmed by the live Codex catalog. Access is checked when you send; no fallback model is substituted.'
 
     @Property(bool, notify=changed)
     def modelsLoading(self):
@@ -976,10 +996,27 @@ class Backend(QObject):
         # Publish only after every page succeeds; keep the last good list on error.
         self._models_generation += 1
         generation = self._models_generation
+        folder = self._folder
+        self._models_folder = folder
         self._models_loading = True
         self._models_status = 'Refreshing the Codex model catalog...'
         names, efforts_by_model, cursors = [], {}, set()
         self.changed.emit()
+
+        def configured(result, error):
+            if generation != self._models_generation or not self.server.connected or folder != self._folder:
+                return
+            config = result.get('config') if isinstance(result, dict) else None
+            if error or not isinstance(config, dict):
+                return
+            name = config.get('model')
+            self._configured_model = name if isinstance(name, str) and valid_model_id(name) else ''
+            self._configured_folder = folder
+            self.changed.emit()
+
+        # A custom/provider model can be configured without appearing in model/list.
+        # Read only its ID from the response; do not retain/log other config fields.
+        self.server.request('config/read', {'includeLayers': False, 'cwd': self._folder}, configured)
 
         def failed(message):
             self._models_loading = False
@@ -1429,6 +1466,9 @@ class Backend(QObject):
             write_access(self._access_path, access)
         except (OSError, ValueError) as exc:
             return self._settings_error("Could not save access mode: " + str(exc))
+        if model and model != self._model and model not in self._model_efforts:
+            # Do not guess the reasoning capabilities of an unadvertised model.
+            effort = 'default'
         if access != self._access:
             self._reset_context()
             self.server.close()
@@ -1439,6 +1479,9 @@ class Backend(QObject):
             self._close_voice()
         self._effort, self._access = effort, access
         self._model, self._language, self._voice_model = model, language, voice_model
+        if model:
+            self._custom_models = [model, *[x for x in self._custom_models if x != model]][:64]
+            self.settings.setValue('customModels', self._custom_models)
         self.settings.setValue("effort", effort)
         if access != "full-access":
             self.settings.setValue("access", access)
@@ -1454,7 +1497,7 @@ class Backend(QObject):
         """Read-only catalog discovery when a picker opens; coalesce rapid opens."""
         if self._locked() or self.modelsLoading or self._shutting_down:
             return
-        if self._models_updated_at and time.monotonic() - self._models_updated_at < 60:
+        if self._models_updated_at and self._models_folder == self._folder and time.monotonic() - self._models_updated_at < 60:
             return
         if self.server.connected:
             self._fetch_models()

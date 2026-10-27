@@ -41,6 +41,8 @@ for line in sys.stdin:
         if scenario == 'slow-init':
             time.sleep(60)
         result = {'userAgent': 'fake-app-server'}
+    elif method == 'config/read':
+        result = {'config': {'model': 'gpt-6.1-terra' if scenario == 'models-configured' else None}}
     elif method == 'model/list':
         result = {'data': [{'id': 'test-model', 'model': 'test-model', 'isDefault': True, 'hidden': False,
                             'supportedReasoningEfforts': [{'reasoningEffort': 'low'}, {'reasoningEffort': 'high'}]}], 'nextCursor': None}

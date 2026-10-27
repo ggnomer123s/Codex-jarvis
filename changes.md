@@ -8,6 +8,35 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-27 — Keep Terra and custom model IDs selectable (GUI 0.14.5)
+
+- The prior catalog fix could only show IDs reported by Codex or the currently
+  selected manual ID. Added an explicitly requested `gpt-6.1-terra` shortcut
+  separately from advertised models in [preferences](gui/tigo_gui/preferences.py).
+  It remains selectable in both pickers even when a Codex catalog omits it;
+  this does not claim that the user's account/endpoint supports that model.
+- Added up to 64 validated, deduplicated previously selected IDs in QSettings
+  `customModels`. Refresh, switching models and restart retain these choices.
+  Read-only `config/read` also extracts the effective workspace model ID when
+  it is not advertised; other response fields are discarded. Connection and
+  workspace guards reject stale config responses, and workspace changes avoid
+  reusing another workspace's configured choice through the freshness timer.
+- Added reactive selection notes/tooltips identifying catalog-reported,
+  configured and unconfirmed IDs. A newly selected model with no advertised
+  reasoning metadata starts with Model default. Selection still passes the
+  exact ID through existing Codex app-server thread/turn parameters; no silent
+  model substitution, alternate transport, account change or access grant occurs.
+- Updated catalog regressions for the separate shortcut/config request and
+  added two unexecuted cases for Terra/custom persistence and configured-ID
+  status. Updated README, model/update guides and both current handovers.
+  GUI/version lock metadata is 0.14.5; dependencies/installers are unchanged.
+- Verification: reviewed the patch and installed `config/read` protocol schema,
+  parsed changed Python and version metadata, checked edited public docs'
+  English convention and whitespace. No test suite, GUI run, CI or authenticated
+  Terra request was executed, following the earlier stop-testing preference.
+  The cloud has no model cache for this inspection; the user's actual desktop
+  model catalog and Terra entitlement remain unverified. Publication skips CI.
+
 ## 2026-10-27 — Refresh the full Codex model catalog (GUI 0.14.4)
 
 - Fixed [catalog discovery](gui/tigo_gui/backend.py) to request hidden picker

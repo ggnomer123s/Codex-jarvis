@@ -64,7 +64,7 @@ class TestBackend(unittest.TestCase):
         backend = self.server_backend('models-paged')
         backend.ensureModels()
         self.wait(lambda: backend.serverReady and not backend.modelsLoading)
-        self.assertEqual(backend.models, ['Codex default', 'test-model', 'new-model'])
+        self.assertEqual(backend.models, ['Codex default', 'test-model', 'new-model', 'gpt-6.1-terra'])
         calls = [x['request'] for x in self.requests(backend) if x['request'].get('method') == 'model/list']
         self.assertEqual(len(calls), 2)
         self.assertTrue(all(x['params']['includeHidden'] for x in calls))
@@ -78,7 +78,7 @@ class TestBackend(unittest.TestCase):
         backend = self.server_backend()
         backend.server.connected = True
         callbacks = []
-        with mock.patch.object(backend.server, 'request', side_effect=lambda method, params, callback: callbacks.append(callback)):
+        with mock.patch.object(backend.server, 'request', side_effect=lambda method, params, callback: callbacks.append(callback) if method == 'model/list' else None):
             backend._fetch_models()
             backend.newSession()
             callbacks[0]({'data': [{'model': 'released-model', 'hidden': True}], 'nextCursor': None}, None)
@@ -92,11 +92,11 @@ class TestBackend(unittest.TestCase):
         backend._model_efforts = {'previous-model': ['high']}
         for error in ('Page unavailable', None):
             callbacks = []
-            with mock.patch.object(backend.server, 'request', side_effect=lambda method, params, callback: callbacks.append(callback)):
+            with mock.patch.object(backend.server, 'request', side_effect=lambda method, params, callback: callbacks.append(callback) if method == 'model/list' else None):
                 backend._fetch_models()
                 callbacks[0]({'data': [{'model': 'partial-model'}], 'nextCursor': 'again'}, None)
                 callbacks[1]({'data': [], 'nextCursor': 'again'}, error)
-            self.assertEqual(backend.models, ['Codex default', 'previous-model'])
+            self.assertEqual(backend.models, ['Codex default', 'previous-model', 'gpt-6.1-terra'])
             self.assertEqual(backend._model_efforts, {'previous-model': ['high']})
             self.assertFalse(backend.modelsLoading)
             self.assertIn('failed', backend.modelsStatus)
@@ -116,6 +116,32 @@ class TestBackend(unittest.TestCase):
         self.wait(lambda: not backend.busy)
         resumes = [x['request'] for x in self.requests(backend) if x['request'].get('method') == 'thread/resume']
         self.assertEqual(resumes[-1]['params']['threadId'], thread)
+
+    def test_terra_shortcut_and_custom_models_survive_catalog_refresh_and_restart(self):
+        backend = self.server_backend()
+        backend.ensureModels()
+        self.wait(lambda: backend.serverReady and not backend.modelsLoading)
+        self.assertIn('gpt-6.1-terra', backend.models)
+        self.assertTrue(backend.selectModel('gpt-6.1-terra'))
+        self.assertEqual(backend.effort, 'default')
+        self.assertIn('not confirmed', backend.modelSelectionStatus)
+        self.assertTrue(backend.selectModel('provider/private-model'))
+        backend.refreshModels()
+        self.wait(lambda: backend.serverReady and not backend.modelsLoading)
+        self.assertIn('provider/private-model', backend.models)
+        reopened = self.server_backend()
+        self.assertEqual(reopened.model, 'provider/private-model')
+        self.assertIn('provider/private-model', reopened.models)
+        self.assertIn('gpt-6.1-terra', reopened.models)
+
+    def test_configured_model_is_identified_without_claiming_catalog_access(self):
+        backend = self.server_backend('models-configured')
+        backend.ensureModels()
+        self.wait(lambda: backend.serverReady and not backend.modelsLoading and backend._configured_model == 'gpt-6.1-terra')
+        self.assertNotIn('gpt-6.1-terra', backend._models)
+        self.assertTrue(backend.selectModel('gpt-6.1-terra'))
+        self.assertIn('Configured in Codex', backend.modelSelectionStatus)
+        self.assertFalse(any(x['request'].get('method') in ('thread/start', 'turn/start') for x in self.requests(backend)))
 
     def test_request_response_reuses_process_and_thread(self):
         backend = self.server_backend()

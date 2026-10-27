@@ -202,6 +202,20 @@ installing). Updating Tigo alone does not guarantee an existing Codex binary is
 upgraded. New-model rollout, account/provider access and Codex's own catalog
 refresh policy still apply. An exact model ID can also be entered manually.
 Availability is validated by the actual request, not by the picker or cache.
+GUI 0.14.5 also includes the explicitly requested `gpt-6.1-terra` shortcut,
+the model ID from Codex's effective configuration, and up to 64 previously
+selected model IDs saved in GUI settings. Catalog refresh cannot remove these
+choices. Configuration discovery uses read-only app-server `config/read`; only
+the model ID is retained, not the rest of the configuration response.
+
+Choose `gpt-6.1-terra` directly in either picker. A note/tooltip distinguishes
+catalog-reported, configured and unconfirmed custom IDs. Listing a shortcut
+does **not** confirm that your Codex endpoint/account supports it; unsupported
+IDs surface the Codex error without substituting another model. Newly selected
+IDs without advertised reasoning metadata start with **Model default**, without
+guessing supported effort levels. Selecting another model never changes account
+permissions or adds another inference provider.
+
 An empty selection / **Codex default** inherits the configured model. Changing
 the model starts a fresh conversation. The selected ID is supplied as structured
 app-server thread/turn parameters.

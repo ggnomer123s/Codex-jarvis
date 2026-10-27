@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-27**, GUI **0.14.4**. Repository:
+Last reconciled: **2026-10-27**, GUI **0.14.5**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read [USER_HANDOFF.md](USER_HANDOFF.md) first for standing user preferences,
@@ -14,6 +14,23 @@ This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
 
+GUI 0.14.5 addresses the follow-up asking specifically for 6.1 Terra. Add the
+explicit `gpt-6.1-terra` ID as a requested shortcut separately from live catalog
+data; this is NOT a verified account entitlement or confirmation that every
+Codex endpoint supports the same model as another Codex client. The target PC's
+catalog has not been inspected. Never fabricate advertised capabilities or claim
+an authenticated Terra request succeeded. Both pickers also retain up to 64
+validated selected IDs in QSettings `customModels`, so switching models, live
+refresh and restart cannot erase private/provider IDs. Read `config/read` with
+the workspace to extract only its configured model ID; discard other response
+fields and reject stale connection/workspace callbacks. Selection status/tooltips
+distinguish last-catalog, configured and unconfirmed IDs. Never substitute another
+model on an unavailable-ID error. A newly selected model with no advertised
+reasoning metadata starts at Model default, without guessing its capabilities.
+Codex app-server remains the only transport; no new dependency, account/profile,
+provider or installer action is added. User explicitly authorized pushing this
+fix. Test suites and CI remain unrun; only static checks are recorded.
+
 GUI 0.14.4 fixes stale/missing model choices. Opening either picker or Preferences
 uses `ensureModels()` to fetch a complete live `model/list` catalog with
 `includeHidden: true`, following bounded nonrepeating cursors. Keep the local
@@ -25,8 +42,9 @@ Repeated picker checks coalesce for 60 seconds. Explicit Refresh restarts only
 the idle owned app-server, preserves chat/model/thread ID and marks the thread
 for resume on the next task; never send a prompt or alter login/access to list
 models. Preserve editable draft/selection across QML catalog replacements.
-The visible status reports loading/errors. No model IDs are hardcoded; new
-models can still require a Codex CLI update and account/provider rollout.
+The visible status reports loading/errors. The live catalog is not restricted
+to a hardcoded allowlist; 0.14.5 adds a separate explicitly requested shortcut.
+New models can still require a Codex CLI update and account/provider rollout.
 User asked to fix and push this change directly. No test suites/GUI runs or CI
 were started for this patch; publication uses `[skip ci]`. Static source/schema
 inspection and syntax/whitespace checks are reported separately in changes.md.

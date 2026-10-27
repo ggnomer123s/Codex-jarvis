@@ -11,10 +11,28 @@ LANGUAGES = [("auto", "Auto detect"), ("ru", "Russian"), ("en", "English"),
              ("zh", "Chinese"), ("ja", "Japanese"), ("ko", "Korean"), ("hi", "Hindi")]
 VOICE_MODELS = ["tiny", "base", "small", "medium"]
 REASONING = ("default", "none", "minimal", "low", "medium", "high", "xhigh")
+# Explicitly requested IDs are picker shortcuts, not claims of account access.
+REQUESTED_MODELS = ("gpt-6.1-terra",)
 
 
 def valid_model_id(model):
     return not model or bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}", model))
+
+
+def saved_custom_models(value):
+    values = [value] if isinstance(value, str) else value
+    if not isinstance(values, (list, tuple)):
+        return []
+    result = []
+    for model in values:
+        if not isinstance(model, str):
+            continue
+        model = model.strip()
+        if model and valid_model_id(model) and model not in result:
+            result.append(model)
+            if len(result) >= 64:
+                break
+    return result
 
 
 def valid_voice_model(model):

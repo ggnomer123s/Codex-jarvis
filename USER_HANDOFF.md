@@ -41,6 +41,10 @@ results to resolve outdated technical descriptions. Read
   from the GUI picker and push this fix to GitHub. This authorizes publication
   of the focused model-catalog patch; it does not authorize publishing unrelated
   drafts or changing the chosen model/provider/account automatically.
+- Follow-up the same day explicitly asks why 6.1 Terra is missing and requests
+  another fix/push. Include its `gpt-6.1-terra` ID as a selectable shortcut even
+  if absent from the catalog, with honest unconfirmed-access status. Do not
+  equate a visible shortcut with verified access on the user's Codex account.
 
 - Canonical development checkout in this conversation:
   `/home/tikos/Documents/Jarvis`. The legacy folder name is intentional; it does

@@ -1,5 +1,11 @@
 # Update Center and one-step setup
 
+GUI 0.14.5 adds a `gpt-6.1-terra` picker shortcut and retains configured/saved
+custom model IDs even when Codex omits them from its catalog. This is a selectable
+ID, not confirmation of account/API access. After updating/restarting Tigo,
+select it in the composer or Preferences > Intelligence; the note explains its
+catalog status. No new dependencies or setup commands are required.
+
 Model discovery in GUI 0.14.4 refreshes when a picker opens and supports all
 pages/hidden catalog entries. **Preferences > Intelligence > Refresh** reloads
 the owned Codex connection without clearing the chat. New model support can also

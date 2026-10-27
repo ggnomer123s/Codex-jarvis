@@ -469,7 +469,7 @@ ApplicationWindow {
                                         inlineModel.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
                                         inlineModel.editText = inlineModel.draft
                                     })
-                                    ToolTip.visible: hovered; ToolTip.text: bridge.model || "Codex default"
+                                    ToolTip.visible: hovered; ToolTip.text: (bridge.model || "Codex default") + "\n" + bridge.modelSelectionStatus
                                     Connections {
                                         target: inlineModel.contentItem
                                         function onTextEdited() { inlineModel.draft = inlineModel.contentItem.text }
@@ -546,6 +546,12 @@ ApplicationWindow {
         exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: bridge.reducedMotion ? 0 : 100 } }
         property string speechLanguageCode: bridge.language
         property string modelDraft: bridge.model || "Codex default"
+        property string modelDraftStatus: bridge.modelSelectionStatus
+        onModelDraftChanged: modelDraftStatus = bridge.modelStatus(modelDraft)
+        Connections {
+            target: bridge
+            function onChanged() { preferences.modelDraftStatus = bridge.modelStatus(preferences.modelDraft) }
+        }
         function applyWake() {
             return bridge.wake.configure(wakeToggle.checked, wakeAutostart.checked, wakeModel.editText.trim(),
                 wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked, wakeProvider.currentIndex === 1 ? "online" : "local", wakeRecord.checked)
@@ -635,7 +641,8 @@ ApplicationWindow {
                         Text { Layout.fillWidth: true; text: bridge.modelsStatus; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                         HudButton { text: bridge.modelsLoading ? "Refreshing..." : "Refresh"; implicitHeight: 30; enabled: !window.locked && !bridge.modelsLoading; onClicked: bridge.refreshModels() }
                     }
-                    Text { Layout.fillWidth: true; text: "All models reported by Codex are listed. If a new release is missing, update Codex CLI and press Refresh. Account/provider access still applies; a model ID can also be entered manually."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                    Text { Layout.fillWidth: true; text: "Includes the Codex catalog, configured/saved model IDs and the gpt-6.1-terra shortcut. A shortcut does not grant account access. Update Codex CLI and Refresh if its catalog is stale."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                    Text { Layout.fillWidth: true; text: preferences.modelDraftStatus; color: "#a7bebc"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                     Text { text: "Reasoning"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox {
                         id: effortChoice; Layout.fillWidth: true; enabled: !window.locked
