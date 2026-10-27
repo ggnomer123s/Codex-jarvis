@@ -13,6 +13,7 @@ from .access import codex_home
 class FullProfile(QObject):
     changed = Signal()
     error = Signal(str)
+    signedIn = Signal()
 
     def __init__(self, command_factory, parent=None, home=None):
         super().__init__(parent)
@@ -88,6 +89,7 @@ class FullProfile(QObject):
             self.error.emit(f"Codex {operation} failed. Check the account log in Preferences.")
         elif operation == "login":
             self._output += "\nCodex sign-in completed."
+            self.signedIn.emit()
         self.changed.emit()
 
     def _failed(self, error):

@@ -334,3 +334,15 @@ in Voice/Wake applies to all voice requests and saves immediately. It is off by
 default. Online wake mode uploads nearby speech phrases to Google; local wake
 mode does not. See [voice activation](voice-activation.md) for the separate
 opt-ins, pause choices, draft preservation and XDG/Windows startup requirements.
+
+## Usage status and recognition recovery (0.15.0)
+
+No packages or install commands changed. Usage/auth metadata needs a Codex CLI
+that supports the native account endpoints. For `workspace routing discovery
+unauthorized (401)`, use the GUI Sign in to Codex button to renew the existing
+login; revoked workspace access still requires the account/workspace owner.
+Do not elevate Tigo, create another profile or change Full Access to fix auth.
+The new default-on online-dictation fallback uses existing `voice` dependencies
+and downloads the saved Whisper model on first local use unless already cached
+or configured as a local path. It runs on CPU; disable it in Voice if unwanted.
+See [account and limits](account-and-limits.md) and [dictation](voice-input.md).

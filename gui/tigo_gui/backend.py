@@ -30,6 +30,7 @@ from .desktop_control import control_summary
 from .interface_tools import interface_summary
 from .screen_activity import ScreenActivity
 from .updates import Updates
+from .account import CodexAccount, authorization_error
 from .compat import desktop_settings, environment, existing_path, LEGACY
 
 
@@ -96,6 +97,7 @@ class Backend(QObject):
         if self._transcription_provider not in ("local", "online"):
             self._transcription_provider = "local"
         self._voice_auto_send = str(self.settings.value("voiceAutoSend", "false")).lower() == "true"
+        self._voice_local_fallback = str(self.settings.value('voiceLocalFallback', True)).lower() == 'true'
         try:
             self._voice_silence_ms = max(800, min(4000, int(self.settings.value("voiceSilenceMs", 1600))))
         except (TypeError, ValueError):
@@ -131,6 +133,7 @@ class Backend(QObject):
         self._models_updated_at = 0.0
         self._models_folder = ''
         self._models_status = 'Saved Codex catalog. Open the model picker to check for new models.'
+        self._auth_error_reported = False
         self._codex = environment("GUI_CODEX") or find_codex() or ""
         self._codex_command = codex_command
         if codex_command:
@@ -173,6 +176,8 @@ class Backend(QObject):
         self.profiler = Profiler()
         self.checkpoints = Checkpoints(self.settings)
         self.server = AppServer(self)
+        self.account = CodexAccount(self.server, self.settings, self)
+        self.account.set_model(self._model)
         self.process = self.server.process
         self.server.ready.connect(self._server_ready)
         self.server.notification.connect(self._notification)
@@ -205,6 +210,7 @@ class Backend(QObject):
         self.profile = FullProfile(self._codex_launch, self, home=self._normal_home)
         self.updater = Updates(self)
         self.profile.changed.connect(self.changed.emit)
+        self.profile.signedIn.connect(self._signed_in)
         self.profile.error.connect(lambda text: self._message("error", text))
         self.changed.connect(lambda: self.wake_control.set_suspended(self._shutting_down or self._voice_state != "idle" or self.speaker.active or self._busy))
         self.wake_control.activated.connect(self._on_wake_activated)
@@ -501,6 +507,7 @@ class Backend(QObject):
         self._conversation_id = value['id']
         self._conversation_title = value['title']
         self._folder, self._model = value['folder'], value['model']
+        self.account.set_model(self._model)
         self.settings.setValue('folder', self._folder)
         self.settings.setValue('model', self._model)
         self._thread_id, self._thread_loaded = value['thread'], False
@@ -638,11 +645,49 @@ class Backend(QObject):
 
     @Property(bool, notify=changed)
     def modelsLoading(self):
-        return self._models_loading or self._models_connecting
+        return self._models_loading or self._models_connecting or self.account.preparing
 
     @Property(str, notify=changed)
     def modelsStatus(self):
         return self._models_status
+
+    @Property(QObject, constant=True)
+    def codexAccount(self):
+        return self.account
+
+    @Slot()
+    def refreshUsage(self):
+        if self._shutting_down or self.profile.busy or self.updater.installing or self.account.needsSignIn:
+            return
+        self._ensure_server(self.account.refresh)
+
+    @Slot()
+    def signInCodex(self):
+        if self._locked():
+            return
+        self.server.close()
+        self._server_waiters = []
+        self.profile.login()
+
+    def _signed_in(self):
+        self._auth_error_reported = False
+        self.server.close()
+        self._thread_loaded = False
+        self._server_waiters = []
+        self._models_updated_at = 0.
+        # Sign-in does not replay the failed request or change its model.
+        self._ensure_server(lambda: self._show_notice('Codex login refreshed. Review and resend your request.'))
+
+    def _codex_error(self, text):
+        if authorization_error(text):
+            message = self.account.require_sign_in(text)
+            if not self._auth_error_reported:
+                self._auth_error_reported = True
+                self._message('error', message)
+            else:
+                self._show_notice(message)
+        else:
+            self._message('error', text)
 
     @Property("QVariantList", notify=changed)
     def reasoningOptions(self):
@@ -704,6 +749,17 @@ class Backend(QObject):
     @Property(bool, notify=changed)
     def voiceAutoSend(self):
         return self._voice_auto_send
+
+    @Property(bool, notify=changed)
+    def voiceLocalFallback(self):
+        return self._voice_local_fallback
+
+    @Slot(bool)
+    def setVoiceLocalFallback(self, value):
+        if self._locked(): return
+        self._voice_local_fallback = value
+        self.settings.setValue('voiceLocalFallback', value)
+        self.changed.emit()
 
     @Property(int, notify=changed)
     def voiceSilenceMs(self):
@@ -922,7 +978,7 @@ class Backend(QObject):
         return guarded
 
     def _ensure_server(self, callback):
-        if self.server.connected:
+        if self.server.connected and not self.account.preparing:
             self.profiler.mark("serverReady")
             callback()
             return
@@ -940,12 +996,20 @@ class Backend(QObject):
 
     def _server_ready(self):
         self.profiler.mark("serverReady")
-        self._models_connecting = False
-        self._fetch_models()
-        waiters, self._server_waiters = self._server_waiters, []
-        for epoch, callback in waiters:
-            if epoch == self._epoch:
-                callback()
+
+        def prepared(error):
+            if error:
+                self._server_failed(error)
+                return
+            self._models_connecting = False
+            self._fetch_models()
+            waiters, self._server_waiters = self._server_waiters, []
+            for epoch, callback in waiters:
+                if epoch == self._epoch:
+                    callback()
+            self.changed.emit()
+
+        self.account.prepare(prepared)
         self.changed.emit()
 
     def _ensure_thread(self, callback, *, restore=False):
@@ -1020,7 +1084,8 @@ class Backend(QObject):
 
         def failed(message):
             self._models_loading = False
-            self._models_status = 'Model refresh failed: ' + str(message)[:350] + ' The previous list is retained.'
+            self._models_status = ('Model refresh failed: ' + str(message)[:350] + ' The previous list is retained.'
+                                   if not authorization_error(message) else self.account.require_sign_in(message))
             self.changed.emit()
 
         def page(cursor=None):
@@ -1105,6 +1170,9 @@ class Backend(QObject):
             return
         if not self._attachments and self._local_command(prompt):
             return True
+        if self.account.needsSignIn:
+            self._show_notice(self.account.authMessage)
+            return False
         try:
             thread_options(self._folder, self._access, self._model)
             if self.fullAccess and elevated():
@@ -1168,6 +1236,8 @@ class Backend(QObject):
         self.changed.emit()
 
     def _notification(self, method, params):
+        if self.account.notification(method, params):
+            return
         if method == "tigo/requestDeclined":
             self._message("system", "A request needing additional input/approval was declined. Use the interactive CLI for that request.")
             return
@@ -1231,7 +1301,7 @@ class Backend(QObject):
                 self._activity = "Planning the next step"
         elif method == "error" and not params.get("willRetry"):
             error = params.get("error", {})
-            self._message("error", str(error.get("message", "Codex reported an error.")))
+            self._codex_error(str(error.get("message", "Codex reported an error.")))
         self.changed.emit()
 
     def _set_item_text(self, item_id, text, replace=False):
@@ -1271,7 +1341,10 @@ class Backend(QObject):
             self._message("system", "Task stopped. Completed actions have not been undone; inspect before resuming.")
             self._stage, self._activity = "stopped", "Task stopped"
         elif error or status == "failed":
-            self._message("error", error or "Codex task failed.")
+            if self._task_kind == 'codex':
+                self._codex_error(error or 'Codex task failed.')
+            else:
+                self._message('error', error or 'Codex task failed.')
             self._stage, self._activity = "failed", "Request failed"
             if self._task_kind != 'desktop-check':
                 self._needs_deep = True
@@ -1298,7 +1371,7 @@ class Backend(QObject):
             self.runner.cancel()
             self._finish("interrupted" if self._cancelled else "failed", text)
         else:
-            self._message("error", text)
+            self._codex_error(text)
         self.changed.emit()
 
     def _disconnected(self):
@@ -1479,6 +1552,7 @@ class Backend(QObject):
             self._close_voice()
         self._effort, self._access = effort, access
         self._model, self._language, self._voice_model = model, language, voice_model
+        self.account.set_model(model)
         if model:
             self._custom_models = [model, *[x for x in self._custom_models if x != model]][:64]
             self.settings.setValue('customModels', self._custom_models)
@@ -1496,6 +1570,8 @@ class Backend(QObject):
     def ensureModels(self):
         """Read-only catalog discovery when a picker opens; coalesce rapid opens."""
         if self._locked() or self.modelsLoading or self._shutting_down:
+            return
+        if self.account.preparing or self.account.needsSignIn:
             return
         if self._models_updated_at and self._models_folder == self._folder and time.monotonic() - self._models_updated_at < 60:
             return
@@ -1589,7 +1665,8 @@ class Backend(QObject):
 
     def _record_voice(self):
         self._voice_write("record", language=self._language, **self._voice_options,
-                          auto_stop=self._record_auto_send, silence_ms=self._voice_silence_ms)
+                          auto_stop=self._record_auto_send, silence_ms=self._voice_silence_ms,
+                          local_fallback=self._voice_local_fallback)
 
     def _complete_auto_voice(self):
         pending, self._pending_voice_submit = self._pending_voice_submit, None
@@ -1732,6 +1809,9 @@ class Backend(QObject):
                 self._voice_state, self._activity = "transcribing", "Speech ended; preparing transcription"
             elif kind == "transcribing":
                 self._voice_state, self._activity = "transcribing", "Transcribing " + ("locally" if self._transcription_provider == "local" else "online")
+            elif kind == 'fallback':
+                self._voice_state, self._activity = 'transcribing', 'Online speech unavailable; using local Whisper'
+                self._show_notice(str(event.get('message', 'Using local transcription for this recording.')))
             elif kind == "level":
                 self._level = max(0, min(1, float(event.get("value", 0))))
             elif kind == "preview":
@@ -1739,12 +1819,14 @@ class Backend(QObject):
             elif kind == "transcript":
                 self.profiler.voice.update(event.get("timings", {}))
                 text = str(event.get("text", ""))[:60000].strip()
-                if self._record_auto_send and event.get("endReason") == "silence" and text:
+                if self._record_auto_send and event.get("endReason") == "silence" and text and not event.get('fallback'):
                     self._pending_voice_submit = (self._voice_id, text)
                     self._activity = "Speech recognized; preparing voice request"
                 else:
                     self.transcriptReady.emit(text)
                     self._activity = "Review your transcript, then press Send"
+                    if event.get('fallback'):
+                        self._show_notice('Recovered with local Whisper. Review the transcript and press Send.')
             elif kind == "error":
                 self._pending_voice_submit = None
                 self._message("error", str(event.get("message", "Voice failed.")))
@@ -1788,6 +1870,7 @@ class Backend(QObject):
     @Slot()
     def shutdown(self):
         self._shutting_down = True
+        self.account.close()
         self._wake_record_token += 1
         self._pending_voice_submit = None
         self.updater.close()

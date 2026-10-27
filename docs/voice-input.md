@@ -66,3 +66,14 @@ cancels before recognition/upload. Say the wake name, wait for the recording
 indicator, then speak; the wake phrase is not treated as the command. These
 controls require `webrtcvad-wheels` from the voice extra. See
 [voice activation](voice-activation.md) for timing, privacy and limitations.
+
+## Online recognition recovery (0.15.0)
+
+Preferences > Voice enables **Use local Whisper if online recognition fails** by
+default. A final online recognition/network failure reuses the same in-memory
+recording with the saved multilingual Whisper model on CPU. First use may
+download that model; choose a smaller or existing local model in the same panel.
+No second cloud retry or microphone recording is added. Recovered text always
+requires review and Send, even with hands-free sending enabled. Disable this
+checkbox for online-only behavior. Live previews and wake recognition retain
+their separate providers; missing speech/failed fallback still reports an error.

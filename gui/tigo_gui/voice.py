@@ -29,6 +29,8 @@ class VoiceWorker:
         import numpy as np
         import sounddevice as sd
         self.provider = provider
+        self.model_name, self._model_factory = model_name, model_factory
+        self._used_fallback = False
         if provider == "local" and model_factory is None:
             from faster_whisper import WhisperModel
             model_factory = WhisperModel
@@ -71,6 +73,10 @@ class VoiceWorker:
             language = value.get("language", "auto")
             beam = value.get("beam", 3)
             auto_stop, silence_ms = value.get("auto_stop", False), value.get("silence_ms", 1600)
+            if type(value.get('local_fallback', True)) is not bool:
+                self.output('error', id=recording_id, message='Invalid local fallback option.')
+                self.output('idle', id=recording_id)
+                return True
             if not isinstance(recording_id, str) or not recording_id or len(recording_id) > 128 or language not in dict(LANGUAGES) or type(beam) is not int or beam not in (1, 3, 5) or type(auto_stop) is not bool or type(silence_ms) is not int or not 800 <= silence_ms <= 4000:
                 self.output("error", id=recording_id, message="Invalid recording options.")
                 self.output("idle", id=recording_id)
@@ -82,12 +88,28 @@ class VoiceWorker:
             self.thread.start()
         return True
 
-    def _transcribe(self, raw, language, beam):
+    def _transcribe(self, raw, language, beam, *, allow_fallback=True):
         if self.provider == "online":
-            from .transcription import transcribe_online
-            return transcribe_online(raw, language)
+            try:
+                from .transcription import transcribe_online
+                return transcribe_online(raw, language)
+            except (RuntimeError, ValueError, ImportError):
+                if not allow_fallback or self.cancelled.is_set():
+                    raise
+                self._used_fallback = True
+                self.output('fallback', id=self.recording_id,
+                            message='Online speech failed; recognizing the same recording locally. First use may download Whisper.')
         audio = self.np.frombuffer(raw, dtype=self.np.int16).astype(self.np.float32) / 32768.0
         with self._model_lock:
+            if self.model is None:
+                factory = self._model_factory
+                if factory is None:
+                    from faster_whisper import WhisperModel
+                    factory = WhisperModel
+                # CPU fallback works even when no CUDA runtime is installed.
+                self.model = factory(self.model_name, device='cpu', compute_type='int8')
+            if self.cancelled.is_set():
+                return ''
             segments, _ = self.model.transcribe(audio, beam_size=beam, vad_filter=True,
                                                 task="transcribe", language=None if language == "auto" else language,
                                                 condition_on_previous_text=False)
@@ -95,6 +117,7 @@ class VoiceWorker:
 
     def _record(self, options):
         recording_id = options["id"]
+        self._used_fallback = False
         frames = queue.Queue(maxsize=64)
         overflow = threading.Event()
         buffers = []
@@ -126,7 +149,7 @@ class VoiceWorker:
                 if self.cancelled.is_set() or preview_done.is_set():
                     return
                 try:
-                    text = self._transcribe(raw, options["language"], 1)
+                    text = self._transcribe(raw, options["language"], 1, allow_fallback=False)
                     if text and not self.cancelled.is_set() and not preview_done.is_set():
                         self.output("preview", id=recording_id, text=live.update(window, text))
                 except Exception:
@@ -217,12 +240,13 @@ class VoiceWorker:
             capture_ms = round((time.monotonic() - started) * 1000, 1)
             self.output("transcribing", id=recording_id)
             transcribe_started = time.monotonic()
-            text = self._transcribe(b"".join(buffers), options["language"], options.get("beam", 3))
+            text = self._transcribe(b"".join(buffers), options["language"], options.get("beam", 3),
+                                    allow_fallback=options.get('local_fallback', True))
             if self.cancelled.is_set():
                 return
             if not text:
                 raise RuntimeError("No speech detected. Try again closer to the microphone.")
-            self.output("transcript", id=recording_id, text=text, endReason=end_reason,
+            self.output("transcript", id=recording_id, text=text, endReason=end_reason, fallback=self._used_fallback,
                         timings={"captureMs": capture_ms, "transcribeMs": round((time.monotonic() - transcribe_started) * 1000, 1)})
         except Exception as exc:
             if not self.cancelled.is_set():

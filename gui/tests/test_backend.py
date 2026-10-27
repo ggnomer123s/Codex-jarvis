@@ -60,6 +60,20 @@ class TestBackend(unittest.TestCase):
     def requests(self, backend):
         return [json.loads(line) for line in backend.test_log.read_text().splitlines()]
 
+    def test_auth_refusal_prevents_task_start_and_duplicate_error_cards(self):
+        backend = self.server_backend('auth-401')
+        backend.send('Do not execute without a valid session')
+        self.wait(lambda: not backend.busy)
+        self.assertTrue(backend.account.needsSignIn)
+        errors = [m for m in backend.messages if m['role'] == 'error']
+        self.assertEqual(len(errors), 1)
+        self.assertIn('Sign in to Codex', errors[0]['text'])
+        self.assertFalse(backend.send('Still unauthorized'))
+        self.assertEqual(len([m for m in backend.messages if m['role'] == 'error']), 1)
+        methods = [x['request'].get('method') for x in self.requests(backend)]
+        self.assertNotIn('thread/start', methods)
+        self.assertNotIn('turn/start', methods)
+
     def test_model_catalog_includes_hidden_later_pages_and_survives_settings(self):
         backend = self.server_backend('models-paged')
         backend.ensureModels()

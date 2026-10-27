@@ -8,6 +8,33 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-27 — Live usage panel and account/dictation recovery (GUI 0.15.0)
+
+- Added [native account status](gui/tigo_gui/account.py) and a
+  [usage panel](gui/tigo_gui/ui/UsageLimits.qml) above the composer. Displays
+  actual five-hour/weekly remaining percentages, reset countdowns and snapshot
+  time; reads every minute and consumes account notifications before thread
+  filtering. Duration/model buckets, stale and unavailable data are handled
+  explicitly. X hides and stops polling; Limits/Runtime restores the saved view.
+- Refreshes the existing managed Codex token before thread/task startup.
+  Routing/auth 401 errors now provide a deduplicated sign-in recovery flow;
+  repeated submissions are blocked without replay. Native successful login
+  reconnects the same profile while retaining the chat/thread. The GUI cannot
+  grant missing workspace/account access or confirm live recovery in this cloud.
+- Final online dictation can fall back to the saved CPU Whisper model using the
+  same bounded recording. The default-on Voice checkbox can disable it. A first
+  fallback can download the model; recovered text always requires review/Send.
+  Preview/wake providers and microphone ownership/cancellation remain separate.
+- Added unexecuted account/quota/auth regression cases and account fixture
+  responses. Updated current handovers, version metadata and
+  [account guidance](docs/account-and-limits.md), dictation/live-voice and
+  installation docs. No dependencies or setup commands changed.
+- Verification: protocol/schema and source review, changed Python syntax,
+  manifest/lock version alignment, documentation links and whitespace. No test
+  suites, GUI/hardware checks, authenticated quota/model request or CI run was
+  performed, following the user's earlier preference and request to finish
+  faster. Publication skips CI. Actual account access remains server-controlled.
+
 ## 2026-10-27 — Keep Terra and custom model IDs selectable (GUI 0.14.5)
 
 - The prior catalog fix could only show IDs reported by Codex or the currently

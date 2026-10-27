@@ -37,6 +37,10 @@ results to resolve outdated technical descriptions. Read
 
 ## 2. Repository and Git workflow
 
+- Latest follow-up: fix the displayed workspace-routing 401 and failed online
+  dictation; add live five-hour/weekly usage above the composer with a saved hide
+  option. The user asked to finish faster; do not expand unrelated work.
+
 - Latest direct request (2026-10-27): fix newly released Codex models missing
   from the GUI picker and push this fix to GitHub. This authorizes publication
   of the focused model-catalog patch; it does not authorize publishing unrelated

@@ -385,6 +385,21 @@ ApplicationWindow {
                                 HudButton { objectName: "dismissNoticeButton"; text: "Dismiss"; implicitHeight: 26; font.pixelSize: 10; onClicked: bridge.dismissNotice() }
                             }
                         }
+                        Rectangle {
+                            Layout.fillWidth: true; visible: bridge.codexAccount.needsSignIn
+                            implicitHeight: authNotice.implicitHeight + 20
+                            color: "#30232a"; radius: 12; border.color: "#68404b"
+                            ColumnLayout {
+                                id: authNotice
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 10
+                                Text { Layout.fillWidth: true; text: bridge.codexAccount.authMessage; color: "#f0b2bd"; font.pixelSize: 11; wrapMode: Text.WordWrap }
+                                RowLayout {
+                                    HudButton { objectName: "renewCodexLoginButton"; text: "Sign in to Codex"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.signInCodex() }
+                                    HudButton { text: "Open sign-in page"; implicitHeight: 28; font.pixelSize: 10; visible: bridge.fullProfile.loginUrl.length > 0; onClicked: bridge.fullProfile.openLoginPage() }
+                                }
+                            }
+                        }
+                        UsageLimits { Layout.fillWidth: true; active: window.visible && window.visibility !== Window.Minimized }
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: bridge.attachments.length > 0 ? 232 : 174
                         radius: 16; color: "#111f29"; border.color: composer.activeFocus ? "#40867f" : "#2a404c"
@@ -395,6 +410,7 @@ ApplicationWindow {
                                 HudButton { text: "Attach files"; objectName: "attachFilesButton"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.chooseAttachments() }
                                 HudButton { text: "Paste image"; implicitHeight: 28; font.pixelSize: 10; enabled: !window.locked; onClicked: bridge.pasteImage() }
                                 HudButton { objectName: "speechToggleButton"; text: bridge.speech.enabled ? "Speech on" : "Speech off"; implicitHeight: 28; font.pixelSize: 10; onClicked: bridge.speech.setEnabled(!bridge.speech.enabled); ToolTip.visible: hovered; ToolTip.text: "Automatic spoken replies; choose a voice in Preferences > Speech" }
+                                HudButton { objectName: "showUsageButton"; visible: !bridge.codexAccount.visible; text: "Limits"; implicitHeight: 28; font.pixelSize: 10; onClicked: bridge.codexAccount.setVisible(true) }
                                 Text { Layout.fillWidth: true; text: "Drop files here"; color: "#668d9b"; font.pixelSize: 10; elide: Text.ElideRight }
                             }
                             ScrollView {
@@ -683,9 +699,9 @@ ApplicationWindow {
                         onModelChanged: Qt.callLater(function() { languageChoice.currentIndex = Math.max(0, languageChoice.indexOfValue(preferences.speechLanguageCode)) })
                     }
                     Text { Layout.fillWidth: true; text: "Choose the language you speak for better accuracy. Local Whisper also supports automatic language detection."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
-                    Text { visible: transcriptionChoice.currentIndex === 0; text: "Local Whisper model"; color: "#8eadbd"; font.pixelSize: 12 }
-                    HudComboBox { id: voiceModelChoice; visible: transcriptionChoice.currentIndex === 0; Layout.fillWidth: true; editable: true; model: bridge.voiceModels; enabled: !window.locked && transcriptionChoice.currentIndex === 0 }
-                    Text { visible: transcriptionChoice.currentIndex === 0; Layout.fillWidth: true; text: "tiny: smaller and faster. base: balanced. small / medium: larger models for more demanding speech. You can enter a local multilingual model folder for offline use."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    Text { visible: transcriptionChoice.currentIndex === 0 || bridge.voiceLocalFallback; text: transcriptionChoice.currentIndex === 0 ? "Local Whisper model" : "Fallback Whisper model (CPU)"; color: "#8eadbd"; font.pixelSize: 12 }
+                    HudComboBox { id: voiceModelChoice; visible: transcriptionChoice.currentIndex === 0 || bridge.voiceLocalFallback; Layout.fillWidth: true; editable: true; model: bridge.voiceModels; enabled: !window.locked }
+                    Text { visible: transcriptionChoice.currentIndex === 0 || bridge.voiceLocalFallback; Layout.fillWidth: true; text: "tiny: smaller and faster. base: balanced. small / medium: larger models for more demanding speech. You can enter a local multilingual model folder for offline use."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
                     RowLayout {
                         visible: transcriptionChoice.currentIndex === 0
                         HudComboBox { id: deviceChoice; Layout.fillWidth: true; model: ["CPU / int8", "NVIDIA CUDA / int8-fp16"]; enabled: !window.locked && transcriptionChoice.currentIndex === 0 }
@@ -698,6 +714,12 @@ ApplicationWindow {
                         contentItem: Text { text: parent.text; color: "#a8d4d0"; leftPadding: 30; font.pixelSize: 12; verticalAlignment: Text.AlignVCenter }
                     }
                     Text { Layout.fillWidth: true; text: transcriptionChoice.currentIndex === 1 ? "Live text uses short repeated requests, without an API key; latency depends on the network. Disable Live text to upload only after recording. Wake has a separate provider. Review the final transcript before sending." : "Model stays ready for five idle minutes. Preview uses extra CPU and may change in the final transcript. CUDA requires compatible NVIDIA libraries. Wake transcription has its own Local / Online setting. Review the transcript before sending."; color: "#6f909f"; font.pixelSize: 11; wrapMode: Text.WordWrap; lineHeight: 1.4 }
+                    HudCheckBox {
+                        objectName: "voiceLocalFallbackToggle"; visible: transcriptionChoice.currentIndex === 1
+                        text: "Use local Whisper if online recognition fails"; checked: bridge.voiceLocalFallback; enabled: !window.locked
+                        onClicked: bridge.setVoiceLocalFallback(checked)
+                    }
+                    Text { visible: transcriptionChoice.currentIndex === 1; Layout.fillWidth: true; text: "Fallback reuses the same recording on CPU. First use may download your saved Whisper model. Recovered text always stays for review before Send."; color: "#6f909f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                     VoiceAutomation { objectName: "dictationAutomation"; Layout.fillWidth: true; enabled: !window.locked }
                     HudButton { text: bridge.voiceReady ? "Transcription ready" : "Prepare saved provider / list microphones"; enabled: !window.locked && bridge.voiceAvailable; onClicked: bridge.warmVoice() }
                     }
@@ -748,7 +770,7 @@ ApplicationWindow {
                             text: bridge.desktopControlStatus; color: "#82c9bc"; font.pixelSize: 11; wrapMode: Text.WordWrap
                         }
                         RowLayout {
-                            HudButton { text: "Sign in to Codex"; enabled: !window.locked; onClicked: bridge.fullProfile.login() }
+                            HudButton { text: "Sign in to Codex"; enabled: !window.locked; onClicked: bridge.signInCodex() }
                             HudButton { text: "Open sign-in page"; visible: bridge.fullProfile.loginUrl.length > 0; onClicked: bridge.fullProfile.openLoginPage() }
                             HudButton { text: "Cancel"; visible: bridge.fullProfile.busy; danger: true; onClicked: bridge.fullProfile.cancel() }
                         }
@@ -766,6 +788,7 @@ ApplicationWindow {
                     spacing: 12
                     Text { Layout.fillWidth: true; text: "Task timings and connection state"; color: "#bde5de"; font.pixelSize: 14 }
                     HudCheckBox { objectName: "reducedMotionToggle"; text: "Reduce interface motion"; checked: bridge.reducedMotion; onClicked: bridge.setReducedMotion(checked) }
+                    HudCheckBox { objectName: "showUsageLimitsToggle"; text: "Show Codex usage limits above the composer"; checked: bridge.codexAccount.visible; onClicked: bridge.codexAccount.setVisible(checked) }
                     ScrollView {
                         Layout.fillWidth: true; Layout.fillHeight: true; clip: true
                         TextArea { text: bridge.runtimeDetails; readOnly: true; selectByMouse: true; wrapMode: TextEdit.Wrap; color: "#bad4dc"; font.pixelSize: 12; background: Rectangle { color: "#0a1720"; radius: 8 } }

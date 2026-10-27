@@ -19,7 +19,8 @@ This is repeated phrase recognition through the existing public service, not a
 persistent realtime API. It can be slower, limited or unavailable. Disable Live
 text to send audio only after recording. Cancel ignores late responses, but
 cannot recall audio already uploaded. Ordinary wake recognition stays separate.
-No automatic provider fallback or microphone opening is added.
+Final online dictation can use the saved local Whisper fallback in 0.15.0;
+recovered text requires review. No additional microphone opening is added.
 
 Preferences > Speech independently selects local neural, online Microsoft or
 legacy system speech. With automatic speech enabled, each completed assistant

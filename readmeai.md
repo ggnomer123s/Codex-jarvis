@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-27**, GUI **0.14.5**. Repository:
+Last reconciled: **2026-10-27**, GUI **0.15.0**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read [USER_HANDOFF.md](USER_HANDOFF.md) first for standing user preferences,
@@ -13,6 +13,25 @@ Source, tests and observed behavior take precedence over dated summaries.
 This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
+
+GUI 0.15.0 adds live subscription usage above the composer and screenshot-error
+recovery. `account.py` performs native `account/read` with `refreshToken: true`
+before releasing server waiters to thread/task startup. It reads
+`account/rateLimits/read`, handles global account notifications before thread
+filtering, polls every 60 seconds while shown and updates reset countdowns every
+15 seconds. Match 300/10080-minute windows by duration, preserve model buckets,
+show unavailable/stale data honestly and never infer access from reset times.
+QSettings `showUsageLimits` defaults on; X hides/stops polling, Limits or Runtime
+restores it. Quota data stays in memory. A 401 produces one actionable error and
+a sign-in banner, blocks repeated failed submissions, and never replays a task.
+Native successful login restarts the owned server with the same home and retained
+chat/thread. Workspace access still requires actual server authorization.
+Online dictation can reuse the same PCM through lazy CPU Whisper on final
+recognition failure; `voiceLocalFallback` defaults on, is switchable in Voice,
+and recovered text always stays for review even with auto-send enabled. Preview
+and wake providers are unchanged. Existing Whisper model download/cache rules
+apply; no dependencies changed. See docs/account-and-limits.md. The user asked
+to finish quickly; no tests/GUI/CI runs were started. Static checks only.
 
 GUI 0.14.5 addresses the follow-up asking specifically for 6.1 Terra. Add the
 explicit `gpt-6.1-terra` ID as a requested shortcut separately from live catalog

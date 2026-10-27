@@ -41,6 +41,15 @@ for line in sys.stdin:
         if scenario == 'slow-init':
             time.sleep(60)
         result = {'userAgent': 'fake-app-server'}
+    elif method == 'account/read':
+        if scenario == 'auth-401':
+            send({'id': request['id'], 'error': {'code': -32600, 'message': 'workspace routing discovery unauthorized (401)'}})
+            continue
+        result = {'account': {'type': 'chatgpt', 'email': None, 'planType': 'plus'}, 'requiresOpenaiAuth': True}
+    elif method == 'account/rateLimits/read':
+        result = {'rateLimits': {'limitId': 'codex',
+                  'primary': {'usedPercent': 25, 'windowDurationMins': 300, 'resetsAt': int(time.time())+3600},
+                  'secondary': {'usedPercent': 40, 'windowDurationMins': 10080, 'resetsAt': int(time.time())+86400}}}
     elif method == 'config/read':
         result = {'config': {'model': 'gpt-6.1-terra' if scenario == 'models-configured' else None}}
     elif method == 'model/list':
