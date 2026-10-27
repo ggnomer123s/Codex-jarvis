@@ -60,6 +60,63 @@ class TestBackend(unittest.TestCase):
     def requests(self, backend):
         return [json.loads(line) for line in backend.test_log.read_text().splitlines()]
 
+    def test_model_catalog_includes_hidden_later_pages_and_survives_settings(self):
+        backend = self.server_backend('models-paged')
+        backend.ensureModels()
+        self.wait(lambda: backend.serverReady and not backend.modelsLoading)
+        self.assertEqual(backend.models, ['Codex default', 'test-model', 'new-model'])
+        calls = [x['request'] for x in self.requests(backend) if x['request'].get('method') == 'model/list']
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all(x['params']['includeHidden'] for x in calls))
+        self.assertEqual(calls[1]['params']['cursor'], 'second-page')
+        self.assertFalse(any(x['request'].get('method') in ('thread/start', 'turn/start') for x in self.requests(backend)))
+        self.assertTrue(backend.selectModel('new-model'))
+        self.assertEqual(backend.reasoningOptions, [{'code': 'default', 'label': 'Model default'}, {'code': 'medium', 'label': 'Medium'}])
+        self.assertIn('test-model', backend.models)
+
+    def test_catalog_response_survives_conversation_epoch_change(self):
+        backend = self.server_backend()
+        backend.server.connected = True
+        callbacks = []
+        with mock.patch.object(backend.server, 'request', side_effect=lambda method, params, callback: callbacks.append(callback)):
+            backend._fetch_models()
+            backend.newSession()
+            callbacks[0]({'data': [{'model': 'released-model', 'hidden': True}], 'nextCursor': None}, None)
+        self.assertIn('released-model', backend.models)
+        self.assertFalse(backend.modelsLoading)
+
+    def test_catalog_page_error_or_cursor_loop_retains_last_good_list(self):
+        backend = self.server_backend()
+        backend.server.connected = True
+        backend._models = ['previous-model']
+        backend._model_efforts = {'previous-model': ['high']}
+        for error in ('Page unavailable', None):
+            callbacks = []
+            with mock.patch.object(backend.server, 'request', side_effect=lambda method, params, callback: callbacks.append(callback)):
+                backend._fetch_models()
+                callbacks[0]({'data': [{'model': 'partial-model'}], 'nextCursor': 'again'}, None)
+                callbacks[1]({'data': [], 'nextCursor': 'again'}, error)
+            self.assertEqual(backend.models, ['Codex default', 'previous-model'])
+            self.assertEqual(backend._model_efforts, {'previous-model': ['high']})
+            self.assertFalse(backend.modelsLoading)
+            self.assertIn('failed', backend.modelsStatus)
+
+    def test_explicit_model_refresh_preserves_chat_and_resumes_saved_thread(self):
+        backend = self.server_backend()
+        backend.send('Keep this conversation')
+        self.wait(lambda: not backend.busy and not backend.modelsLoading)
+        messages, thread = list(backend.messages), backend._thread_id
+        old_pid = backend.process.processId()
+        backend.refreshModels()
+        self.wait(lambda: backend.serverReady and not backend.modelsLoading)
+        self.assertNotEqual(backend.process.processId(), old_pid)
+        self.assertEqual(backend.messages, messages)
+        self.assertEqual(backend._thread_id, thread)
+        backend.send('Continue')
+        self.wait(lambda: not backend.busy)
+        resumes = [x['request'] for x in self.requests(backend) if x['request'].get('method') == 'thread/resume']
+        self.assertEqual(resumes[-1]['params']['threadId'], thread)
+
     def test_request_response_reuses_process_and_thread(self):
         backend = self.server_backend()
         prompt = "--dangerously-bypass-approvals-and-sandbox & literal text"

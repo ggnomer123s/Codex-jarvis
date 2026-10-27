@@ -6,6 +6,7 @@ import os
 import sqlite3
 from pathlib import Path
 import sys
+import time
 import uuid
 
 from PySide6.QtCore import QObject, Property, QProcess, QProcessEnvironment, QSettings, QTimer, QUrl, Signal, Slot
@@ -121,6 +122,11 @@ class Backend(QObject):
         self._normal_home = Path(codex_home_override) if codex_home_override else codex_home()
         self._models = cached_models(self._normal_home)
         self._model_efforts = {}
+        self._models_generation = 0
+        self._models_loading = False
+        self._models_connecting = False
+        self._models_updated_at = 0.0
+        self._models_status = 'Saved Codex catalog. Open the model picker to check for new models.'
         self._codex = environment("GUI_CODEX") or find_codex() or ""
         self._codex_command = codex_command
         if codex_command:
@@ -610,6 +616,14 @@ class Backend(QObject):
             names.append(self._model)
         return ["Codex default", *names]
 
+    @Property(bool, notify=changed)
+    def modelsLoading(self):
+        return self._models_loading or self._models_connecting
+
+    @Property(str, notify=changed)
+    def modelsStatus(self):
+        return self._models_status
+
     @Property("QVariantList", notify=changed)
     def reasoningOptions(self):
         known = self._model_efforts.get(self._model)
@@ -906,6 +920,7 @@ class Backend(QObject):
 
     def _server_ready(self):
         self.profiler.mark("serverReady")
+        self._models_connecting = False
         self._fetch_models()
         waiters, self._server_waiters = self._server_waiters, []
         for epoch, callback in waiters:
@@ -955,31 +970,74 @@ class Backend(QObject):
         self.server.request("mcpServerStatus/list", {"threadId": self._thread_id, "limit": 100}, returned)
 
     def _fetch_models(self):
-        epoch = self._epoch
-        def returned(result, error):
-            if epoch != self._epoch or error or not isinstance(result, dict):
-                return
-            entries = result.get("data", [])
-            if not isinstance(entries, list):
-                return
-            names = []
-            for item in entries:
-                if not isinstance(item, dict) or item.get("hidden"):
-                    continue
-                name = item.get("model", item.get("id", ""))
-                if isinstance(name, str) and name and valid_model_id(name) and name not in names:
-                    names.append(name)
-                    efforts = [x.get("reasoningEffort") for x in item.get("supportedReasoningEfforts", []) if isinstance(x, dict)]
-                    self._model_efforts[name] = efforts
-                    if item.get("isDefault"):
-                        self._model_efforts[""] = efforts
-            self._models = names
-            supported = self._model_efforts.get(self._model)
-            if supported is not None and self._effort != "default" and self._effort not in supported:
-                self._effort = "default"
-                self.settings.setValue("effort", "default")
+        if not self.server.connected or self._models_loading or self._shutting_down:
+            return
+        # The catalog belongs to the server connection, not a conversation epoch.
+        # Publish only after every page succeeds; keep the last good list on error.
+        self._models_generation += 1
+        generation = self._models_generation
+        self._models_loading = True
+        self._models_status = 'Refreshing the Codex model catalog...'
+        names, efforts_by_model, cursors = [], {}, set()
+        self.changed.emit()
+
+        def failed(message):
+            self._models_loading = False
+            self._models_status = 'Model refresh failed: ' + str(message)[:350] + ' The previous list is retained.'
             self.changed.emit()
-        self.server.request("model/list", {"limit": 100}, returned)
+
+        def page(cursor=None):
+            params = {'limit': 100, 'includeHidden': True}
+            if cursor is not None:
+                params['cursor'] = cursor
+
+            def returned(result, error):
+                if generation != self._models_generation or not self.server.connected:
+                    return
+                if error:
+                    failed(error)
+                    return
+                entries = result.get('data') if isinstance(result, dict) else None
+                if not isinstance(entries, list):
+                    failed('Codex returned an invalid model catalog.')
+                    return
+                for item in entries:
+                    if not isinstance(item, dict):
+                        continue
+                    name = item.get('model') or item.get('id') or item.get('slug')
+                    if not isinstance(name, str) or not name or not valid_model_id(name):
+                        continue
+                    if name not in names:
+                        names.append(name)
+                    advertised = item.get('supportedReasoningEfforts')
+                    if isinstance(advertised, list):
+                        efforts = [x.get('reasoningEffort') for x in advertised
+                                   if isinstance(x, dict) and x.get('reasoningEffort') in REASONING]
+                        efforts_by_model[name] = efforts
+                        if item.get('isDefault'):
+                            efforts_by_model[''] = efforts
+                next_cursor = result.get('nextCursor')
+                if next_cursor not in (None, ''):
+                    if not isinstance(next_cursor, str) or next_cursor in cursors or len(cursors) >= 19:
+                        failed('Codex returned a repeated cursor or too many catalog pages.')
+                        return
+                    cursors.add(next_cursor)
+                    page(next_cursor)
+                    return
+                self._models, self._model_efforts = names, efforts_by_model
+                self._models_loading = False
+                self._models_updated_at = time.monotonic()
+                self._models_status = (f'Codex catalog refreshed: {len(names)} models, including hidden picker entries.'
+                                       if names else 'Codex reported no models. Check your Codex sign-in and provider.')
+                supported = self._model_efforts.get(self._model)
+                if supported is not None and self._effort != 'default' and self._effort not in supported:
+                    self._effort = 'default'
+                    self.settings.setValue('effort', 'default')
+                self.changed.emit()
+
+            self.server.request('model/list', params, returned)
+
+        page()
 
     def _begin(self, kind):
         self.speaker.stop()
@@ -1193,6 +1251,10 @@ class Backend(QObject):
         self.changed.emit()
 
     def _server_failed(self, text):
+        if self.modelsLoading:
+            self._models_status = 'Model catalog unavailable: ' + str(text)[:350]
+        self._models_generation += 1
+        self._models_loading = self._models_connecting = False
         self._thread_loaded = False
         self._server_waiters = []
         if self._busy:
@@ -1203,6 +1265,10 @@ class Backend(QObject):
         self.changed.emit()
 
     def _disconnected(self):
+        if self.modelsLoading:
+            self._models_status = 'Model refresh stopped: Codex disconnected. Use Refresh to reconnect.'
+        self._models_generation += 1
+        self._models_loading = self._models_connecting = False
         self.screen_activity.clear()
         self._thread_loaded = False
         self.changed.emit()
@@ -1378,20 +1444,40 @@ class Backend(QObject):
             self.settings.setValue("access", access)
         for key, value in (("model", model), ("language", language), ("voiceModel", voice_model)):
             self.settings.setValue(key, value)
-        self._models = cached_models(self._normal_home)
         if self.server.connected:
-            self._fetch_models()
+            self.ensureModels()
         self.changed.emit()
         return True
 
     @Slot()
-    def refreshModels(self):
-        if self._locked():
+    def ensureModels(self):
+        """Read-only catalog discovery when a picker opens; coalesce rapid opens."""
+        if self._locked() or self.modelsLoading or self._shutting_down:
             return
-        self._models = cached_models(self._normal_home)
-        self._ensure_server(lambda: None)
+        if self._models_updated_at and time.monotonic() - self._models_updated_at < 60:
+            return
         if self.server.connected:
             self._fetch_models()
+        else:
+            self._models_connecting = True
+            self._models_status = 'Connecting to Codex to refresh the model catalog...'
+            self._ensure_server(lambda: None)
+        self.changed.emit()
+
+    @Slot()
+    def refreshModels(self):
+        if self._locked() or self.modelsLoading or self._shutting_down:
+            return
+        # model/list has no force-refresh flag. An explicit refresh starts a new
+        # owned server, reloading Codex/provider state without clearing the chat.
+        self._models_generation += 1
+        self.server.close()
+        self._thread_loaded = False
+        self._server_waiters = []
+        self._models_updated_at = 0.0
+        self._models_connecting = True
+        self._models_status = 'Reconnecting to Codex for a fresh model catalog...'
+        self._ensure_server(lambda: None)
         self.changed.emit()
 
     @Slot(bool, result=bool)

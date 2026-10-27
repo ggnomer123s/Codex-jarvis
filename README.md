@@ -112,7 +112,7 @@ use an explicit checkout path and work from your user directory as well.
 
 ## Start here: project handoff for another AI
 
-**Current overview — 2026-10-16, GUI 0.9.0.** Start with
+**Current overview — 2026-10-27, GUI 0.14.4.** Start with
 **[readmeai.md](readmeai.md)** for the project's purpose, implemented features,
 architecture, decisions to preserve, code map, local state and test commands.
 This README is the public usage guide. **[docs/AI_HANDOFF.md](docs/AI_HANDOFF.md)**

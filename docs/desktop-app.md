@@ -182,11 +182,26 @@ non-elevated PowerShell. See [installation commands](install-desktop.md#windows-
 
 Preferences has **Intelligence**, **Voice**, **Access**, **Runtime**,
 **Automation** and **Wake** tabs. Intelligence
-offers a live `model/list` picker when app-server is connected, the active
-profile's local `models_cache.json` before connection, an editable model ID, and
-a Refresh button. No credentials are read from that file.
-The cache can be empty or stale: run Codex once and refresh, or enter an ID from
-your provider. Availability is validated by the actual request, not by the cache.
+offers a live `model/list` picker and the active profile's `models_cache.json`
+until connection. Opening either model picker or Preferences checks the live
+catalog, coalescing checks for 60 seconds. All catalog pages and hidden picker
+entries are included; hidden does not by itself mean account access is denied.
+No credentials are read from the cache. A completed live catalog is retained
+when saving preferences; background catalog updates preserve a typed model ID.
+
+**Refresh** reconnects the owned Codex app-server, reloads its catalog and shows
+progress/errors beside the button. It preserves the chat and selected model;
+the saved thread resumes on the next request. It is disabled during active tasks
+or another refresh. Failed/incomplete pages retain the previous complete list.
+Refresh does not send a prompt, start a thread or change login/access settings.
+
+If a newly released model is still absent, update **Codex CLI** using the package
+source that installed it, then press Refresh. For an npm-managed installation,
+use `npm install -g @openai/codex@latest` (or the same user-local prefix used when
+installing). Updating Tigo alone does not guarantee an existing Codex binary is
+upgraded. New-model rollout, account/provider access and Codex's own catalog
+refresh policy still apply. An exact model ID can also be entered manually.
+Availability is validated by the actual request, not by the picker or cache.
 An empty selection / **Codex default** inherits the configured model. Changing
 the model starts a fresh conversation. The selected ID is supplied as structured
 app-server thread/turn parameters.

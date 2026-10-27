@@ -1,6 +1,6 @@
 # Tigo: user preferences and handover for the next assistant
 
-Updated: **2026-10-18**. This file consolidates the user's explicit requests,
+Updated: **2026-10-27**. This file consolidates the user's explicit requests,
 corrections and standing project rules from the available conversation. It is
 not a transcript, a complete archive of inaccessible conversations or permission
 to perform unrelated work. Newer direct user instructions take precedence.
@@ -36,6 +36,11 @@ results to resolve outdated technical descriptions. Read
   in section 4 is a concrete example.
 
 ## 2. Repository and Git workflow
+
+- Latest direct request (2026-10-27): fix newly released Codex models missing
+  from the GUI picker and push this fix to GitHub. This authorizes publication
+  of the focused model-catalog patch; it does not authorize publishing unrelated
+  drafts or changing the chosen model/provider/account automatically.
 
 - Canonical development checkout in this conversation:
   `/home/tikos/Documents/Jarvis`. The legacy folder name is intentional; it does

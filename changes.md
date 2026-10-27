@@ -8,6 +8,39 @@ validation. Do not record user conversations, recordings, credentials or local
 machine configuration here. Dates below are report dates; Git history remains
 the source of commit timestamps.
 
+## 2026-10-27 — Refresh the full Codex model catalog (GUI 0.14.4)
+
+- Fixed [catalog discovery](gui/tigo_gui/backend.py) to request hidden picker
+  entries and follow `model/list` pagination, with repeated-cursor/page bounds.
+  Names and reasoning metadata publish together only after all pages succeed;
+  failures retain the last complete list and expose a visible status/error.
+  Hidden picker entries are not a guarantee of account/provider availability.
+- Model pickers and Preferences discover live models on opening, coalescing
+  checks for 60 seconds. Explicit Refresh reconnects the idle owned app-server
+  to reload Codex/provider state while retaining chat, selected model and thread
+  ID for resume. Catalog results use a connection generation, so switching
+  conversations no longer discards a valid catalog response. Listing never
+  starts a thread/turn or changes login/access settings.
+- Removed stale disk-cache replacement during preference saves. The initial
+  cache reader includes hidden entries and recognizes slug/model/id records.
+  [Both QML pickers](gui/tigo_gui/ui/Main.qml) retain selections and typed IDs
+  across catalog replacement, and Preferences shows loading/progress/errors.
+- Added four focused, unexecuted regressions for paginated hidden models,
+  catalog results across conversation changes, failed pages/repeated cursors,
+  and chat/thread preservation on explicit refresh. Added a paginated fixture.
+- Updated [model guidance](docs/desktop-app.md#use-the-app),
+  [update notes](docs/updates.md), README and maintainer/user handovers. New
+  releases can also require a Codex CLI update through its original package
+  manager and appropriate account access. No dependencies, installer commands,
+  Codex transport or account profiles changed. Version/lock metadata is 0.14.4.
+- Verification: inspected the installed Codex 0.159.2 generated protocol schema
+  (`includeHidden`, cursor pagination, no force-refresh parameter), reviewed the
+  patch, parsed changed Python sources and manifest/lock versions, checked the
+  edited public docs' English convention and `git diff --check`. No test suites,
+  GUI/hardware checks, authenticated model requests or CI were run; publication
+  uses `[skip ci]` following the user's earlier stop-testing preference. Newly
+  released model availability on the user's actual account remains unverified.
+
 ## 2026-10-18 — Hyprland fullscreen indicator and responsive observation (GUI 0.14.3)
 
 - Wayland layer surfaces now use exclusive zone -1, so the border reaches the

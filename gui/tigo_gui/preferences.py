@@ -33,10 +33,11 @@ def cached_models(home):
     if not isinstance(data, dict) or not isinstance(data.get("models"), list):
         return []
     models = []
-    for item in data["models"][:200]:
-        if not isinstance(item, dict) or item.get("visibility") == "hide":
+    for item in data["models"][:2000]:
+        if not isinstance(item, dict):
             continue
-        slug = item.get("slug", item.get("id", ""))
+        # Hidden means omitted by Codex's default picker, not necessarily denied.
+        slug = item.get("slug") or item.get("model") or item.get("id", "")
         if isinstance(slug, str) and slug and valid_model_id(slug) and slug not in models:
             models.append(slug)
     return models

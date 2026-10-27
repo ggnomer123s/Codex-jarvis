@@ -1,5 +1,12 @@
 # Update Center and one-step setup
 
+Model discovery in GUI 0.14.4 refreshes when a picker opens and supports all
+pages/hidden catalog entries. **Preferences > Intelligence > Refresh** reloads
+the owned Codex connection without clearing the chat. New model support can also
+require updating the separately installed Codex CLI with its original package
+manager; Tigo's updater retains a compatible existing Codex installation. See
+[model selection](desktop-app.md#use-the-app). This fix adds no dependencies.
+
 Open **Updates** in the sidebar, or press **Ctrl+U**. The center shows the running
 version, the version on the official `main` branch, new commit count, recent
 change reports, a compare link and the last installer result. Notes are plain

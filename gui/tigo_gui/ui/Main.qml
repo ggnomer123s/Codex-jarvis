@@ -26,7 +26,11 @@ ApplicationWindow {
     }
     property bool followConversation: true
     function syncComposerControls() {
-        if (!inlineModel.activeFocus && !inlineModel.contentItem.activeFocus) inlineModel.editText = bridge.model || "Codex default"
+        if (!inlineModel.activeFocus && !inlineModel.contentItem.activeFocus) {
+            inlineModel.draft = bridge.model || "Codex default"
+            inlineModel.currentIndex = bridge.models.indexOf(inlineModel.draft)
+            inlineModel.editText = inlineModel.draft
+        }
         inlineEffort.currentIndex = Math.max(0, inlineEffort.indexOfValue(bridge.effort))
     }
 
@@ -456,11 +460,24 @@ ApplicationWindow {
                                     Layout.preferredWidth: Math.min(180, Math.max(100, chatPane.width * 0.24))
                                     implicitHeight: 34; font.pixelSize: 10
                                     model: bridge.models; editable: true; enabled: !window.locked
+                                    property string draft: bridge.model || "Codex default"
                                     Accessible.name: "Codex model"
                                     Component.onCompleted: editText = bridge.model || "Codex default"
-                                    onActivated: bridge.selectModel(currentText)
-                                    onAccepted: bridge.selectModel(editText)
+                                    onActivated: { draft = currentText; bridge.selectModel(draft) }
+                                    onAccepted: { draft = editText; bridge.selectModel(draft) }
+                                    onModelChanged: Qt.callLater(function() {
+                                        inlineModel.currentIndex = bridge.models.indexOf(bridge.model || "Codex default")
+                                        inlineModel.editText = inlineModel.draft
+                                    })
                                     ToolTip.visible: hovered; ToolTip.text: bridge.model || "Codex default"
+                                    Connections {
+                                        target: inlineModel.contentItem
+                                        function onTextEdited() { inlineModel.draft = inlineModel.contentItem.text }
+                                    }
+                                    Connections {
+                                        target: inlineModel.popup
+                                        function onAboutToShow() { bridge.ensureModels() }
+                                    }
                                 }
                                 HudComboBox {
                                     id: inlineEffort; objectName: "inlineEffort"
@@ -528,11 +545,14 @@ ApplicationWindow {
         }
         exit: Transition { NumberAnimation { property: "opacity"; from: 1; to: 0; duration: bridge.reducedMotion ? 0 : 100 } }
         property string speechLanguageCode: bridge.language
+        property string modelDraft: bridge.model || "Codex default"
         function applyWake() {
             return bridge.wake.configure(wakeToggle.checked, wakeAutostart.checked, wakeModel.editText.trim(),
                 wakeLanguage.currentValue, wakeMic.currentIndex >= 0 ? String(wakeMic.currentValue) : wakeMic.editText.trim(), wakeFuzzy.checked, wakeProvider.currentIndex === 1 ? "online" : "local", wakeRecord.checked)
         }
         onOpened: {
+            bridge.ensureModels()
+            modelDraft = bridge.model || "Codex default"
             speechPage.sync()
             effortChoice.currentIndex = Math.max(0, effortChoice.indexOfValue(bridge.effort))
             accessChoice.currentIndex = ["read-only", "workspace-write"].indexOf(bridge.normalAccess)
@@ -593,11 +613,29 @@ ApplicationWindow {
                 ColumnLayout {
                     spacing: 14
                     Text { text: "Codex model"; color: "#8eadbd"; font.pixelSize: 12 }
-                    HudComboBox { id: modelChoice; objectName: "modelChoice"; Layout.fillWidth: true; editable: true; model: bridge.models; enabled: !window.locked }
-                    RowLayout {
-                        Text { Layout.fillWidth: true; text: "Live app-server catalog when connected; local cache before connection."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
-                        HudButton { text: "Refresh"; implicitHeight: 30; enabled: !window.locked; onClicked: bridge.refreshModels() }
+                    HudComboBox {
+                        id: modelChoice; objectName: "modelChoice"
+                        Layout.fillWidth: true; editable: true; model: bridge.models; enabled: !window.locked
+                        onActivated: preferences.modelDraft = currentText
+                        onAccepted: preferences.modelDraft = editText
+                        onModelChanged: Qt.callLater(function() {
+                            modelChoice.currentIndex = bridge.models.indexOf(preferences.modelDraft)
+                            modelChoice.editText = preferences.modelDraft
+                        })
+                        Connections {
+                            target: modelChoice.contentItem
+                            function onTextEdited() { preferences.modelDraft = modelChoice.contentItem.text }
+                        }
+                        Connections {
+                            target: modelChoice.popup
+                            function onAboutToShow() { bridge.ensureModels() }
+                        }
                     }
+                    RowLayout {
+                        Text { Layout.fillWidth: true; text: bridge.modelsStatus; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
+                        HudButton { text: bridge.modelsLoading ? "Refreshing..." : "Refresh"; implicitHeight: 30; enabled: !window.locked && !bridge.modelsLoading; onClicked: bridge.refreshModels() }
+                    }
+                    Text { Layout.fillWidth: true; text: "All models reported by Codex are listed. If a new release is missing, update Codex CLI and press Refresh. Account/provider access still applies; a model ID can also be entered manually."; color: "#6e919f"; font.pixelSize: 10; wrapMode: Text.WordWrap }
                     Text { text: "Reasoning"; color: "#8eadbd"; font.pixelSize: 12 }
                     HudComboBox {
                         id: effortChoice; Layout.fillWidth: true; enabled: !window.locked

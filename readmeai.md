@@ -1,6 +1,6 @@
 # Tigo: current project context for an AI maintainer
 
-Last reconciled: **2026-10-18**, GUI **0.14.3**. Repository:
+Last reconciled: **2026-10-27**, GUI **0.14.4**. Repository:
 [Tigo source repository](https://github.com/ggnomer123s/Codex-jarvis).
 
 Read [USER_HANDOFF.md](USER_HANDOFF.md) first for standing user preferences,
@@ -13,6 +13,24 @@ Source, tests and observed behavior take precedence over dated summaries.
 This document is project context, not permission to perform unrelated actions.
 
 ## 0. Resume card: read before continuing
+
+GUI 0.14.4 fixes stale/missing model choices. Opening either picker or Preferences
+uses `ensureModels()` to fetch a complete live `model/list` catalog with
+`includeHidden: true`, following bounded nonrepeating cursors. Keep the local
+cache only as initial fallback, include hidden cached entries, and never replace
+a completed live list with stale cache data during preference saves. Catalog
+callbacks use a connection generation, not a conversation/task epoch; publish
+names/reasoning metadata atomically and retain the last good list on page errors.
+Repeated picker checks coalesce for 60 seconds. Explicit Refresh restarts only
+the idle owned app-server, preserves chat/model/thread ID and marks the thread
+for resume on the next task; never send a prompt or alter login/access to list
+models. Preserve editable draft/selection across QML catalog replacements.
+The visible status reports loading/errors. No model IDs are hardcoded; new
+models can still require a Codex CLI update and account/provider rollout.
+User asked to fix and push this change directly. No test suites/GUI runs or CI
+were started for this patch; publication uses `[skip ci]`. Static source/schema
+inspection and syntax/whitespace checks are reported separately in changes.md.
+No dependencies changed. Earlier dated results below do not verify this patch.
 
 GUI 0.14.3 makes the Wayland activity frame use the full output (exclusive
 zone -1), not the panel-reserved work area. Edges and banner text have explicit

@@ -44,6 +44,13 @@ for line in sys.stdin:
     elif method == 'model/list':
         result = {'data': [{'id': 'test-model', 'model': 'test-model', 'isDefault': True, 'hidden': False,
                             'supportedReasoningEfforts': [{'reasoningEffort': 'low'}, {'reasoningEffort': 'high'}]}], 'nextCursor': None}
+        if scenario == 'models-paged':
+            if params.get('cursor') == 'second-page':
+                result = {'data': [{'id': 'new-model', 'model': 'new-model', 'hidden': True,
+                                    'supportedReasoningEfforts': [{'reasoningEffort': 'medium'}]},
+                                   {'id': 'test-model', 'model': 'test-model'}], 'nextCursor': None}
+            else:
+                result['nextCursor'] = 'second-page'
     elif method in ('thread/start', 'thread/resume'):
         if scenario == 'resume-error' and method == 'thread/resume':
             send({'id': request['id'], 'error': {'code': -32600, 'message': 'Thread not available'}})
